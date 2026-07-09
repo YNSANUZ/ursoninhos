@@ -184,8 +184,11 @@
 
     checkoutItems.querySelectorAll('.checkout-item').forEach((itemEl) => {
       const lineId = itemEl.dataset.lineId;
-      itemEl.querySelectorAll('[data-action="detail"]').forEach((button) => {
-        button.addEventListener('click', () => renderItemDetail(lineId));
+      // O card inteiro abre os detalhes; só ficam de fora os controles de
+      // quantidade (+, − e o campo digitável) e o botão de remover.
+      itemEl.addEventListener('click', (event) => {
+        if (event.target.closest('[data-action="increase"], [data-action="decrease"], [data-action="qty-input"], [data-action="remove"]')) return;
+        renderItemDetail(lineId);
       });
       itemEl.querySelector('[data-action="remove"]')?.addEventListener('click', () => {
         store.removeCartItem(lineId);

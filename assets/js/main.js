@@ -1305,7 +1305,8 @@ async function generateFrontPreview() {
   const ctx = canvas.getContext('2d');
 
   try {
-    const base = await loadImage('assets/3d/camisa-base.webp');
+    // Mockup da camisa preta no cabide: a estampa é desenhada no peito.
+    const base = await loadImage('assets/img/camisa-modelo-card.jpg');
     ctx.drawImage(base, 0, 0, canvas.width, canvas.height);
 
     if (frontPrint?.file) {
@@ -1315,12 +1316,17 @@ async function generateFrontPreview() {
       const offsetY = sideTransforms.front.offsetY || 0;
       const printWidth = 250 * scale;
       const printHeight = 250 * scale;
-      const x = canvas.width / 2 - printWidth / 2 + offsetX * 10;
-      const y = canvas.height * 0.28 + offsetY * 10;
+      // Centro do peito da camisa no mockup (levemente à esquerda do centro).
+      const x = canvas.width * 0.478 - printWidth / 2 + offsetX * 10;
+      const y = canvas.height * 0.32 + offsetY * 10;
+      // Artes com fundo preto chapado usam 'screen' (o preto some sobre a
+      // camisa preta); as demais ficam normais — mesmo critério do overlay.
+      ctx.globalCompositeOperation = (frontPrint.blend || 'screen') === 'screen' ? 'screen' : 'source-over';
       ctx.drawImage(printImage, x, y, printWidth, printHeight);
+      ctx.globalCompositeOperation = 'source-over';
     }
 
-    return canvas.toDataURL('image/png');
+    return canvas.toDataURL('image/jpeg', 0.9);
   } catch (error) {
     console.error('Nao foi possivel gerar o preview frontal da camisa:', error);
     return 'assets/img/banner-estatico.png';

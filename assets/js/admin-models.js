@@ -4,7 +4,8 @@ const config = window.URSONINHOS_APP_CONFIG || {};
 const api = window.UrsoninhosApi;
 
 const defaultLogoUrl = config.defaultLogoUrl || '';
-const backgroundUrl = config.productCardBackgroundUrl || '';
+// Mockup da camisa preta no cabide usado na imagem de card do catálogo.
+const CARD_MOCKUP_URL = 'assets/img/camisa-modelo-card.jpg';
 
 const adminViewerEl = document.getElementById('adminViewer');
 const adminPublishForm = document.getElementById('adminPublishForm');
@@ -76,19 +77,48 @@ async function loadImage(src) {
   });
 }
 
+// Fundo marrom claro com degradê leve atrás das capturas 3D do manequim.
+function paintCardBackground(ctx, width, height) {
+  const gradient = ctx.createLinearGradient(0, 0, 0, height);
+  gradient.addColorStop(0, '#dcbb93');
+  gradient.addColorStop(1, '#bd9166');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+}
+
 async function composeWithBackground(foregroundDataUrl) {
   const canvas = document.createElement('canvas');
   canvas.width = 1024;
   canvas.height = 1024;
   const ctx = canvas.getContext('2d');
 
-  const backgroundImage = await loadImage(backgroundUrl);
+  paintCardBackground(ctx, canvas.width, canvas.height);
   const foregroundImage = await loadImage(foregroundDataUrl);
-
-  ctx.drawImage(backgroundImage, 0, 0, canvas.width, canvas.height);
   ctx.drawImage(foregroundImage, 0, 0, canvas.width, canvas.height);
 
-  return canvas.toDataURL('image/png');
+  return canvas.toDataURL('image/jpeg', 0.9);
+}
+
+// Imagem do card do catálogo: estampa frontal aplicada no peito do mockup
+// da camisa no cabide (mesmo visual dos thumbs do carrinho).
+async function composeCardImage(printUrl) {
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024;
+  canvas.height = 1024;
+  const ctx = canvas.getContext('2d');
+
+  const base = await loadImage(CARD_MOCKUP_URL);
+  ctx.drawImage(base, 0, 0, canvas.width, canvas.height);
+
+  if (printUrl) {
+    const printImage = await loadImage(printUrl);
+    const printSize = canvas.width * 0.3;
+    const x = canvas.width * 0.478 - printSize / 2;
+    const y = canvas.height * 0.32;
+    ctx.drawImage(printImage, x, y, printSize, printSize);
+  }
+
+  return canvas.toDataURL('image/jpeg', 0.9);
 }
 
 async function applyCurrentPrints() {
@@ -143,11 +173,12 @@ async function publishModel(event) {
     }
 
     const price = Number((Math.random() * 30 + 20).toFixed(2));
+    const catalogImage = await composeCardImage(adminFrontUrl?.value.trim() || defaultLogoUrl);
     const payload = {
       title: adminTitleInput?.value.trim() || 'Modelo publico Ursoninhos',
       description: adminDescriptionInput?.value.trim() || 'Modelo publico criado no painel ADM.',
       price,
-      catalogImage: state.previews.front,
+      catalogImage,
       views: {
         front: state.previews.front,
         back: state.previews.back,

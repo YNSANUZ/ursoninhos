@@ -14,7 +14,7 @@
 <!-- O "?v=" força o navegador a baixar a versão nova do arquivo em vez
      de usar o cache. Sempre que CSS ou JS mudarem, aumente este número
      aqui e no <script> do final da página. -->
-<link rel="stylesheet" href="assets/css/style.css?v=12">
+<link rel="stylesheet" href="assets/css/style.css?v=13">
 <!-- three.js para o manequim 3D do hero (decal da estampa no tecido).
      O importmap precisa vir antes de qualquer script type="module". -->
 <script type="importmap">
@@ -141,7 +141,6 @@
                manequim 3D, recriado em CSS a partir da referência.
                Fica sob a foto 2D: aparece quando o 3D assume. -->
           <div class="hero__stage-backdrop" aria-hidden="true"></div>
-          <img src="assets/img/banner-estatico.png" alt="Manequim com camisa preta em pedestal iluminado, base para personalização" class="hero__stage-img">
           <!-- Portal: anéis dourados em espiral girando atrás da estampa,
                como no banner de referência. Puramente decorativo. -->
           <div class="shirt-print-portal" aria-hidden="true">
@@ -162,8 +161,8 @@
           <div class="stage-side-toggle" role="group" aria-label="Lado da camisa em edição">
             <button type="button" class="stage-side-btn is-active" id="sideFrontBtn">Frente</button>
             <button type="button" class="stage-side-btn" id="sideBackBtn">Verso</button>
-            <button type="button" class="stage-side-btn" id="sideSleeveRightBtn" title="Manga direita (de quem veste)">M. Dir.</button>
-            <button type="button" class="stage-side-btn" id="sideSleeveLeftBtn" title="Manga esquerda (de quem veste)">M. Esq.</button>
+            <button type="button" class="stage-side-btn" id="sideSleeveRightBtn" title="Manga direita (de quem veste)">Direita</button>
+            <button type="button" class="stage-side-btn" id="sideSleeveLeftBtn" title="Manga esquerda (de quem veste)">Esquerda</button>
           </div>
           <!-- Controles sobre a base dourada: à esquerda do play, - e +
                (tamanho da estampa); à direita, setas para descer e
@@ -827,11 +826,11 @@
     </div>
   </div>
 
-  <script src="assets/js/app-config.js?v=12"></script>
-  <script src="assets/js/shop-store.js?v=12"></script>
-  <script src="assets/js/public-api.js?v=12"></script>
-  <script src="assets/js/main.js?v=12"></script>
-  <script src="assets/js/public-catalog.js?v=12"></script>
-  <script type="module" src="assets/js/viewer3d.js?v=12"></script>
+  <script src="assets/js/app-config.js?v=13"></script>
+  <script src="assets/js/shop-store.js?v=13"></script>
+  <script src="assets/js/public-api.js?v=13"></script>
+  <script src="assets/js/main.js?v=13"></script>
+  <script src="assets/js/public-catalog.js?v=13"></script>
+  <script type="module" src="assets/js/viewer3d.js?v=13"></script>
 </body>
 </html>

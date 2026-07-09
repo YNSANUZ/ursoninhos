@@ -1093,6 +1093,22 @@ ul {
   border-radius: var(--radius-m);
   border: 1px solid rgba(217, 167, 92, 0.14);
   background: rgba(13, 9, 6, 0.45);
+  /* O card inteiro abre os detalhes do item (exceto quantidade/remover). */
+  cursor: pointer;
+}
+
+.checkout-item:hover {
+  border-color: rgba(217, 167, 92, 0.35);
+}
+
+.checkout-item .qty-stepper,
+.checkout-item [data-action='remove'] {
+  cursor: auto;
+}
+
+.checkout-item .qty-stepper button,
+.checkout-item [data-action='remove'] {
+  cursor: pointer;
 }
 
 .checkout-item__preview {
