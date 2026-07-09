@@ -1648,6 +1648,44 @@ ul {
   transform: translateY(-1px);
 }
 
+/* ===== Vitrine "Camisas de Frases" =====
+   Reusa o product-card do catálogo; aqui só o que é específico:
+   thumb clicável como link, placeholder enquanto o mockup é
+   desenhado no canvas e o subtítulo da seção. */
+.frases-subtitle {
+  margin: 6px 0 0;
+  color: var(--text-muted);
+  max-width: 640px;
+  line-height: 1.55;
+}
+
+.frase-card__thumb {
+  cursor: pointer;
+  text-decoration: none;
+  overflow: hidden;
+}
+
+.frase-card__loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  aspect-ratio: 1 / 1;
+  color: var(--text-dim);
+  font-size: 0.8rem;
+}
+
+.frase-card .product-card__add {
+  text-decoration: none;
+  flex: 1;
+  margin-top: 0;
+}
+
+.frase-card .product-card__quick-add:disabled {
+  opacity: 0.4;
+  cursor: wait;
+}
+
 /* ===== Collections banner ===== */
 .collections-banner {
   position: relative;

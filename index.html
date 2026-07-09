@@ -14,7 +14,7 @@
 <!-- O "?v=" força o navegador a baixar a versão nova do arquivo em vez
      de usar o cache. Sempre que CSS ou JS mudarem, aumente este número
      aqui e no <script> do final da página. -->
-<link rel="stylesheet" href="assets/css/style.css?v=15">
+<link rel="stylesheet" href="assets/css/style.css?v=16">
 <!-- three.js para o manequim 3D do hero (decal da estampa no tecido).
      O importmap precisa vir antes de qualquer script type="module". -->
 <script type="importmap">
@@ -75,6 +75,7 @@
           <li><a href="#inicio" class="is-active">Início</a></li>
           <li><a href="#destaques">Produtos</a></li>
           <li><a href="#hero">Camisas Personalizadas</a></li>
+          <li><a href="camisas-de-frases.html">Camisas de Frases</a></li>
           <li><a href="#colecoes">Coleções</a></li>
           <li><a href="#por-que">Empresas</a></li>
           <li><a href="#por-que">Sobre nós</a></li>
@@ -826,11 +827,15 @@
     </div>
   </div>
 
-  <script src="assets/js/app-config.js?v=15"></script>
-  <script src="assets/js/shop-store.js?v=15"></script>
-  <script src="assets/js/public-api.js?v=15"></script>
-  <script src="assets/js/main.js?v=15"></script>
-  <script src="assets/js/public-catalog.js?v=15"></script>
-  <script type="module" src="assets/js/viewer3d.js?v=15"></script>
+  <script src="assets/js/app-config.js?v=16"></script>
+  <script src="assets/js/shop-store.js?v=16"></script>
+  <script src="assets/js/public-api.js?v=16"></script>
+  <!-- Motor dos estilos de texto (compartilhado com camisas-de-frases.html)
+       e dados das frases: precisam vir ANTES do main.js. -->
+  <script src="assets/js/text-print-engine.js?v=16"></script>
+  <script src="assets/js/frases-data.js?v=16"></script>
+  <script src="assets/js/main.js?v=16"></script>
+  <script src="assets/js/public-catalog.js?v=16"></script>
+  <script type="module" src="assets/js/viewer3d.js?v=16"></script>
 </body>
 </html>
