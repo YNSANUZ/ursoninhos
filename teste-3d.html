@@ -1,0 +1,20 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teste do manequim 3D otimizado</title>
+<!-- Página de teste temporária: valida se o manequim-web.glb carrega
+     e gira no navegador antes de integrarmos ao site. -->
+<script type="module" src="https://unpkg.com/@google/model-viewer@3.5.0/dist/model-viewer.min.js"></script>
+<style>
+  body { margin: 0; background: #0d0906; font-family: Arial, sans-serif; color: #f3e6d3; }
+  model-viewer { width: 100vw; height: 90vh; background: #0d0906; }
+  p { text-align: center; margin: 10px; }
+</style>
+</head>
+<body>
+<model-viewer id="mv" src="assets/3d/manequim-web.glb" camera-controls auto-rotate shadow-intensity="1" exposure="1.1"></model-viewer>
+<p>Arraste para girar o manequim — teste do arquivo otimizado (1,44 MB)</p>
+</body>
+</html>
