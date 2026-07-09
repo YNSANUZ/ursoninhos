@@ -42,6 +42,8 @@ const printNextBtn = document.getElementById('printNext');
 const activePrintName = document.getElementById('activePrintName');
 const heroStage = document.querySelector('.hero__stage');
 const heroPicker = document.querySelector('.hero__picker');
+const modelVariantBlackBtn = document.getElementById('modelVariantBlackBtn');
+const modelVariantWhiteBtn = document.getElementById('modelVariantWhiteBtn');
 
 /* O card em destaque na lateral direita e a camisa do manequim ficam
    SEMPRE sincronizados: a estampa destacada é a mesma vestida no
@@ -66,6 +68,29 @@ const sidePrintSelections = {
   sleeveLeft: null,
   sleeveRight: null,
 };
+let activeModelVariant = 'black';
+
+function setActiveModelVariantUi(variant) {
+  activeModelVariant = variant;
+  modelVariantBlackBtn?.classList.toggle('is-active', variant === 'black');
+  modelVariantWhiteBtn?.classList.toggle('is-active', variant === 'white');
+}
+
+setActiveModelVariantUi('black');
+
+async function changeModelVariant(variant) {
+  if (!window.shirtViewer3D?.setModelVariant || activeModelVariant === variant) {
+    setActiveModelVariantUi(variant);
+    return;
+  }
+
+  try {
+    await window.shirtViewer3D.setModelVariant(variant);
+    setActiveModelVariantUi(variant);
+  } catch (error) {
+    console.error('Nao foi possivel trocar o manequim 3D:', error);
+  }
+}
 
 function normalizePrintIndex(index) {
   const total = shirtPrints.length;
@@ -379,6 +404,8 @@ function setAutoRotatePaused(paused) {
 }
 
 autoRotateToggle?.addEventListener('click', () => setAutoRotatePaused(!autoRotatePaused));
+modelVariantBlackBtn?.addEventListener('click', () => { changeModelVariant('black'); });
+modelVariantWhiteBtn?.addEventListener('click', () => { changeModelVariant('white'); });
 
 printPrevBtn?.addEventListener('click', () => {
   rotateCarousel(queuedPrintIndex - 1);

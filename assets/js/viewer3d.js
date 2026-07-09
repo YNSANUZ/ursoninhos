@@ -17,11 +17,15 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { DRACOLoader } from 'three/addons/loaders/DRACOLoader.js';
+import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { DecalGeometry } from 'three/addons/geometries/DecalGeometry.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
-const MODEL_URL = 'assets/3d/manequim-web.glb';
+const MODEL_URLS = {
+  black: 'assets/3d/manequim-web.glb',
+  white: 'assets/3d/manequim-branco-web.glb',
+};
 const DRACO_DECODER_URL = 'https://unpkg.com/three@0.160.0/examples/jsm/libs/draco/gltf/';
 
 // Alturas como fração da altura total do modelo (busto com base).
@@ -68,6 +72,10 @@ let mannequinMesh = null;
 let anchors = null; // pontos do peito (frente/costas) achados por raycast
 let decals = [];
 let rebuildQueued = false;
+let currentModel = null;
+let currentVariant = 'black';
+let gltfLoader = null;
+const modelCache = new Map();
 
 const textureLoader = new THREE.TextureLoader();
 textureLoader.setCrossOrigin('anonymous');
@@ -201,6 +209,15 @@ function rebuildDecals() {
   };
 
   Object.keys(SIDE_CONFIG).forEach(makeDecal);
+}
+
+function clearDecals() {
+  decals.forEach((decal) => {
+    decal.geometry.dispose();
+    decal.material.dispose();
+    scene.remove(decal);
+  });
+  decals = [];
 }
 
 /* Acha os pontos de ancoragem das estampas por raycast:
@@ -410,55 +427,19 @@ function init() {
 
   const dracoLoader = new DRACOLoader();
   dracoLoader.setDecoderPath(DRACO_DECODER_URL);
-  const gltfLoader = new GLTFLoader();
+  gltfLoader = new GLTFLoader();
   gltfLoader.setDRACOLoader(dracoLoader);
+  gltfLoader.setMeshoptDecoder(MeshoptDecoder);
 
-  gltfLoader.load(
-    MODEL_URL,
-    (gltf) => {
-      const model = gltf.scene;
-
-      model.traverse((child) => {
-        if (child.isMesh && !mannequinMesh) mannequinMesh = child;
-      });
-      if (!mannequinMesh) return;
-
-      // Centraliza o modelo no chão da cena (x/z no zero, base em y=0).
-      const box = new THREE.Box3().setFromObject(model);
-      const center = box.getCenter(new THREE.Vector3());
-      model.position.x -= center.x;
-      model.position.z -= center.z;
-      model.position.y -= box.min.y;
-      // A frente deste modelo aponta para +X (verificado por raycast e
-      // câmera); -90° em Y faz o peito encarar a câmera (+Z).
-      model.rotation.y = -Math.PI / 2;
-      model.updateMatrixWorld(true);
-
-      scene.add(model);
-
-      const sized = new THREE.Box3().setFromObject(model);
-      const size = sized.getSize(new THREE.Vector3());
-
-      // Enquadra o manequim INTEIRO (da base ao topo da cabeça) e
-      // define os limites do zoom: aproximar até o peito, afastar até
-      // ver a estátua com folga.
-      camera.position.set(0, size.y * 0.55, size.y * 2.3);
-      controls.target.set(0, size.y * 0.5, 0);
-      controls.minDistance = size.y * 0.9;
-      controls.maxDistance = size.y * 3.2;
-      controls.update();
-
-      computeAnchors(model);
-
+  setModelVariant('black')
+    .then(() => {
       stage.classList.add('is-3d');
       window.shirtViewer3D.ready = true;
       window.dispatchEvent(new Event('shirt3d-ready'));
-    },
-    undefined,
-    (error) => {
+    })
+    .catch((error) => {
       console.warn('Manequim 3D indisponível, mantendo o manequim 2D:', error);
-    }
-  );
+    });
 
   const resize = () => {
     if (!container.clientWidth || !container.clientHeight) return;
@@ -474,6 +455,70 @@ function init() {
   });
 }
 
+function cloneScene(sceneToClone) {
+  return sceneToClone.clone(true);
+}
+
+function loadModelScene(url) {
+  if (modelCache.has(url)) {
+    return Promise.resolve(cloneScene(modelCache.get(url)));
+  }
+
+  return new Promise((resolve, reject) => {
+    gltfLoader.load(
+      url,
+      (gltf) => {
+        modelCache.set(url, gltf.scene);
+        resolve(cloneScene(gltf.scene));
+      },
+      undefined,
+      reject
+    );
+  });
+}
+
+async function setModelVariant(variant) {
+  const url = MODEL_URLS[variant] || MODEL_URLS.black;
+  const model = await loadModelScene(url);
+
+  if (currentModel) {
+    clearDecals();
+    scene.remove(currentModel);
+    currentModel = null;
+    mannequinMesh = null;
+    anchors = null;
+  }
+
+  model.traverse((child) => {
+    if (child.isMesh && !mannequinMesh) mannequinMesh = child;
+  });
+  if (!mannequinMesh) throw new Error('Modelo 3D sem malha principal.');
+
+  const box = new THREE.Box3().setFromObject(model);
+  const center = box.getCenter(new THREE.Vector3());
+  model.position.x -= center.x;
+  model.position.z -= center.z;
+  model.position.y -= box.min.y;
+  model.rotation.y = -Math.PI / 2;
+  model.updateMatrixWorld(true);
+
+  scene.add(model);
+  currentModel = model;
+  currentVariant = variant;
+
+  const sized = new THREE.Box3().setFromObject(model);
+  const size = sized.getSize(new THREE.Vector3());
+  camera.position.set(0, size.y * 0.55, size.y * 2.3);
+  controls.target.set(0, size.y * 0.5, 0);
+  controls.minDistance = size.y * 0.9;
+  controls.maxDistance = size.y * 3.2;
+  controls.update();
+
+  computeAnchors(model);
+  queueRebuild();
+  window.shirtViewer3D.currentVariant = currentVariant;
+}
+
 // Gira a câmera ao redor do manequim (0 = frente, 180 = costas).
 function setCameraAngle(degrees) {
   if (!camera || !controls) return;
@@ -487,7 +532,7 @@ function setCameraAngle(degrees) {
   controls.update();
 }
 
-window.shirtViewer3D = { ready: false, setPrint, setTransform, clearPrint, setCameraAngle };
+window.shirtViewer3D = { ready: false, currentVariant, setPrint, setTransform, clearPrint, setCameraAngle, setModelVariant };
 
 try {
   init();
