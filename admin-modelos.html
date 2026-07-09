@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ursoninhos | Painel ADM</title>
+<meta name="description" content="Painel de teste para publicar modelos publicos da Ursoninhos.">
+<link rel="stylesheet" href="assets/css/style.css?v=12">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body class="checkout-page">
+  <div class="topbar">
+    <div class="container topbar__inner">
+      <ul class="topbar__perks">
+        <li>Painel ADM de teste</li>
+        <li>Sem login nesta fase</li>
+        <li>Publicacao com backend</li>
+      </ul>
+      <ul class="topbar__actions">
+        <li><a href="index.html">Voltar ao site</a></li>
+        <li><a href="carrinho.html">Ver carrinho</a></li>
+      </ul>
+    </div>
+  </div>
+
+  <header class="header">
+    <div class="container header__inner">
+      <a href="index.html" class="brand">
+        <span class="brand__icon">
+          <svg viewBox="0 0 48 48" width="40" height="40" fill="none">
+            <circle cx="24" cy="26" r="14" fill="#3a2416" stroke="#c98f4d" stroke-width="1.5"/>
+            <circle cx="12" cy="12" r="6" fill="#3a2416" stroke="#c98f4d" stroke-width="1.5"/>
+            <circle cx="36" cy="12" r="6" fill="#3a2416" stroke="#c98f4d" stroke-width="1.5"/>
+            <circle cx="19" cy="24" r="2" fill="#c98f4d"/>
+            <circle cx="29" cy="24" r="2" fill="#c98f4d"/>
+            <path d="M20 31c1.5 1.4 6.5 1.4 8 0" stroke="#c98f4d" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="brand__text">
+          <span class="brand__name">Ursoninhos</span>
+          <span class="brand__tagline">Painel ADM</span>
+        </span>
+      </a>
+      <a href="index.html#destaques" class="btn btn--outline">Ver modelos publicados</a>
+    </div>
+  </header>
+
+  <main class="checkout-shell">
+    <div class="container">
+      <div class="checkout-head">
+        <h1>Painel ADM de modelos públicos</h1>
+        <p>Monte um modelo base com estampa nos quatro lados, gere as imagens de apresentação e publique como produto fixo para o catálogo público.</p>
+      </div>
+
+      <div class="admin-layout">
+        <section class="checkout-panel">
+          <div class="checkout-stage__head">
+            <div>
+              <h2>Modelo 3D do produto</h2>
+              <p>O modelo já inicia com a logo padrão na frente, no verso e nas duas mangas.</p>
+            </div>
+          </div>
+
+          <div class="admin-viewer-wrap">
+            <div class="admin-viewer" id="adminViewer"></div>
+            <div class="admin-viewer-actions">
+              <button type="button" class="btn btn--outline" data-camera="0">Frente</button>
+              <button type="button" class="btn btn--outline" data-camera="180">Verso</button>
+              <button type="button" class="btn btn--outline" data-camera="-90">Manga dir.</button>
+              <button type="button" class="btn btn--outline" data-camera="90">Manga esq.</button>
+            </div>
+          </div>
+
+          <div class="admin-preview-strip" id="adminPreviewStrip">
+            <div class="admin-preview-card">
+              <strong>Frente</strong>
+              <img id="previewFront" alt="Preview frontal">
+            </div>
+            <div class="admin-preview-card">
+              <strong>Verso</strong>
+              <img id="previewBack" alt="Preview traseiro">
+            </div>
+            <div class="admin-preview-card">
+              <strong>Lado direito</strong>
+              <img id="previewRight" alt="Preview lado direito">
+            </div>
+            <div class="admin-preview-card">
+              <strong>Lado esquerdo</strong>
+              <img id="previewLeft" alt="Preview lado esquerdo">
+            </div>
+          </div>
+        </section>
+
+        <aside class="checkout-summary">
+          <h3>Publicar modelo</h3>
+          <p>Ao publicar, o produto entra na home com imagem, descricao, valor aleatorio e pagina propria.</p>
+
+          <form class="checkout-form" id="adminPublishForm">
+            <label class="form-field">
+              <span>Titulo do produto</span>
+              <input type="text" id="adminTitleInput" value="Camisa Ursoninhos Logo 4 lados" required>
+            </label>
+
+            <label class="form-field">
+              <span>Descricao curta</span>
+              <input type="text" id="adminDescriptionInput" value="Modelo publico com a logo Ursoninhos aplicada em todos os lados.">
+            </label>
+
+            <label class="form-field">
+              <span>Imagem da frente</span>
+              <input type="url" id="adminFrontUrl">
+            </label>
+
+            <label class="form-field">
+              <span>Imagem do verso</span>
+              <input type="url" id="adminBackUrl">
+            </label>
+
+            <label class="form-field">
+              <span>Imagem da manga direita</span>
+              <input type="url" id="adminRightUrl">
+            </label>
+
+            <label class="form-field">
+              <span>Imagem da manga esquerda</span>
+              <input type="url" id="adminLeftUrl">
+            </label>
+
+            <div class="checkout-nav">
+              <button type="button" class="btn btn--outline" id="applyDefaultLogoBtn">Reaplicar logo padrão</button>
+              <button type="button" class="btn btn--outline" id="refreshPreviewBtn">Atualizar previews</button>
+            </div>
+
+            <button type="submit" class="btn btn--gold">Adicionar modelo ao site público</button>
+            <p class="cart-drawer__note" id="adminPublishNote"></p>
+          </form>
+        </aside>
+      </div>
+    </div>
+  </main>
+
+  <script src="assets/js/app-config.js?v=12"></script>
+  <script src="assets/js/public-api.js?v=12"></script>
+  <script type="module" src="assets/js/admin-models.js?v=12"></script>
+</body>
+</html>

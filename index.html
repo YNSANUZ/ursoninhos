@@ -13,7 +13,7 @@
 <!-- O "?v=" força o navegador a baixar a versão nova do arquivo em vez
      de usar o cache. Sempre que CSS ou JS mudarem, aumente este número
      aqui e no <script> do final da página. -->
-<link rel="stylesheet" href="assets/css/style.css?v=11">
+<link rel="stylesheet" href="assets/css/style.css?v=12">
 <!-- three.js para o manequim 3D do hero (decal da estampa no tecido).
      O importmap precisa vir antes de qualquer script type="module". -->
 <script type="importmap">
@@ -38,6 +38,7 @@
       <ul class="topbar__actions">
         <li><a href="#">Rastrear pedido</a></li>
         <li><button type="button" id="authToggleBtn">Entrar / Cadastrar</button></li>
+        <li><a href="admin-modelos.html">Painel ADM</a></li>
         <li class="topbar__cart">
           <button type="button" id="cartToggleBtn" aria-label="Abrir carrinho">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8">
@@ -303,6 +304,18 @@
           <a href="#" class="link-arrow">Ver todos os produtos
             <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
           </a>
+        </div>
+
+        <div class="public-products-head">
+          <div>
+            <h3>Modelos públicos</h3>
+            <p>Produtos publicados pelo painel ADM já prontos para compra.</p>
+          </div>
+          <a href="admin-modelos.html" class="btn btn--outline">Criar novo modelo</a>
+        </div>
+
+        <div class="product-grid product-grid--dynamic" id="publicProductsGrid">
+          <p class="catalog-placeholder">Carregando modelos públicos...</p>
         </div>
 
         <div class="product-grid">
@@ -816,8 +829,11 @@
     </div>
   </div>
 
-  <script src="assets/js/shop-store.js?v=11"></script>
-  <script src="assets/js/main.js?v=11"></script>
-  <script type="module" src="assets/js/viewer3d.js?v=11"></script>
+  <script src="assets/js/app-config.js?v=12"></script>
+  <script src="assets/js/shop-store.js?v=12"></script>
+  <script src="assets/js/public-api.js?v=12"></script>
+  <script src="assets/js/main.js?v=12"></script>
+  <script src="assets/js/public-catalog.js?v=12"></script>
+  <script type="module" src="assets/js/viewer3d.js?v=12"></script>
 </body>
 </html>

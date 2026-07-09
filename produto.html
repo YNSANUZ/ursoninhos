@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ursoninhos | Produto</title>
+<meta name="description" content="Detalhes do produto da Ursoninhos com visualizacao 3D.">
+<link rel="stylesheet" href="assets/css/style.css?v=12">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body class="checkout-page">
+  <div class="topbar">
+    <div class="container topbar__inner">
+      <ul class="topbar__perks">
+        <li>Produto publico Ursoninhos</li>
+        <li>Visualizacao 3D</li>
+        <li>Compra sem login</li>
+      </ul>
+      <ul class="topbar__actions">
+        <li><a href="index.html#destaques">Voltar aos produtos</a></li>
+        <li class="topbar__cart">
+          <button type="button" id="productPageCartBtn" aria-label="Abrir carrinho">
+            <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8">
+              <circle cx="9" cy="21" r="1"></circle>
+              <circle cx="19" cy="21" r="1"></circle>
+              <path d="M1 1h3l2.6 12.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L22 6H6"></path>
+            </svg>
+            <span class="cart-count" id="productPageCartCount">0</span>
+          </button>
+        </li>
+      </ul>
+    </div>
+  </div>
+
+  <header class="header">
+    <div class="container header__inner">
+      <a href="index.html" class="brand">
+        <span class="brand__icon">
+          <svg viewBox="0 0 48 48" width="40" height="40" fill="none">
+            <circle cx="24" cy="26" r="14" fill="#3a2416" stroke="#c98f4d" stroke-width="1.5"/>
+            <circle cx="12" cy="12" r="6" fill="#3a2416" stroke="#c98f4d" stroke-width="1.5"/>
+            <circle cx="36" cy="12" r="6" fill="#3a2416" stroke="#c98f4d" stroke-width="1.5"/>
+            <circle cx="19" cy="24" r="2" fill="#c98f4d"/>
+            <circle cx="29" cy="24" r="2" fill="#c98f4d"/>
+            <path d="M20 31c1.5 1.4 6.5 1.4 8 0" stroke="#c98f4d" stroke-width="1.5" stroke-linecap="round"/>
+          </svg>
+        </span>
+        <span class="brand__text">
+          <span class="brand__name">Ursoninhos</span>
+          <span class="brand__tagline">Detalhes do produto</span>
+        </span>
+      </a>
+      <a href="carrinho.html" class="btn btn--outline">Ir para o carrinho</a>
+    </div>
+  </header>
+
+  <main class="checkout-shell">
+    <div class="container">
+      <div class="product-page-layout">
+        <section class="checkout-panel">
+          <div class="checkout-stage__head">
+            <div>
+              <h1 id="productTitle">Carregando produto...</h1>
+              <p id="productDescription">Preparando os detalhes do produto.</p>
+            </div>
+            <div class="checkout-pill" id="productPricePill">R$ 0,00</div>
+          </div>
+
+          <div class="product-viewer-shell">
+            <div class="product-viewer" id="productViewer"></div>
+            <div class="admin-viewer-actions">
+              <button type="button" class="btn btn--outline" data-product-camera="0">Frente</button>
+              <button type="button" class="btn btn--outline" data-product-camera="180">Verso</button>
+              <button type="button" class="btn btn--outline" data-product-camera="-90">Manga dir.</button>
+              <button type="button" class="btn btn--outline" data-product-camera="90">Manga esq.</button>
+            </div>
+          </div>
+
+          <div class="product-page-grid">
+            <div class="review-card">
+              <strong>O que voce pode fazer aqui</strong>
+              <span>Girar, aproximar e ver o modelo 3D já estampado antes de comprar.</span>
+            </div>
+            <div class="review-card">
+              <strong>Visual do produto</strong>
+              <span>O viewer gira devagar automaticamente e voce pode assumir o controle com o mouse ou toque.</span>
+            </div>
+          </div>
+        </section>
+
+        <aside class="checkout-summary">
+          <h3>Comprar este produto</h3>
+          <p>Escolha o tamanho, ajuste a quantidade e siga para o carrinho.</p>
+          <div class="checkout-form">
+            <label class="form-field">
+              <span>Tamanho</span>
+              <select id="productSizeSelect">
+                <option value="P">P</option>
+                <option value="M" selected>M</option>
+                <option value="G">G</option>
+                <option value="GG">GG</option>
+              </select>
+            </label>
+
+            <label class="form-field">
+              <span>Quantidade</span>
+              <div class="qty-stepper">
+                <button type="button" id="productQtyDecrease">−</button>
+                <input type="number" id="productQtyInput" min="1" value="1">
+                <button type="button" id="productQtyIncrease">+</button>
+              </div>
+            </label>
+
+            <div class="checkout-nav product-page-actions">
+              <button type="button" class="btn btn--gold" id="productAddToCartBtn">Adicionar ao carrinho</button>
+              <a href="index.html#destaques" class="btn btn--outline">Continuar comprando</a>
+              <a href="carrinho.html" class="btn btn--outline">Pagar agora</a>
+            </div>
+            <p class="cart-drawer__note" id="productActionNote"></p>
+          </div>
+        </aside>
+      </div>
+
+      <section class="section section--related">
+        <div class="section__head">
+          <h2>Veja mais produtos</h2>
+          <a href="index.html#destaques" class="link-arrow">Voltar ao catalogo
+            <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+          </a>
+        </div>
+        <div class="product-grid product-grid--dynamic" id="relatedProductsGrid">
+          <p class="catalog-placeholder">Carregando produtos semelhantes...</p>
+        </div>
+      </section>
+    </div>
+  </main>
+
+  <script src="assets/js/app-config.js?v=12"></script>
+  <script src="assets/js/shop-store.js?v=12"></script>
+  <script src="assets/js/public-api.js?v=12"></script>
+  <script type="module" src="assets/js/product-page.js?v=12"></script>
+</body>
+</html>
