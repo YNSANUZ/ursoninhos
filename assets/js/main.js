@@ -231,7 +231,6 @@ const printMoveUpBtn = document.getElementById('printMoveUp');
 const printMoveDownBtn = document.getElementById('printMoveDown');
 const printMoveLeftBtn = document.getElementById('printMoveLeft');
 const printMoveRightBtn = document.getElementById('printMoveRight');
-const shirtPortal = document.querySelector('.shirt-print-portal');
 
 function syncPrintTransform3D() {
   if (window.shirtViewer3D?.ready) {
@@ -257,10 +256,6 @@ function applyPrintOffset() {
     if (shirtOverlay) {
       shirtOverlay.style.top = top;
       shirtOverlay.style.left = left;
-    }
-    if (shirtPortal) {
-      shirtPortal.style.top = top;
-      shirtPortal.style.left = left;
     }
   }
   syncPrintTransform3D();
@@ -318,10 +313,6 @@ window.addEventListener('shirt3d-print-drag', (event) => {
     if (shirtOverlay) {
       shirtOverlay.style.top = top;
       shirtOverlay.style.left = left;
-    }
-    if (shirtPortal) {
-      shirtPortal.style.top = top;
-      shirtPortal.style.left = left;
     }
   }
 });
