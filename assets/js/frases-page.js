@@ -26,7 +26,19 @@
   const PRINT_TOP_Y = 0.30;
   const PRINT_SIZE = 0.34;
 
-  const produtos = frases.gerarProdutosDeFrases();
+  // Busca (?busca=termo): filtra por frase, título, estilo ou tags —
+  // sem acentos, para "desmotivacionais" achar "desmotivacionáis" etc.
+  const normalizar = (texto) => String(texto || '')
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '');
+
+  const termoBusca = new URLSearchParams(window.location.search).get('busca') || '';
+  const todos = frases.gerarProdutosDeFrases();
+  const produtos = termoBusca
+    ? todos.filter((p) => normalizar(`${p.frase} ${p.titulo} ${p.presetName} ${p.tags.join(' ')}`).includes(normalizar(termoBusca)))
+    : todos;
+
   const mockupsProntos = {}; // id -> dataURL (reusado no "Adicionar ao carrinho")
 
   function atualizarContadorCarrinho() {
@@ -103,16 +115,21 @@
   }
 
   function renderGrid() {
+    if (termoBusca && !produtos.length) {
+      grid.innerHTML = `<p class="catalog-placeholder">Nenhuma camisa encontrada para "${escapeHtml(termoBusca)}". <a href="camisas-de-frases.html">Ver todas as camisas de frases</a>.</p>`;
+      return;
+    }
+
     grid.innerHTML = produtos.map((produto) => `
       <article class="product-card frase-card" data-product-id="${produto.id}" data-tags="${escapeHtml(produto.tags.join(', '))}">
-        <a class="product-card__thumb product-card__thumb--catalog frase-card__thumb" href="index.html?frase=${encodeURIComponent(produto.id)}#hero" aria-label="Personalizar: ${escapeHtml(produto.frase)}">
+        <a class="product-card__thumb product-card__thumb--catalog frase-card__thumb" href="produto-frase.html?id=${encodeURIComponent(produto.id)}" aria-label="Ver produto: ${escapeHtml(produto.frase)}">
           <span class="frase-card__loading">Gerando mockup…</span>
         </a>
         <h3 title="${escapeHtml(produto.frase)}">${escapeHtml(produto.titulo)}</h3>
         <p class="product-card__price">${store.formatBRL(produto.preco)}</p>
         <p class="product-card__meta">Estilo: ${escapeHtml(produto.presetName)}</p>
         <div class="product-card__actions">
-          <a class="product-card__add" href="index.html?frase=${encodeURIComponent(produto.id)}#hero">Personalizar</a>
+          <a class="product-card__add" href="produto-frase.html?id=${encodeURIComponent(produto.id)}">Ver produto</a>
           <button type="button" class="product-card__quick-add" data-action="add" aria-label="Adicionar ao carrinho" disabled>+</button>
         </div>
       </article>
@@ -145,6 +162,16 @@
   }
 
   cartBtn?.addEventListener('click', () => { window.location.href = 'carrinho.html'; });
+
+  // Busca do cabeçalho: recarrega a vitrine filtrada (?busca=termo).
+  const searchForm = document.getElementById('frasesSearchForm');
+  const searchInput = document.getElementById('frasesSearchInput');
+  if (searchInput && termoBusca) searchInput.value = termoBusca;
+  searchForm?.addEventListener('submit', (event) => {
+    event.preventDefault();
+    const termo = searchInput?.value.trim() || '';
+    window.location.href = `camisas-de-frases.html${termo ? `?busca=${encodeURIComponent(termo)}` : ''}`;
+  });
 
   atualizarContadorCarrinho();
   renderGrid();
