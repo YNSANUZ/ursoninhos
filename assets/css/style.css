@@ -775,7 +775,7 @@ ul {
 .stage-variant-picker {
   position: absolute;
   left: 50%;
-  bottom: calc(3.5% - 24px);
+  bottom: calc(3.5% - 42px);
   transform: translateX(-50%);
   z-index: 3;
   display: flex;
