@@ -195,6 +195,7 @@ function rebuildDecals() {
     const geometry = new DecalGeometry(mannequinMesh, position, orientation, size);
     const mesh = new THREE.Mesh(geometry, material);
     mesh.renderOrder = 2;
+    mesh.userData.side = sideKey; // usado pelo arrasto para saber qual lado editar
     scene.add(mesh);
     decals.push(mesh);
   };
@@ -269,6 +270,109 @@ function computeAnchors(model) {
   window.shirtViewer3D._boxSize = size;
 }
 
+/* --- Arrastar a arte com o mouse/dedo ---
+   Segurar o clique EXATAMENTE sobre a estampa arrasta a arte pelo
+   tecido (o giro do manequim pausa durante o arrasto); clicar fora
+   da arte gira o manequim normalmente. O movimento é relativo ao
+   ponto onde o dedo pegou a arte, então ela não "pula" no clique.
+   Os limites espelham os das setas no main.js. */
+const DRAG_LIMIT_X_PCT = 10;
+const DRAG_LIMIT_Y_PCT = 14;
+
+function setupDecalDrag() {
+  const raycaster = new THREE.Raycaster();
+  const pointerNdc = new THREE.Vector2();
+  let dragSide = null;
+  let activePointerId = null;
+  let startPoint = null;
+  let startOffsetX = 0;
+  let startOffsetY = 0;
+
+  const setRayFromEvent = (event) => {
+    const rect = renderer.domElement.getBoundingClientRect();
+    pointerNdc.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+    pointerNdc.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+    raycaster.setFromCamera(pointerNdc, camera);
+  };
+
+  const decalSideAt = (event) => {
+    if (!camera || !decals.length) return null;
+    setRayFromEvent(event);
+    const hit = raycaster.intersectObjects(decals, false)[0];
+    return hit ? hit.object.userData.side : null;
+  };
+
+  const shirtPointAt = (event) => {
+    if (!camera || !mannequinMesh) return null;
+    setRayFromEvent(event);
+    const hit = raycaster.intersectObject(mannequinMesh, true)[0];
+    return hit ? hit.point.clone() : null;
+  };
+
+  const applyDragAt = (event) => {
+    const sideState = state[dragSide];
+    const config = SIDE_CONFIG[dragSide];
+    if (!sideState || !config || !startPoint) return;
+
+    const point = shirtPointAt(event);
+    if (!point) return;
+
+    // Deslocamento relativo ao ponto onde o arrasto começou, convertido
+    // de metros no tecido para os "%" usados pelos botões de seta.
+    const [dx, , dz] = config.offsetXDir;
+    const deltaX = (dx * (point.x - startPoint.x) + dz * (point.z - startPoint.z)) / OFFSET_X_M_PER_PCT;
+    const deltaY = (startPoint.y - point.y) / OFFSET_Y_M_PER_PCT;
+
+    sideState.offsetX = clamp(startOffsetX + deltaX, -DRAG_LIMIT_X_PCT, DRAG_LIMIT_X_PCT);
+    sideState.offsetY = clamp(startOffsetY + deltaY, -DRAG_LIMIT_Y_PCT, DRAG_LIMIT_Y_PCT);
+    queueRebuild();
+
+    // Mantém o main.js em dia: setas, overlay 2D e preview do carrinho
+    // continuam coerentes com a posição arrastada.
+    window.dispatchEvent(new CustomEvent('shirt3d-print-drag', {
+      detail: { side: dragSide, offsetX: sideState.offsetX, offsetY: sideState.offsetY },
+    }));
+  };
+
+  renderer.domElement.addEventListener('pointerdown', (event) => {
+    const side = decalSideAt(event);
+    if (!side) return;
+
+    dragSide = side;
+    activePointerId = event.pointerId;
+    startPoint = shirtPointAt(event);
+    startOffsetX = state[side].offsetX;
+    startOffsetY = state[side].offsetY;
+    if (controls) controls.enabled = false; // pausa o giro durante o arrasto
+    renderer.domElement.style.cursor = 'grabbing';
+    try {
+      renderer.domElement.setPointerCapture(event.pointerId);
+    } catch (error) {
+      /* pointerId sintético em testes não suporta captura */
+    }
+  });
+
+  renderer.domElement.addEventListener('pointermove', (event) => {
+    if (dragSide) {
+      if (event.pointerId === activePointerId) applyDragAt(event);
+      return;
+    }
+    // Fora do arrasto, o cursor indica quando o ponteiro está sobre a arte.
+    renderer.domElement.style.cursor = decalSideAt(event) ? 'move' : '';
+  });
+
+  const endDrag = (event) => {
+    if (!dragSide || event.pointerId !== activePointerId) return;
+    dragSide = null;
+    activePointerId = null;
+    startPoint = null;
+    if (controls) controls.enabled = true;
+    renderer.domElement.style.cursor = '';
+  };
+  renderer.domElement.addEventListener('pointerup', endDrag);
+  renderer.domElement.addEventListener('pointercancel', endDrag);
+}
+
 function init() {
   if (!container || !stage) return;
 
@@ -278,6 +382,10 @@ function init() {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.15;
   container.appendChild(renderer.domElement);
+
+  // Registrado ANTES do OrbitControls: no clique sobre a arte, este
+  // handler roda primeiro e desliga o giro antes de o controle reagir.
+  setupDecalDrag();
 
   scene = new THREE.Scene();
 

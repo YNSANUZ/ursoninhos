@@ -302,6 +302,30 @@ printMoveRightBtn?.addEventListener('click', () => {
   applyPrintOffset();
 });
 
+// Arrasto da arte direto no 3D (viewer3d.js): atualiza o estado local
+// para as setas, o overlay 2D e o preview do carrinho continuarem
+// coerentes. Não chama setTransform de volta — o viewer já se aplicou.
+window.addEventListener('shirt3d-print-drag', (event) => {
+  const { side, offsetX, offsetY } = event.detail || {};
+  const t = sideTransforms[side];
+  if (!t) return;
+  t.offsetX = offsetX;
+  t.offsetY = offsetY;
+
+  if (side === 'front') {
+    const top = `${(PRINT_BASE_TOP_PCT + offsetY).toFixed(1)}%`;
+    const left = `${(PRINT_BASE_LEFT_PCT + offsetX).toFixed(1)}%`;
+    if (shirtOverlay) {
+      shirtOverlay.style.top = top;
+      shirtOverlay.style.left = left;
+    }
+    if (shirtPortal) {
+      shirtPortal.style.top = top;
+      shirtPortal.style.left = left;
+    }
+  }
+});
+
 /* --- Chave FRENTE/VERSO/MANGAS ---
    Alterna qual lado da camisa os controles editam: a câmera gira para
    o lado escolhido e o carrossel/upload/estampa de texto passam a
