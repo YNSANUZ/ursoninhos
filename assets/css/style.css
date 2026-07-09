@@ -223,6 +223,21 @@ ul {
   flex-shrink: 0;
 }
 
+.brand__icon {
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.brand__icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
 .brand__text {
   display: flex;
   flex-direction: column;
@@ -525,6 +540,38 @@ ul {
   display: flex;
   align-items: center;
   gap: 18px;
+}
+
+.stage-action-buttons {
+  position: absolute;
+  left: 50%;
+  bottom: calc(3.5% - 34px);
+  transform: translateX(-50%);
+  z-index: 3;
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.stage-action-btn {
+  min-width: 104px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(217, 167, 92, 0.28);
+  background: rgba(20, 14, 9, 0.72);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+  transition: border-color 0.2s ease, background 0.2s ease, transform 0.2s ease;
+}
+
+.stage-action-btn:hover {
+  border-color: var(--gold);
+  background: rgba(201, 143, 77, 0.12);
+  transform: translateY(-1px);
 }
 
 /* Símbolos de - e + puros: só o traço dourado, sem fundo, sem borda
