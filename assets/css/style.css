@@ -1766,6 +1766,102 @@ ul {
   justify-content: center;
 }
 
+/* O atributo hidden precisa vencer o display:flex acima. */
+.pf-media[hidden] {
+  display: none;
+}
+
+/* Manequim 3D do produto: fundo caramelo (o mesmo degradê do botão e
+   da foto do cabide) em vez do estúdio escuro da home — aqui é só o
+   cliente girar e conferir frente e verso, sem botões de edição. */
+.pf-media--viewer {
+  background: linear-gradient(180deg, #e0ac67, var(--caramel));
+}
+
+.pf-viewer3d {
+  position: absolute;
+  inset: 0;
+}
+
+.pf-viewer3d canvas {
+  display: block;
+  width: 100% !important;
+  height: 100% !important;
+  cursor: grab;
+  outline: none;
+}
+
+.pf-viewer3d canvas:active {
+  cursor: grabbing;
+}
+
+.pf-media--viewer .pf-media__loading {
+  position: relative;
+  z-index: 1;
+  color: #4a2f14;
+}
+
+.pf-viewer-hint {
+  position: absolute;
+  bottom: 12px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 6px 14px;
+  border-radius: 999px;
+  background: rgba(20, 12, 6, 0.55);
+  color: #f3ddc0;
+  font-size: 0.72rem;
+  letter-spacing: 0.2px;
+  pointer-events: none;
+  white-space: nowrap;
+}
+
+.pf-thumbs {
+  display: flex;
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.pf-thumb {
+  width: 86px;
+  height: 86px;
+  padding: 0;
+  border-radius: var(--radius-s);
+  border: 2px solid rgba(217, 167, 92, 0.25);
+  background: rgba(13, 9, 6, 0.5);
+  cursor: pointer;
+  overflow: hidden;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--text-muted);
+}
+
+.pf-thumb.is-active {
+  border-color: var(--gold);
+  box-shadow: 0 0 14px rgba(217, 167, 92, 0.3);
+}
+
+.pf-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.pf-thumb__badge3d {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  color: var(--gold);
+}
+
+.pf-thumb__badge3d small {
+  font-size: 0.62rem;
+  color: var(--text-muted);
+  letter-spacing: 0.3px;
+}
+
 .pf-media img {
   width: 100%;
   height: 100%;

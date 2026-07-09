@@ -11,7 +11,16 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&family=Anton&family=Bebas+Neue&family=Caveat:wght@600&family=Dancing+Script:wght@600&family=Great+Vibes&family=Lobster&family=Oswald:wght@500&family=Pacifico&family=Permanent+Marker&family=Playfair+Display:ital,wght@1,600&family=Special+Elite&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="assets/css/style.css?v=17">
+<link rel="stylesheet" href="assets/css/style.css?v=18">
+<!-- three.js para o manequim 3D girável do produto. -->
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
 </head>
 <body class="checkout-page">
   <div class="topbar">
@@ -69,9 +78,30 @@
       </nav>
 
       <div class="pf-layout">
-        <div class="pf-media">
-          <span class="pf-media__loading" id="pfImageLoading">Gerando o mockup da camisa…</span>
-          <img id="pfImage" alt="" hidden>
+        <div class="pf-gallery">
+          <!-- Visual principal: manequim 3D girável (sem botões — o
+               cliente arrasta para ver frente e verso). A miniatura
+               abaixo troca para a foto da camisa no cabide. -->
+          <div class="pf-media pf-media--viewer" id="pfMediaViewer">
+            <div class="pf-viewer3d" id="pfViewer3d" aria-label="Manequim 3D — arraste para girar e ver frente e verso"></div>
+            <span class="pf-media__loading" id="pfViewerLoading">Carregando manequim 3D…</span>
+            <span class="pf-viewer-hint" id="pfViewerHint" hidden>Arraste para girar • frente e verso</span>
+          </div>
+          <div class="pf-media" id="pfMediaPhoto" hidden>
+            <span class="pf-media__loading" id="pfImageLoading">Gerando o mockup da camisa…</span>
+            <img id="pfImage" alt="" hidden>
+          </div>
+          <div class="pf-thumbs" role="group" aria-label="Imagens do produto">
+            <button type="button" class="pf-thumb is-active" id="pfThumb3d" aria-label="Ver manequim 3D">
+              <span class="pf-thumb__badge3d" id="pfThumb3dInner">
+                <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5z"/><path d="M3 7l9 5 9-5M12 12v10"/></svg>
+                <small>Girar 3D</small>
+              </span>
+            </button>
+            <button type="button" class="pf-thumb" id="pfThumbPhoto" aria-label="Ver foto da camisa no cabide">
+              <span class="pf-thumb__loading" id="pfThumbPhotoLoading">…</span>
+            </button>
+          </div>
         </div>
 
         <section class="pf-info">
@@ -194,10 +224,11 @@
     </div>
   </main>
 
-  <script src="assets/js/app-config.js?v=17"></script>
-  <script src="assets/js/shop-store.js?v=17"></script>
-  <script src="assets/js/text-print-engine.js?v=17"></script>
-  <script src="assets/js/frases-data.js?v=17"></script>
-  <script src="assets/js/frase-produto.js?v=17"></script>
+  <script src="assets/js/app-config.js?v=18"></script>
+  <script src="assets/js/shop-store.js?v=18"></script>
+  <script src="assets/js/text-print-engine.js?v=18"></script>
+  <script src="assets/js/frases-data.js?v=18"></script>
+  <script src="assets/js/frase-produto.js?v=18"></script>
+  <script type="module" src="assets/js/frase-produto-3d.js?v=18"></script>
 </body>
 </html>

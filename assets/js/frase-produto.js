@@ -250,8 +250,39 @@
     });
   }
 
+  // Alterna o visual principal entre o manequim 3D e a foto do cabide.
+  function configurarGaleria() {
+    const thumb3d = document.getElementById('pfThumb3d');
+    const thumbPhoto = document.getElementById('pfThumbPhoto');
+    const mediaViewer = document.getElementById('pfMediaViewer');
+    const mediaPhoto = document.getElementById('pfMediaPhoto');
+
+    const mostrar = (qual) => {
+      if (mediaViewer) mediaViewer.hidden = qual !== '3d';
+      if (mediaPhoto) mediaPhoto.hidden = qual !== 'foto';
+      thumb3d?.classList.toggle('is-active', qual === '3d');
+      thumbPhoto?.classList.toggle('is-active', qual === 'foto');
+    };
+
+    thumb3d?.addEventListener('click', () => mostrar('3d'));
+    thumbPhoto?.addEventListener('click', () => mostrar('foto'));
+  }
+
   async function renderImagemPrincipal() {
     try {
+      // Estampa da frase (PNG transparente) — também alimenta o manequim
+      // 3D, que projeta este mesmo desenho no peito da camisa.
+      await textFontsReady;
+      const preset = TEXT_PRINT_PRESETS.find((p) => p.id === produto.presetId) || TEXT_PRINT_PRESETS[0];
+      const textCanvas = document.createElement('canvas');
+      textCanvas.width = 1024;
+      textCanvas.height = 1024;
+      drawTextPrint(textCanvas, preset, produto.linhas);
+      const estampaDataUrl = textCanvas.toDataURL('image/png');
+
+      window.UrsoninhosFraseProdutoAtual = { produto, estampaDataUrl };
+      window.dispatchEvent(new Event('frase-produto-pronto'));
+
       mockupDataUrl = await gerarMockup(produto);
       const img = document.getElementById('pfImage');
       const loading = document.getElementById('pfImageLoading');
@@ -261,6 +292,12 @@
         img.hidden = false;
       }
       if (loading) loading.hidden = true;
+
+      // Miniatura da foto do cabide, logo abaixo do manequim 3D.
+      const thumbPhoto = document.getElementById('pfThumbPhoto');
+      if (thumbPhoto) {
+        thumbPhoto.innerHTML = `<img src="${mockupDataUrl}" alt="Miniatura: camisa no cabide com a frase">`;
+      }
     } catch (error) {
       console.error('Não foi possível gerar o mockup do produto:', error);
     }
@@ -298,6 +335,7 @@
   configurarAbas();
   configurarOpcoes();
   configurarAcoes();
+  configurarGaleria();
   atualizarContadorCarrinho();
   renderImagemPrincipal();
   renderRelacionados();
