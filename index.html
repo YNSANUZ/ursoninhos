@@ -157,15 +157,6 @@
                a ser projetada no tecido — arraste para girar. Se WebGL
                falhar, a foto 2D continua funcionando como sempre. -->
           <div class="hero__stage-viewer3d" id="shirtViewer3d" aria-label="Manequim 3D — arraste para girar; segure na arte para reposicioná-la"></div>
-          <!-- Chave FRENTE/VERSO/MANGAS: escolhe qual lado da camisa os
-               controles editam (arte, tamanho e posição independentes).
-               A câmera gira sozinha para o lado escolhido. Só no 3D. -->
-          <div class="stage-side-toggle" role="group" aria-label="Lado da camisa em edição">
-            <button type="button" class="stage-side-btn is-active" id="sideFrontBtn">Frente</button>
-            <button type="button" class="stage-side-btn" id="sideBackBtn">Verso</button>
-            <button type="button" class="stage-side-btn" id="sideSleeveRightBtn" title="Manga direita (de quem veste)">Direita</button>
-            <button type="button" class="stage-side-btn" id="sideSleeveLeftBtn" title="Manga esquerda (de quem veste)">Esquerda</button>
-          </div>
           <!-- Controles sobre a base dourada: à esquerda do play, - e +
                (tamanho da estampa); à direita, setas para descer e
                subir a estampa na camisa. Todos só o símbolo dourado. -->
@@ -206,10 +197,6 @@
                 <path d="M12 5v14M5 12l7 7 7-7"/>
               </svg>
             </button>
-          </div>
-          <div class="stage-action-buttons">
-            <button type="button" class="stage-action-btn" id="personalizarCamisaBtn">Inserir imagem</button>
-            <button type="button" class="stage-action-btn" id="textPrintBtn">Inserir texto</button>
           </div>
         </div>
 
@@ -259,6 +246,16 @@
 
           <button class="btn btn--gold btn--cart" id="addToCartBtn">Adicionar ao carrinho</button>
           <a href="carrinho.html" class="btn btn--outline btn--cart-link">Ver carrinho e checkout</a>
+          <div class="stage-side-toggle" role="group" aria-label="Lado da camisa em edição">
+            <button type="button" class="stage-side-btn is-active" id="sideFrontBtn">Frente</button>
+            <button type="button" class="stage-side-btn" id="sideBackBtn">Verso</button>
+            <button type="button" class="stage-side-btn" id="sideSleeveRightBtn" title="Manga direita (de quem veste)">Direita</button>
+            <button type="button" class="stage-side-btn" id="sideSleeveLeftBtn" title="Manga esquerda (de quem veste)">Esquerda</button>
+          </div>
+          <div class="stage-action-buttons">
+            <button type="button" class="stage-action-btn" id="personalizarCamisaBtn">Inserir imagem</button>
+            <button type="button" class="stage-action-btn" id="textPrintBtn">Inserir texto</button>
+          </div>
           <p class="cart-feedback" id="cartFeedback" aria-live="polite"></p>
         </div>
 
@@ -480,7 +477,7 @@
           <a href="https://www.instagram.com/ursoninhos" target="_blank" rel="noopener" aria-label="Instagram @ursoninhos">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>
           </a>
-          <a href="https://wa.me/5511999999999" target="_blank" rel="noopener" aria-label="WhatsApp Ursoninhos">
+          <a href="https://wa.me/5561994062166" target="_blank" rel="noopener" aria-label="WhatsApp Ursoninhos">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.87 9.87 0 0 0 4.74 1.21h.01c5.46 0 9.9-4.45 9.9-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2z"/></svg>
           </a>
           <a href="https://www.tiktok.com/@ursoninhos" target="_blank" rel="noopener" aria-label="TikTok @ursoninhos">
@@ -525,8 +522,8 @@
       <div class="footer__col">
         <h4>Atendimento</h4>
         <ul>
-          <li>WhatsApp: (11) 99999-9999</li>
-          <li>contato@ursoninhos.com.br</li>
+          <li>WhatsApp: (61) 99406-2166</li>
+          <li>ursoninhos@gmail.com</li>
           <li>Segunda à sexta: 08h às 18h</li>
         </ul>
         <h4 class="footer__payments-title">Formas de pagamento</h4>

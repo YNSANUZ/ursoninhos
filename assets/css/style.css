@@ -708,20 +708,19 @@ ul {
    Pílula acima da barra de controles; o lado ativo ganha o mesmo
    acabamento dourado do play. Só aparece com o manequim 3D ativo. */
 .stage-side-toggle {
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  bottom: calc(3.5% + 54px);
-  z-index: 3;
+  position: static;
   display: none;
   gap: 4px;
+  align-self: stretch;
+  justify-content: center;
+  margin-top: 10px;
   padding: 4px;
   border-radius: 999px;
   border: 1px solid var(--gold-soft);
   background: rgba(20, 14, 9, 0.72);
 }
 
-.hero__stage.is-3d .stage-side-toggle {
+.hero__stage.is-3d + .hero__picker .stage-side-toggle {
   display: flex;
 }
 
@@ -762,14 +761,12 @@ ul {
 }
 
 .stage-action-buttons {
-  position: absolute;
-  left: 50%;
-  bottom: calc(3.5% - 34px);
-  transform: translateX(-50%);
-  z-index: 3;
   display: flex;
   gap: 8px;
   align-items: center;
+  justify-content: center;
+  margin-top: 10px;
+  width: 100%;
 }
 
 .stage-action-btn {
