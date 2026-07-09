@@ -3468,7 +3468,7 @@ ul {
     display: none;
   }
 
-  /* Mobile hero order: manequim -> texto -> seletor/configuração.
+  /* Mobile hero order: manequim -> seletor/configuração -> texto.
      No celular o banner 3D vira a primeira coisa visível da seção. */
   .hero {
     min-height: 0;
@@ -3482,7 +3482,7 @@ ul {
   }
 
   .hero__content {
-    order: 2;
+    order: 3;
     max-width: 520px;
     margin: 0 auto;
   }
@@ -3492,7 +3492,7 @@ ul {
   }
 
   .hero__picker {
-    order: 3;
+    order: 2;
   }
 
   .hero__ctas,
