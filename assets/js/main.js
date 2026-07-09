@@ -60,6 +60,12 @@ const sideTransforms = {
   sleeveLeft: { scale: 1, offsetX: 0, offsetY: 0 },
   sleeveRight: { scale: 1, offsetX: 0, offsetY: 0 },
 };
+const sidePrintSelections = {
+  front: 0,
+  back: null,
+  sleeveLeft: null,
+  sleeveRight: null,
+};
 
 function normalizePrintIndex(index) {
   const total = shirtPrints.length;
@@ -106,6 +112,8 @@ function updateTrackPosition() {
 function applyPrintToShirt(index, animate = true) {
   const print = shirtPrints[index];
   if (!print) return;
+
+  sidePrintSelections[activeSide] = index;
 
   // Editando a FRENTE, atualiza também o manequim 2D (fallback) e o
   // índice usado pelo carrinho; no VERSO só a projeção das costas muda.
@@ -1228,24 +1236,8 @@ renderTextStyleCards();
    não existem — isso é assunto das próximas fases.
    --------------------------------------------------------- */
 
-const CART_STORAGE_KEY = 'ursoninhos_cart';
-
-function loadCart() {
-  try {
-    const raw = localStorage.getItem(CART_STORAGE_KEY);
-    const parsed = raw ? JSON.parse(raw) : [];
-    return Array.isArray(parsed) ? parsed : [];
-  } catch (error) {
-    console.error('Não foi possível ler o carrinho salvo:', error);
-    return [];
-  }
-}
-
-function saveCart() {
-  localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(cart));
-}
-
-let cart = loadCart();
+const shopStore = window.UrsoninhosStore;
+let cart = shopStore?.loadCart() || [];
 
 const cartToggleBtn = document.getElementById('cartToggleBtn');
 const cartCloseBtn = document.getElementById('cartCloseBtn');
@@ -1256,44 +1248,109 @@ const cartCountEl = document.getElementById('cartCount');
 const cartTotalEl = document.getElementById('cartTotal');
 const checkoutBtn = document.getElementById('checkoutBtn');
 const checkoutNote = document.getElementById('checkoutNote');
+const heroSizeSelect = document.getElementById('heroSizeSelect');
+const heroQtyInput = document.getElementById('heroQtyInput');
+const heroQtyDecrease = document.getElementById('heroQtyDecrease');
+const heroQtyIncrease = document.getElementById('heroQtyIncrease');
 
 function formatBRL(value) {
-  return value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+  return shopStore ? shopStore.formatBRL(value) : value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 }
 
-function addToCart({ id, name, variant, price, thumbType, thumb }) {
-  const existing = cart.find((item) => item.id === id);
+function refreshCartState() {
+  cart = shopStore?.loadCart() || [];
+}
 
-  if (existing) {
-    existing.qty += 1;
-  } else {
-    cart.push({ id, name, variant: variant || null, price, thumbType, thumb, qty: 1 });
+function getSelectedCoverage() {
+  const hasBack = sidePrintSelections.back !== null;
+  const hasSleeves = sidePrintSelections.sleeveLeft !== null || sidePrintSelections.sleeveRight !== null;
+
+  if (!hasBack && !hasSleeves) {
+    return { label: 'Frente', price: 20 };
   }
 
-  saveCart();
+  if (hasBack && hasSleeves) {
+    return { label: 'Frente, verso e laterais', price: 50 };
+  }
+
+  if (hasBack) {
+    return { label: 'Frente e verso', price: 40 };
+  }
+
+  return { label: 'Frente e laterais', price: 40 };
+}
+
+function normalizeHeroQty() {
+  if (!heroQtyInput) return 1;
+  const qty = Math.max(1, parseInt(heroQtyInput.value || '1', 10) || 1);
+  heroQtyInput.value = String(qty);
+  return qty;
+}
+
+function loadImage(src) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    image.crossOrigin = 'anonymous';
+    image.onload = () => resolve(image);
+    image.onerror = reject;
+    image.src = src;
+  });
+}
+
+async function generateFrontPreview() {
+  const frontPrint = shirtPrints[sidePrintSelections.front ?? shirtPrintIndex];
+  const canvas = document.createElement('canvas');
+  canvas.width = 900;
+  canvas.height = 900;
+  const ctx = canvas.getContext('2d');
+
+  try {
+    const base = await loadImage('assets/3d/camisa-base.webp');
+    ctx.drawImage(base, 0, 0, canvas.width, canvas.height);
+
+    if (frontPrint?.file) {
+      const printImage = await loadImage(frontPrint.file);
+      const scale = sideTransforms.front.scale || 1;
+      const offsetX = sideTransforms.front.offsetX || 0;
+      const offsetY = sideTransforms.front.offsetY || 0;
+      const printWidth = 250 * scale;
+      const printHeight = 250 * scale;
+      const x = canvas.width / 2 - printWidth / 2 + offsetX * 10;
+      const y = canvas.height * 0.28 + offsetY * 10;
+      ctx.drawImage(printImage, x, y, printWidth, printHeight);
+    }
+
+    return canvas.toDataURL('image/png');
+  } catch (error) {
+    console.error('Nao foi possivel gerar o preview frontal da camisa:', error);
+    return 'assets/img/banner-estatico.png';
+  }
+}
+
+function addToCart(item) {
+  if (!shopStore) return;
+  shopStore.addCartItem(item);
+  refreshCartState();
   renderCart();
 }
 
-function changeQty(id, delta) {
-  const item = cart.find((entry) => entry.id === id);
+function changeQty(lineId, delta) {
+  const item = cart.find((entry) => entry.lineId === lineId);
   if (!item) return;
 
-  item.qty += delta;
-  if (item.qty <= 0) {
-    cart = cart.filter((entry) => entry.id !== id);
-  }
-
-  saveCart();
+  shopStore?.updateCartItemQuantity(lineId, item.quantity + delta);
+  refreshCartState();
   renderCart();
 }
 
-function removeItem(id) {
-  cart = cart.filter((entry) => entry.id !== id);
-  saveCart();
+function removeItem(lineId) {
+  shopStore?.removeCartItem(lineId);
+  refreshCartState();
   renderCart();
 }
 
 function renderCart() {
+  refreshCartState();
   updateCartBadge();
 
   if (!cartItemsEl || !cartTotalEl) return;
@@ -1306,24 +1363,25 @@ function renderCart() {
 
   cartItemsEl.innerHTML = cart
     .map((item) => {
-      const thumbContent = item.thumbType === 'image'
-        ? `<img src="${item.thumb}" alt="${item.name}">`
-        : (item.thumb || '🛍️');
+      const thumbContent = item.previewImage
+        ? `<img src="${item.previewImage}" alt="${item.title}">`
+        : '🛍️';
 
       return `
-        <div class="cart-item" data-id="${item.id}">
+        <div class="cart-item" data-id="${item.lineId}">
           <div class="cart-item__thumb">${thumbContent}</div>
           <div class="cart-item__info">
-            <h4>${item.name}</h4>
-            ${item.variant ? `<p class="cart-item__variant">Estampa: ${item.variant}</p>` : ''}
+            <h4>${item.title}</h4>
+            ${item.variantLabel ? `<p class="cart-item__variant">${item.variantLabel}</p>` : ''}
+            ${item.size ? `<p class="cart-item__variant">Tamanho: ${item.size}</p>` : ''}
             <div class="cart-item__qty">
               <button type="button" data-action="decrease" aria-label="Diminuir quantidade">−</button>
-              <span>${item.qty}</span>
+              <span>${item.quantity}</span>
               <button type="button" data-action="increase" aria-label="Aumentar quantidade">+</button>
             </div>
           </div>
           <div class="cart-item__right">
-            <span class="cart-item__price">${formatBRL(item.price * item.qty)}</span>
+            <span class="cart-item__price">${formatBRL(item.price * item.quantity)}</span>
             <button type="button" class="cart-item__remove" data-action="remove" aria-label="Remover item">
               <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7h16M9 7V4h6v3M6 7l1 13h10l1-13"/></svg>
             </button>
@@ -1340,14 +1398,14 @@ function renderCart() {
     el.querySelector('[data-action="remove"]')?.addEventListener('click', () => removeItem(id));
   });
 
-  const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+  const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
   cartTotalEl.textContent = formatBRL(total);
 }
 
 function updateCartBadge() {
   if (!cartCountEl) return;
 
-  const totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
+  const totalQty = cart.reduce((sum, item) => sum + item.quantity, 0);
   cartCountEl.textContent = String(totalQty);
 
   cartCountEl.classList.remove('is-bump');
@@ -1378,7 +1436,9 @@ function toggleCart() {
   }
 }
 
-cartToggleBtn?.addEventListener('click', toggleCart);
+cartToggleBtn?.addEventListener('click', () => {
+  window.location.href = 'carrinho.html';
+});
 cartCloseBtn?.addEventListener('click', closeCart);
 cartBackdrop?.addEventListener('click', closeCart);
 
@@ -1425,12 +1485,14 @@ document.querySelectorAll('.product-card[data-price]').forEach((card) => {
   const addBtn = card.querySelector('.product-card__add');
   addBtn?.addEventListener('click', () => {
     addToCart({
-      id: `produto::${card.dataset.name}`,
-      name: card.dataset.name,
-      variant: null,
+      productId: `produto::${card.dataset.name}`,
+      title: card.dataset.name,
+      variantLabel: 'Produto pronto',
       price: parseFloat(card.dataset.price),
-      thumbType: 'emoji',
-      thumb: card.dataset.emoji,
+      size: '',
+      quantity: 1,
+      previewImage: '',
+      metadata: { emoji: card.dataset.emoji || '' },
     });
   });
 });
@@ -1445,23 +1507,46 @@ const addToCartBtn = document.getElementById('addToCartBtn');
 const cartFeedback = document.getElementById('cartFeedback');
 let feedbackTimeoutId;
 
-addToCartBtn?.addEventListener('click', () => {
+heroQtyDecrease?.addEventListener('click', () => {
+  if (!heroQtyInput) return;
+  heroQtyInput.value = String(Math.max(1, normalizeHeroQty() - 1));
+});
+
+heroQtyIncrease?.addEventListener('click', () => {
+  if (!heroQtyInput) return;
+  heroQtyInput.value = String(normalizeHeroQty() + 1);
+});
+
+heroQtyInput?.addEventListener('change', normalizeHeroQty);
+
+addToCartBtn?.addEventListener('click', async () => {
   // Adiciona a estampa que está VESTIDA na camisa (mockup), que não é
   // necessariamente a que está em destaque na lateral (fila).
   const print = shirtPrints[shirtPrintIndex];
+  const qty = normalizeHeroQty();
+  const size = heroSizeSelect?.value || 'M';
+  const coverage = getSelectedCoverage();
+  const previewImage = await generateFrontPreview();
 
   addToCart({
-    id: `camisa-personalizada::${print.name}`,
-    name: 'Camisa Personalizada',
-    variant: print.name,
-    price: 49.90,
-    thumbType: 'image',
-    thumb: print.file,
+    productId: `camisa-personalizada::${coverage.label}`,
+    title: 'Camisa Personalizada',
+    variantLabel: `${coverage.label} • Estampa: ${print.name}`,
+    price: coverage.price,
+    size,
+    quantity: qty,
+    previewImage,
+    previewViews: { front: previewImage },
+    metadata: {
+      coverage: coverage.label,
+      printName: print.name,
+      sides: { ...sidePrintSelections },
+    },
   });
 
   if (!cartFeedback) return;
 
-  cartFeedback.textContent = `Estampa "${print.name}" adicionada ao carrinho.`;
+  cartFeedback.textContent = `${coverage.label} adicionada ao carrinho por ${formatBRL(coverage.price)} cada.`;
   cartFeedback.classList.add('is-visible');
 
   clearTimeout(feedbackTimeoutId);
@@ -1914,7 +1999,7 @@ function goToReview(user) {
     reviewItems.innerHTML = cart
       .map((item) => `
         <p class="address-display">
-          ${item.qty}x ${item.name}${item.variant ? ` (${item.variant})` : ''} — ${formatBRL(item.price * item.qty)}
+          ${item.quantity}x ${item.title}${item.variantLabel ? ` (${item.variantLabel})` : ''} — ${formatBRL(item.price * item.quantity)}
         </p>
       `)
       .join('');
@@ -1924,7 +2009,7 @@ function goToReview(user) {
   if (reviewPayment) reviewPayment.textContent = PAYMENT_METHOD_LABELS[selectedPaymentMethod] || '—';
 
   if (reviewTotal) {
-    const total = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+    const total = cart.reduce((sum, item) => sum + item.price * item.quantity, 0);
     reviewTotal.textContent = formatBRL(total);
   }
 
@@ -1943,8 +2028,8 @@ confirmOrderBtn?.addEventListener('click', () => {
   if (orderNumberEl) orderNumberEl.textContent = generateOrderNumber();
 
   // O pedido foi "fechado": esvazia o carrinho para a próxima compra.
-  cart = [];
-  saveCart();
+  shopStore?.clearCart();
+  refreshCartState();
   renderCart();
 
   showCartStep('confirmed');

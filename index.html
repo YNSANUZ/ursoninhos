@@ -13,7 +13,7 @@
 <!-- O "?v=" força o navegador a baixar a versão nova do arquivo em vez
      de usar o cache. Sempre que CSS ou JS mudarem, aumente este número
      aqui e no <script> do final da página. -->
-<link rel="stylesheet" href="assets/css/style.css?v=10">
+<link rel="stylesheet" href="assets/css/style.css?v=11">
 <!-- three.js para o manequim 3D do hero (decal da estampa no tecido).
      O importmap precisa vir antes de qualquer script type="module". -->
 <script type="importmap">
@@ -237,7 +237,28 @@
           <p class="print-picker__active-name" id="activePrintName"></p>
           <p class="print-picker__hint">Deslize ou clique<br>para trocar a estampa</p>
 
+          <div class="product-config product-config--hero">
+            <label class="product-config__field">
+              <span>Tamanho</span>
+              <select id="heroSizeSelect">
+                <option value="P">P</option>
+                <option value="M" selected>M</option>
+                <option value="G">G</option>
+                <option value="GG">GG</option>
+              </select>
+            </label>
+            <label class="product-config__field product-config__field--qty">
+              <span>Quantidade</span>
+              <div class="qty-stepper">
+                <button type="button" id="heroQtyDecrease" aria-label="Diminuir quantidade">−</button>
+                <input type="number" id="heroQtyInput" min="1" value="1" inputmode="numeric">
+                <button type="button" id="heroQtyIncrease" aria-label="Aumentar quantidade">+</button>
+              </div>
+            </label>
+          </div>
+
           <button class="btn btn--gold btn--cart" id="addToCartBtn">Adicionar ao carrinho</button>
+          <a href="carrinho.html" class="btn btn--outline btn--cart-link">Ver carrinho e checkout</a>
           <p class="cart-feedback" id="cartFeedback" aria-live="polite"></p>
         </div>
 
@@ -795,7 +816,8 @@
     </div>
   </div>
 
-  <script src="assets/js/main.js?v=10"></script>
-  <script type="module" src="assets/js/viewer3d.js?v=10"></script>
+  <script src="assets/js/shop-store.js?v=11"></script>
+  <script src="assets/js/main.js?v=11"></script>
+  <script type="module" src="assets/js/viewer3d.js?v=11"></script>
 </body>
 </html>
