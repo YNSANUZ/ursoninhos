@@ -847,6 +847,9 @@ async function generateFrontPreview() {
   canvas.width = 900;
   canvas.height = 900;
   const ctx = canvas.getContext('2d');
+  const PRINT_CENTER_X = 0.478;
+  const PRINT_TOP_Y = 0.30;
+  const PRINT_SIZE = 0.34;
 
   try {
     // Mockup da camisa preta no cabide: a estampa é desenhada no peito.
@@ -858,11 +861,10 @@ async function generateFrontPreview() {
       const scale = sideTransforms.front.scale || 1;
       const offsetX = sideTransforms.front.offsetX || 0;
       const offsetY = sideTransforms.front.offsetY || 0;
-      const printWidth = 250 * scale;
-      const printHeight = 250 * scale;
-      // Centro do peito da camisa no mockup (levemente à esquerda do centro).
-      const x = canvas.width * 0.478 - printWidth / 2 + offsetX * 10;
-      const y = canvas.height * 0.32 + offsetY * 10;
+      const printWidth = canvas.width * PRINT_SIZE * scale;
+      const printHeight = canvas.height * PRINT_SIZE * scale;
+      const x = canvas.width * PRINT_CENTER_X - printWidth / 2 + offsetX * 10;
+      const y = canvas.height * PRINT_TOP_Y + offsetY * 10;
       // Artes com fundo preto chapado usam 'screen' (o preto some sobre a
       // camisa preta); as demais ficam normais — mesmo critério do overlay.
       ctx.globalCompositeOperation = (frontPrint.blend || 'screen') === 'screen' ? 'screen' : 'source-over';

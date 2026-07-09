@@ -266,6 +266,7 @@
 
     thumb3d?.addEventListener('click', () => mostrar('3d'));
     thumbPhoto?.addEventListener('click', () => mostrar('foto'));
+    mostrar('foto');
   }
 
   async function renderImagemPrincipal() {

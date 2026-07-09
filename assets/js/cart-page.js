@@ -59,6 +59,9 @@
   const itemDetailPreview = document.getElementById('itemDetailPreview');
   const CARD_MOCKUP_URL = 'assets/img/camisa-modelo-card.jpg';
   const previewCache = new Map();
+  const PRINT_CENTER_X = 0.478;
+  const PRINT_TOP_Y = 0.30;
+  const PRINT_SIZE = 0.34;
   let renderToken = 0;
 
   function getCart() {
@@ -116,10 +119,10 @@
         const scale = Number(transform.scale || 1);
         const offsetX = Number(transform.offsetX || 0);
         const offsetY = Number(transform.offsetY || 0);
-        const printWidth = 250 * scale;
-        const printHeight = 250 * scale;
-        const x = canvas.width * 0.478 - printWidth / 2 + offsetX * 10;
-        const y = canvas.height * 0.32 + offsetY * 10;
+        const printWidth = canvas.width * PRINT_SIZE * scale;
+        const printHeight = canvas.height * PRINT_SIZE * scale;
+        const x = canvas.width * PRINT_CENTER_X - printWidth / 2 + offsetX * 10;
+        const y = canvas.height * PRINT_TOP_Y + offsetY * 10;
         ctx.globalCompositeOperation = blend === 'screen' ? 'screen' : 'source-over';
         ctx.drawImage(printImage, x, y, printWidth, printHeight);
         ctx.globalCompositeOperation = 'source-over';
@@ -138,8 +141,9 @@
   async function resolveCartPreview(item) {
     const frontPreview = item.previewViews?.front || item.previewImage || 'assets/img/banner-estatico.png';
     if (!isCustomShirt(item)) return frontPreview;
+    if (!item.metadata?.frontPrintUrl) return frontPreview;
 
-    const printUrl = item.metadata?.frontPrintUrl || frontPreview;
+    const printUrl = item.metadata.frontPrintUrl;
     const transform = item.metadata?.frontTransform || {};
     const blend = item.metadata?.frontPrintBlend || 'screen';
     return buildShirtMockup(printUrl, transform, blend);
