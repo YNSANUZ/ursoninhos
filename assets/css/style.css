@@ -3468,9 +3468,8 @@ ul {
     display: none;
   }
 
-  /* Mobile hero order: texto -> manequim -> carrossel de estampas.
-     Segue a ordem natural do HTML (content, stage, picker), então
-     não é preciso reordenar com `order`. */
+  /* Mobile hero order: manequim -> texto -> seletor/configuração.
+     No celular o banner 3D vira a primeira coisa visível da seção. */
   .hero {
     min-height: 0;
     padding: 56px 0 64px;
@@ -3483,8 +3482,17 @@ ul {
   }
 
   .hero__content {
+    order: 2;
     max-width: 520px;
     margin: 0 auto;
+  }
+
+  .hero__stage {
+    order: 1;
+  }
+
+  .hero__picker {
+    order: 3;
   }
 
   .hero__ctas,
