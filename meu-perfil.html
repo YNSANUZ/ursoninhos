@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ursoninhos | Meu Perfil</title>
+<meta name="description" content="Area de perfil da Ursoninhos.">
+<link rel="icon" type="image/webp" href="https://i.ibb.co/wrPpWWsf/ea990759-29d9-4e67-98ce-bb22e69f8e9e-Sem-T-tulo-1.webp">
+<link rel="stylesheet" href="assets/css/style.css?v=20">
+</head>
+<body class="checkout-page profile-page">
+  <div class="topbar">
+    <div class="container topbar__inner">
+      <ul class="topbar__perks">
+        <li>Minha conta Ursoninhos</li>
+        <li>Endereco, dados e preferencias</li>
+        <li>Sem produtos nesta etapa</li>
+      </ul>
+      <ul class="topbar__actions topbar__actions--profile">
+        <li><a href="index.html">Voltar ao site</a></li>
+        <li class="topbar__cart">
+          <a href="carrinho.html" class="topbar__simple-link">Carrinho</a>
+        </li>
+        <li class="topbar__account" id="topbarAccount"></li>
+      </ul>
+    </div>
+  </div>
+
+  <header class="header">
+    <div class="container header__inner">
+      <a href="index.html" class="brand">
+        <span class="brand__icon">
+          <img src="https://i.ibb.co/wrPpWWsf/ea990759-29d9-4e67-98ce-bb22e69f8e9e-Sem-T-tulo-1.webp" alt="Logo Ursoninhos">
+        </span>
+        <span class="brand__text">
+          <span class="brand__name">Ursoninhos</span>
+          <span class="brand__tagline">Meu Perfil</span>
+        </span>
+      </a>
+      <a href="index.html#destaques" class="btn btn--outline">Continuar comprando</a>
+    </div>
+  </header>
+
+  <main class="checkout-shell">
+    <div class="container">
+      <div class="profile-shell" id="profileShell">
+        <aside class="profile-sidebar">
+          <div class="profile-sidebar__user">
+            <div class="profile-sidebar__avatar" id="profileSidebarAvatar"></div>
+            <div>
+              <strong id="profileSidebarName">Visitante</strong>
+              <p id="profileSidebarEmail">Entre para acessar sua conta.</p>
+            </div>
+          </div>
+
+          <nav class="profile-nav">
+            <button type="button" class="profile-nav__item is-active" data-profile-section="account">Minha Conta</button>
+            <button type="button" class="profile-nav__item" data-profile-section="address">Enderecos</button>
+            <button type="button" class="profile-nav__item" data-profile-section="privacy">Privacidade</button>
+          </nav>
+        </aside>
+
+        <section class="profile-content">
+          <div class="profile-card-panel" data-section="account">
+            <div class="profile-card-panel__head">
+              <div>
+                <h1>Meu Perfil</h1>
+                <p>Gerencie seu cadastro na Ursoninhos.</p>
+              </div>
+            </div>
+            <form class="profile-form" id="profileForm">
+              <label class="form-field">
+                <span>Nome</span>
+                <input type="text" id="profileNameInput" autocomplete="name">
+              </label>
+              <label class="form-field">
+                <span>E-mail</span>
+                <input type="email" id="profileEmailInput" autocomplete="email" disabled>
+              </label>
+              <label class="form-field">
+                <span>Foto de perfil (URL)</span>
+                <input type="url" id="profilePhotoInput" placeholder="https://...">
+              </label>
+              <p class="cart-drawer__note" id="profileSaveNote"></p>
+              <div class="checkout-nav">
+                <button type="submit" class="btn btn--gold">Salvar perfil</button>
+              </div>
+            </form>
+          </div>
+
+          <div class="profile-card-panel" data-section="address" hidden>
+            <div class="profile-card-panel__head">
+              <div>
+                <h2>Enderecos</h2>
+                <p>Veja o endereco salvo para continuar seu pedido.</p>
+              </div>
+            </div>
+            <div class="review-card">
+              <strong>Endereco principal</strong>
+              <span id="profileAddressText">Nenhum endereco cadastrado ainda.</span>
+            </div>
+          </div>
+
+          <div class="profile-card-panel" data-section="privacy" hidden>
+            <div class="profile-card-panel__head">
+              <div>
+                <h2>Privacidade</h2>
+                <p>Controles simples da sua conta nesta primeira fase.</p>
+              </div>
+            </div>
+            <div class="review-card">
+              <strong>Conta local</strong>
+              <span>Se quiser sair desta conta no navegador atual, use o botao abaixo.</span>
+            </div>
+            <div class="checkout-nav">
+              <button type="button" class="btn btn--outline" id="profileLogoutBtn">Sair</button>
+            </div>
+          </div>
+        </section>
+      </div>
+    </div>
+  </main>
+
+  <script src="assets/js/shop-store.js?v=20"></script>
+  <script src="assets/js/account-ui.js?v=20"></script>
+  <script src="assets/js/profile-page.js?v=20"></script>
+</body>
+</html>

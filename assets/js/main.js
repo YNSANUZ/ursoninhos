@@ -1090,6 +1090,9 @@ addToCartBtn?.addEventListener('click', async () => {
     metadata: {
       coverage: coverage.label,
       printName: print.name,
+      frontPrintUrl: print.file || '',
+      frontPrintBlend: print.blend || 'screen',
+      frontTransform: { ...sideTransforms.front },
       sides: { ...sidePrintSelections },
     },
   });
@@ -1220,7 +1223,12 @@ function renderAuthState() {
     if (authGuestView) authGuestView.hidden = true;
     if (authProfileView) authProfileView.hidden = false;
     if (authDrawerTitle) authDrawerTitle.textContent = 'Meu perfil';
-    if (profileAvatar) profileAvatar.textContent = getInitials(user.name) || '?';
+    if (profileAvatar) {
+      profileAvatar.innerHTML = user.photoUrl
+        ? `<img src="${user.photoUrl}" alt="${user.name}">`
+        : '';
+      profileAvatar.textContent = user.photoUrl ? '' : getInitials(user.name) || '?';
+    }
     if (profileName) profileName.textContent = user.name;
     if (profileEmail) profileEmail.textContent = user.email;
     if (authToggleBtn) authToggleBtn.textContent = `Olá, ${user.name.split(' ')[0]}`;
@@ -1231,6 +1239,8 @@ function renderAuthState() {
     if (authDrawerTitle) authDrawerTitle.textContent = 'Entrar';
     if (authToggleBtn) authToggleBtn.textContent = 'Entrar / Cadastrar';
   }
+
+  window.UrsoninhosAccountUI?.renderTopbarAccounts();
 }
 
 authToggleBtn?.addEventListener('click', () => {

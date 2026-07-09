@@ -57,6 +57,9 @@
   const itemDetailPrice = document.getElementById('itemDetailPrice');
   const itemDetailTotal = document.getElementById('itemDetailTotal');
   const itemDetailPreview = document.getElementById('itemDetailPreview');
+  const CARD_MOCKUP_URL = 'assets/img/camisa-modelo-card.jpg';
+  const previewCache = new Map();
+  let renderToken = 0;
 
   function getCart() {
     return store.loadCart();
@@ -70,6 +73,96 @@
     if (!address) return 'Pendente';
     const complement = address.complement ? ` - ${address.complement}` : '';
     return `${address.street}, ${address.number}${complement} — ${address.neighborhood}, ${address.city}/${address.state} — CEP ${address.cep}`;
+  }
+
+  function escapeHtml(value) {
+    return String(value)
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;')
+      .replace(/'/g, '&#39;');
+  }
+
+  function loadImage(src) {
+    return new Promise((resolve, reject) => {
+      const image = new Image();
+      image.crossOrigin = 'anonymous';
+      image.onload = () => resolve(image);
+      image.onerror = reject;
+      image.src = src;
+    });
+  }
+
+  function isCustomShirt(item) {
+    return String(item.productId || '').startsWith('camisa-personalizada::');
+  }
+
+  async function buildShirtMockup(printUrl, transform = {}, blend = 'screen') {
+    const cacheKey = JSON.stringify({ printUrl, transform, blend });
+    if (previewCache.has(cacheKey)) return previewCache.get(cacheKey);
+
+    const promise = (async () => {
+      const canvas = document.createElement('canvas');
+      canvas.width = 900;
+      canvas.height = 900;
+      const ctx = canvas.getContext('2d');
+
+      const base = await loadImage(CARD_MOCKUP_URL);
+      ctx.drawImage(base, 0, 0, canvas.width, canvas.height);
+
+      if (printUrl) {
+        const printImage = await loadImage(printUrl);
+        const scale = Number(transform.scale || 1);
+        const offsetX = Number(transform.offsetX || 0);
+        const offsetY = Number(transform.offsetY || 0);
+        const printWidth = 250 * scale;
+        const printHeight = 250 * scale;
+        const x = canvas.width * 0.478 - printWidth / 2 + offsetX * 10;
+        const y = canvas.height * 0.32 + offsetY * 10;
+        ctx.globalCompositeOperation = blend === 'screen' ? 'screen' : 'source-over';
+        ctx.drawImage(printImage, x, y, printWidth, printHeight);
+        ctx.globalCompositeOperation = 'source-over';
+      }
+
+      return canvas.toDataURL('image/jpeg', 0.9);
+    })().catch((error) => {
+      console.error('Nao foi possivel compor a miniatura da camisa:', error);
+      return printUrl || 'assets/img/banner-estatico.png';
+    });
+
+    previewCache.set(cacheKey, promise);
+    return promise;
+  }
+
+  async function resolveCartPreview(item) {
+    const frontPreview = item.previewViews?.front || item.previewImage || 'assets/img/banner-estatico.png';
+    if (!isCustomShirt(item)) return frontPreview;
+
+    const printUrl = item.metadata?.frontPrintUrl || frontPreview;
+    const transform = item.metadata?.frontTransform || {};
+    const blend = item.metadata?.frontPrintBlend || 'screen';
+    return buildShirtMockup(printUrl, transform, blend);
+  }
+
+  function applyPreviewToImage(imgEl, src, item) {
+    if (!imgEl || !src) return;
+    imgEl.src = src;
+    imgEl.alt = `${item.title} no mockup de camisa`;
+  }
+
+  async function hydrateCartPreviews(cartSnapshot, token) {
+    await Promise.all(cartSnapshot.map(async (item) => {
+      const src = await resolveCartPreview(item);
+      if (token !== renderToken) return;
+
+      const selector = `[data-preview-line-id="${CSS.escape(item.lineId)}"]`;
+      document.querySelectorAll(selector).forEach((imgEl) => applyPreviewToImage(imgEl, src, item));
+
+      if (selectedItemLineId === item.lineId) {
+        applyPreviewToImage(itemDetailImage, src, item);
+      }
+    }));
   }
 
   function getUnlockedSteps() {
@@ -129,13 +222,16 @@
     if (!item) return;
 
     selectedItemLineId = item.lineId;
-    if (itemDetailImage) itemDetailImage.src = item.previewViews?.front || item.previewImage || 'assets/img/banner-estatico.png';
+    if (itemDetailImage) {
+      itemDetailImage.src = item.previewViews?.front || item.previewImage || 'assets/img/banner-estatico.png';
+      itemDetailImage.alt = `${item.title} selecionado`;
+    }
     if (itemDetailTitle) itemDetailTitle.textContent = item.title;
     if (itemDetailSize) itemDetailSize.textContent = item.size || 'Nao informado';
     if (itemDetailQuantity) itemDetailQuantity.textContent = String(item.quantity);
     if (itemDetailPrice) itemDetailPrice.textContent = store.formatBRL(item.price);
     if (itemDetailTotal) itemDetailTotal.textContent = store.formatBRL(item.price * item.quantity);
-    if (itemDetailPreview) itemDetailPreview.textContent = item.previewViews?.front ? 'Frente salva' : 'Sem preview';
+    if (itemDetailPreview) itemDetailPreview.textContent = item.previewViews?.front ? 'Mockup frontal salvo' : 'Sem preview';
   }
 
   function renderCartItems() {
@@ -153,10 +249,17 @@
       return;
     }
 
+    renderToken += 1;
+    const token = renderToken;
+
     checkoutItems.innerHTML = cart.map((item) => `
       <article class="checkout-item" data-line-id="${item.lineId}">
         <button type="button" class="checkout-item__preview" data-action="detail">
-          <img src="${item.previewViews?.front || item.previewImage || 'assets/img/banner-estatico.png'}" alt="${item.title}">
+          <img
+            src="${item.previewViews?.front || item.previewImage || 'assets/img/banner-estatico.png'}"
+            alt="${escapeHtml(item.title)}"
+            data-preview-line-id="${escapeHtml(item.lineId)}"
+          >
         </button>
         <div class="checkout-item__meta">
           <h3>${item.title}</h3>
@@ -214,6 +317,7 @@
     });
 
     renderItemDetail(selectedItemLineId || cart[0].lineId);
+    hydrateCartPreviews(cart, token);
   }
 
   function renderAuthState() {
