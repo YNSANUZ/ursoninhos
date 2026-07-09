@@ -783,6 +783,16 @@ ul {
   gap: 10px;
 }
 
+.stage-variant-picker--catalog {
+  position: static;
+  left: auto;
+  bottom: auto;
+  transform: none;
+  margin-top: -2px;
+  margin-bottom: 4px;
+  justify-content: center;
+}
+
 .stage-variant-dot {
   width: 18px;
   height: 18px;
