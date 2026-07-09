@@ -14,7 +14,7 @@
 <!-- O "?v=" força o navegador a baixar a versão nova do arquivo em vez
      de usar o cache. Sempre que CSS ou JS mudarem, aumente este número
      aqui e no <script> do final da página. -->
-<link rel="stylesheet" href="assets/css/style.css?v=18">
+<link rel="stylesheet" href="assets/css/style.css?v=19">
 <!-- three.js para o manequim 3D do hero (decal da estampa no tecido).
      O importmap precisa vir antes de qualquer script type="module". -->
 <script type="importmap">
@@ -417,15 +417,15 @@
           </div>
           <div class="why-item">
             <span class="why-item__icon">
-              <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 20c4-3 8-6.5 8-11a5 5 0 0 0-9-3 5 5 0 0 0-9 3c0 4.5 4 8 8 11z"/></svg>
+              <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M21 8l-9-5-9 5v8l9 5 9-5V8z"/><path d="M3 8l9 5 9-5M12 13v8"/></svg>
             </span>
-            <p>Personalização sob demanda</p>
+            <p>Mais de 2.500+ pedidos entregues</p>
           </div>
           <div class="why-item">
             <span class="why-item__icon">
               <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2l2.6 6.6L21 9l-5 4.4L17.5 21 12 17.5 6.5 21 8 13.4 3 9l6.4-.4z"/></svg>
             </span>
-            <p>Visual exclusivo para fãs e marcas</p>
+            <p>Avaliação 4.9/5 pelos nossos clientes</p>
           </div>
         </div>
       </div>
@@ -437,7 +437,7 @@
         <div class="instagram__text">
           <h2>Siga nossas novidades</h2>
           <p class="instagram__handle">@ursoninhos</p>
-          <a href="#" class="btn btn--outline">Ver no Instagram</a>
+          <a href="https://www.instagram.com/ursoninhos" target="_blank" rel="noopener" class="btn btn--outline">Ver no Instagram</a>
         </div>
         <div class="instagram__grid">
           <span class="insta-thumb">🐉</span>
@@ -474,17 +474,18 @@
         <p class="footer__about">
           Impressão 3D e personalização com qualidade, criatividade e carinho em cada detalhe.
         </p>
+        <!-- Todas as redes usam o mesmo usuário: @ursoninhos -->
         <div class="footer__social">
-          <a href="#" aria-label="Instagram">
+          <a href="https://www.instagram.com/ursoninhos" target="_blank" rel="noopener" aria-label="Instagram @ursoninhos">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="3" y="3" width="18" height="18" rx="5"/><circle cx="12" cy="12" r="4"/><circle cx="17.5" cy="6.5" r="1"/></svg>
           </a>
-          <a href="#" aria-label="WhatsApp">
+          <a href="https://wa.me/5511999999999" target="_blank" rel="noopener" aria-label="WhatsApp Ursoninhos">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91c0 1.75.46 3.45 1.32 4.95L2.05 22l5.25-1.38a9.87 9.87 0 0 0 4.74 1.21h.01c5.46 0 9.9-4.45 9.9-9.91 0-2.65-1.03-5.14-2.9-7.01A9.82 9.82 0 0 0 12.04 2z"/></svg>
           </a>
-          <a href="#" aria-label="TikTok">
+          <a href="https://www.tiktok.com/@ursoninhos" target="_blank" rel="noopener" aria-label="TikTok @ursoninhos">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M14 3v10.5a3.5 3.5 0 1 1-3-3.46"/><path d="M14 3c.5 2.5 2 4 5 4.2"/></svg>
           </a>
-          <a href="#" aria-label="YouTube">
+          <a href="https://www.youtube.com/@ursoninhos" target="_blank" rel="noopener" aria-label="YouTube @ursoninhos">
             <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.6"><rect x="2" y="5" width="20" height="14" rx="4"/><path d="M10 9.5v5l4.5-2.5z" fill="currentColor" stroke="none"/></svg>
           </a>
         </div>
@@ -503,10 +504,10 @@
       <div class="footer__col">
         <h4>Categorias</h4>
         <ul>
-          <li><a href="#">Camisas Personalizadas</a></li>
-          <li><a href="#">Estátuas 3D Colecionáveis</a></li>
-          <li><a href="#">Suportes Gamer</a></li>
-          <li><a href="#">Peças 3D Sob Encomenda</a></li>
+          <li><a href="#hero">Camisas Personalizadas</a></li>
+          <li><a href="camisas-de-frases.html">Camisas de Frases</a></li>
+          <li><a href="#destaques">Estátuas 3D Colecionáveis</a></li>
+          <li><a href="#destaques">Peças 3D Sob Encomenda</a></li>
         </ul>
       </div>
 
@@ -529,7 +530,7 @@
         </ul>
         <h4 class="footer__payments-title">Formas de pagamento</h4>
         <div class="footer__payments">
-          <span>Pix</span><span>Visa</span><span>Master</span><span>Elo</span><span>Boleto</span>
+          <img src="assets/img/bandeiras-pagamento.png" alt="Formas de pagamento: Pix, Visa, MasterCard, Elo e Boleto Bancário" loading="lazy">
         </div>
       </div>
     </div>
@@ -827,15 +828,15 @@
     </div>
   </div>
 
-  <script src="assets/js/app-config.js?v=18"></script>
-  <script src="assets/js/shop-store.js?v=18"></script>
-  <script src="assets/js/public-api.js?v=18"></script>
+  <script src="assets/js/app-config.js?v=19"></script>
+  <script src="assets/js/shop-store.js?v=19"></script>
+  <script src="assets/js/public-api.js?v=19"></script>
   <!-- Motor dos estilos de texto (compartilhado com camisas-de-frases.html)
        e dados das frases: precisam vir ANTES do main.js. -->
-  <script src="assets/js/text-print-engine.js?v=18"></script>
-  <script src="assets/js/frases-data.js?v=18"></script>
-  <script src="assets/js/main.js?v=18"></script>
-  <script src="assets/js/public-catalog.js?v=18"></script>
-  <script type="module" src="assets/js/viewer3d.js?v=18"></script>
+  <script src="assets/js/text-print-engine.js?v=19"></script>
+  <script src="assets/js/frases-data.js?v=19"></script>
+  <script src="assets/js/main.js?v=19"></script>
+  <script src="assets/js/public-catalog.js?v=19"></script>
+  <script type="module" src="assets/js/viewer3d.js?v=19"></script>
 </body>
 </html>

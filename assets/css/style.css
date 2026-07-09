@@ -2409,13 +2409,11 @@ ul {
   gap: 8px;
 }
 
-.footer__payments span {
-  font-size: 0.72rem;
-  padding: 5px 10px;
-  border-radius: 6px;
-  background: var(--bg-panel);
-  border: 1px solid rgba(217, 167, 92, 0.15);
-  color: var(--text-dim);
+/* Bandeiras reais (Pix, Visa, MasterCard, Elo, Boleto) numa imagem só. */
+.footer__payments img {
+  width: 100%;
+  max-width: 300px;
+  height: auto;
 }
 
 .footer__bottom {
