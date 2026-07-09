@@ -767,8 +767,8 @@ ul {
 .print-picker {
   position: relative;
   flex: 1;
-  max-width: 190px;
-  height: 132px;
+  max-width: 210px;
+  height: 128px;
   overflow: hidden;
   margin: 0 auto;
 }
@@ -781,70 +781,57 @@ ul {
   will-change: transform;
 }
 
+/* Arte livre: sem caixa, borda ou rótulo — só a estampa flutuando.
+   O nome aparece uma única vez, abaixo do carrossel (#activePrintName). */
 .print-card {
-  width: 92px;
-  height: 112px;
+  width: 112px;
+  height: 120px;
   flex-shrink: 0;
-  margin: 0 8px;
+  margin: 0 6px;
   border-radius: var(--radius-m);
-  background: linear-gradient(165deg, var(--bg-panel-2), var(--bg-panel));
-  border: 1px solid rgba(217, 167, 92, 0.28);
+  background: transparent;
+  border: none;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 8px;
   cursor: pointer;
   color: var(--text-muted);
-  box-shadow: 0 10px 24px rgba(0, 0, 0, 0.4);
   opacity: 0.4;
   transform: scale(0.8);
-  transition: opacity 0.4s ease, transform 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
+  transition: opacity 0.4s ease, transform 0.4s ease, filter 0.4s ease;
 }
 
+/* Estampa com o dobro do tamanho antigo (52px -> 104px), sem caixinha. */
 .print-card__thumb {
-  width: 52px;
-  height: 52px;
-  border-radius: var(--radius-s);
-  background: radial-gradient(circle at 50% 40%, rgba(255, 255, 255, 0.06), transparent 70%), #0c0805;
+  width: 104px;
+  height: 104px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 7px;
 }
 
 .print-card__thumb img {
   width: 100%;
   height: 100%;
   object-fit: contain;
-  filter: drop-shadow(0 3px 6px rgba(0, 0, 0, 0.6));
-}
-
-.print-card__label {
-  font-size: 0.72rem;
-  font-weight: 600;
-  letter-spacing: 0.2px;
-  text-align: center;
-  padding: 0 6px;
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.6));
 }
 
 .print-card:hover:not(.is-active) {
-  transform: scale(0.86);
-  opacity: 0.65;
-  border-color: var(--gold-soft);
+  transform: scale(0.88);
+  opacity: 0.7;
 }
 
 .print-card.is-active {
   opacity: 1;
   transform: scale(1);
-  border-color: var(--gold);
   color: var(--text-main);
-  box-shadow: 0 0 0 1px var(--gold-soft), 0 0 28px rgba(217, 167, 92, 0.3), 0 10px 24px rgba(0, 0, 0, 0.4);
   z-index: 2;
 }
 
-.print-card.is-active .print-card__thumb {
-  background: radial-gradient(circle at 50% 40%, rgba(217, 167, 92, 0.22), transparent 70%), #0c0805;
+.print-card.is-active .print-card__thumb img {
+  filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.6)) drop-shadow(0 0 18px rgba(217, 167, 92, 0.35));
 }
 
 .print-picker__active-name {
@@ -1199,8 +1186,8 @@ ul {
 
 .checkout-summary {
   padding: 24px;
-  position: sticky;
-  top: 108px;
+  /* Sem sticky: rolando a página, o resumo não pode deslizar por cima
+     do card "Detalhes do item" logo abaixo. */
 }
 
 .summary-line {

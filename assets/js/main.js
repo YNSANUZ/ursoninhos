@@ -80,7 +80,6 @@ function renderPrintPicker() {
     .map((print, index) => `
       <button class="print-card" type="button" data-index="${index}" aria-label="Estampa ${print.name}">
         <span class="print-card__thumb"><img src="${print.file}" alt="Estampa ${print.name}" loading="lazy"></span>
-        <span class="print-card__label">${print.name}</span>
       </button>
     `)
     .join('');
