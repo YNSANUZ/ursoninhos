@@ -762,6 +762,62 @@ ul {
   font-variant-numeric: tabular-nums;
 }
 
+/* --- Texto de apresentação (primeiros segundos) ---
+   Cartão translúcido no centro do palco: as linhas entram uma a uma
+   (classe .is-in via JS do index) e o bloco todo sai com fade quando
+   o manequim 3D assume (.is-done) — nunca captura cliques. */
+.stage-intro {
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  z-index: 4;
+  width: min(86%, 420px);
+  padding: 22px 20px;
+  border-radius: var(--radius-m);
+  border: 1px solid var(--gold-soft);
+  background: rgba(20, 14, 9, 0.86);
+  text-align: center;
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.5s ease;
+}
+
+.stage-intro[hidden] {
+  display: none;
+}
+
+.stage-intro.is-done {
+  opacity: 0;
+}
+
+.stage-intro__line {
+  margin: 0 0 8px;
+  font-size: 0.88rem;
+  line-height: 1.45;
+  color: var(--text-main);
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.stage-intro__line:last-child {
+  margin-bottom: 0;
+}
+
+.stage-intro__line--title {
+  margin-bottom: 12px;
+  font-size: 1.25rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  color: var(--gold);
+}
+
+.stage-intro__line.is-in {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 /* No 3D o manequim é mais largo que a camisa da foto: o portal cresce
    para os arcos dourados contornarem a silhueta, como na referência. */
 .hero__stage.is-3d .shirt-print-portal {

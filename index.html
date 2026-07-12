@@ -18,7 +18,7 @@
 <!-- O "?v=" força o navegador a baixar a versão nova do arquivo em vez
      de usar o cache. Sempre que CSS ou JS mudarem, aumente este número
      aqui e no <script> do final da página. -->
-<link rel="stylesheet" href="assets/css/style.css?v=20">
+<link rel="stylesheet" href="assets/css/style.css?v=21">
 <!-- three.js para o manequim 3D do hero (decal da estampa no tecido).
      O importmap precisa vir antes de qualquer script type="module". -->
 <script type="importmap">
@@ -169,6 +169,16 @@
             <span class="stage-loading__label">Carregando manequim 3D…</span>
             <span class="stage-loading__bar"><span class="stage-loading__fill" id="stageLoadingFill"></span></span>
             <span class="stage-loading__pct" id="stageLoadingPct">0%</span>
+          </div>
+          <!-- Texto de apresentação dos primeiros segundos: as linhas
+               entram uma a uma (script no fim da página) enquanto o
+               manequim 3D carrega e o bloco todo sai com fade quando o
+               3D assume (ou se ele falhar). -->
+          <div class="stage-intro" id="stageIntro">
+            <p class="stage-intro__line stage-intro__line--title">Monte sua camisa em segundos.</p>
+            <p class="stage-intro__line">Envie sua arte: imagem, frase ou logo.</p>
+            <p class="stage-intro__line">Personalize frente, verso e mangas</p>
+            <p class="stage-intro__line">e com um clique, ela chega na sua casa.</p>
           </div>
           <!-- Controles sobre a base dourada: à esquerda do play, - e +
                (tamanho da estampa); à direita, setas para descer e
@@ -897,6 +907,23 @@
     });
     window.addEventListener('shirt3d-ready', () => finishLoading(true));
     window.addEventListener('shirt3d-error', () => finishLoading(false));
+
+    // Texto de apresentação: linhas entram uma a uma desde a abertura
+    // da página; o bloco sai com fade quando o 3D assume (ou falha).
+    const intro = document.getElementById('stageIntro');
+    if (intro) {
+      const introLines = intro.querySelectorAll('.stage-intro__line');
+      introLines.forEach((line, index) => {
+        setTimeout(() => line.classList.add('is-in'), 300 + index * 1700);
+      });
+      const dismissIntro = () => {
+        if (intro.hidden) return;
+        intro.classList.add('is-done');
+        setTimeout(() => { intro.hidden = true; }, 550);
+      };
+      window.addEventListener('shirt3d-ready', dismissIntro);
+      window.addEventListener('shirt3d-error', dismissIntro);
+    }
 
     let started = false;
     function load3d() {

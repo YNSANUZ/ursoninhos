@@ -25,7 +25,7 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 // do carrossel (o giro automático reaplica a arte o tempo todo).
 THREE.Cache.enabled = true;
 
-const MODEL_URL = 'assets/3d/manequim-web.glb';
+const MODEL_URL = 'assets/3d/manequim-web.glb?v=2';
 const DRACO_DECODER_URL = 'https://unpkg.com/three@0.160.0/examples/jsm/libs/draco/gltf/';
 
 // Alturas como fração da altura total do modelo (busto com base).
