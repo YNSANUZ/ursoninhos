@@ -18,7 +18,7 @@
 <!-- O "?v=" força o navegador a baixar a versão nova do arquivo em vez
      de usar o cache. Sempre que CSS ou JS mudarem, aumente este número
      aqui e no <script> do final da página. -->
-<link rel="stylesheet" href="assets/css/style.css?v=21">
+<link rel="stylesheet" href="assets/css/style.css?v=22">
 <!-- three.js para o manequim 3D do hero (decal da estampa no tecido).
      O importmap precisa vir antes de qualquer script type="module". -->
 <script type="importmap">
@@ -909,20 +909,31 @@
     window.addEventListener('shirt3d-error', () => finishLoading(false));
 
     // Texto de apresentação: linhas entram uma a uma desde a abertura
-    // da página; o bloco sai com fade quando o 3D assume (ou falha).
+    // da página. Mesmo que o 3D fique pronto rápido (internet boa), o
+    // cartão só sai DEPOIS da última linha aparecer e ser lida — antes
+    // disso o manequim espera atrás do cartão embaçado. Se o 3D falhar,
+    // o cartão sai na hora.
     const intro = document.getElementById('stageIntro');
     if (intro) {
       const introLines = intro.querySelectorAll('.stage-intro__line');
       introLines.forEach((line, index) => {
         setTimeout(() => line.classList.add('is-in'), 300 + index * 1700);
       });
-      const dismissIntro = () => {
-        if (intro.hidden) return;
-        intro.classList.add('is-done');
-        setTimeout(() => { intro.hidden = true; }, 550);
+      // 300ms de entrada + última linha aos 3×1700ms + ~1,6s de leitura
+      const INTRO_MIN_MS = 300 + (introLines.length - 1) * 1700 + 1600;
+      const introStart = Date.now();
+      let introDismissed = false;
+      const dismissIntro = (immediate) => {
+        if (introDismissed) return;
+        introDismissed = true;
+        const wait = immediate ? 0 : Math.max(0, INTRO_MIN_MS - (Date.now() - introStart));
+        setTimeout(() => {
+          intro.classList.add('is-done');
+          setTimeout(() => { intro.hidden = true; }, 550);
+        }, wait);
       };
-      window.addEventListener('shirt3d-ready', dismissIntro);
-      window.addEventListener('shirt3d-error', dismissIntro);
+      window.addEventListener('shirt3d-ready', () => dismissIntro(false));
+      window.addEventListener('shirt3d-error', () => dismissIntro(true));
     }
 
     let started = false;

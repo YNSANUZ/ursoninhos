@@ -777,6 +777,9 @@ ul {
   border-radius: var(--radius-m);
   border: 1px solid var(--gold-soft);
   background: rgba(20, 14, 9, 0.86);
+  /* Embaça a estampa/portal atrás do cartão para o texto reinar sozinho */
+  -webkit-backdrop-filter: blur(12px);
+  backdrop-filter: blur(12px);
   text-align: center;
   pointer-events: none;
   opacity: 1;
