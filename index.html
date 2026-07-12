@@ -18,7 +18,7 @@
 <!-- O "?v=" força o navegador a baixar a versão nova do arquivo em vez
      de usar o cache. Sempre que CSS ou JS mudarem, aumente este número
      aqui e no <script> do final da página. -->
-<link rel="stylesheet" href="assets/css/style.css?v=19">
+<link rel="stylesheet" href="assets/css/style.css?v=20">
 <!-- three.js para o manequim 3D do hero (decal da estampa no tecido).
      O importmap precisa vir antes de qualquer script type="module". -->
 <script type="importmap">
@@ -161,6 +161,15 @@
                a ser projetada no tecido — arraste para girar. Se WebGL
                falhar, a foto 2D continua funcionando como sempre. -->
           <div class="hero__stage-viewer3d" id="shirtViewer3d" aria-label="Manequim 3D — arraste para girar; segure na arte para reposicioná-la"></div>
+          <!-- Barra de progresso do manequim 3D: aparece quando o
+               download começa (o 3D é adiado de propósito — ver script
+               no fim da página) e some no shirt3d-ready. O progresso é
+               REAL: acompanha os bytes do modelo GLB baixados. -->
+          <div class="stage-loading" id="stageLoading" hidden aria-live="polite">
+            <span class="stage-loading__label">Carregando manequim 3D…</span>
+            <span class="stage-loading__bar"><span class="stage-loading__fill" id="stageLoadingFill"></span></span>
+            <span class="stage-loading__pct" id="stageLoadingPct">0%</span>
+          </div>
           <!-- Controles sobre a base dourada: à esquerda do play, - e +
                (tamanho da estampa); à direita, setas para descer e
                subir a estampa na camisa. Todos só o símbolo dourado. -->
@@ -847,13 +856,59 @@
        Até lá o palco 2D (overlay + portal) segura o visual do hero. -->
   <script>
   (function () {
+    const loading = document.getElementById('stageLoading');
+    const loadingFill = document.getElementById('stageLoadingFill');
+    const loadingPct = document.getElementById('stageLoadingPct');
+    let creepTimer = null;
+    let shown = 0;
+
+    // A barra nunca anda para trás: scripts do three.js rastejam até
+    // 20%, o download do modelo (progresso real) vai de 20% a 96% e o
+    // "pronto" fecha em 100% antes do fade.
+    function setPct(pct) {
+      shown = Math.max(shown, Math.min(100, Math.round(pct)));
+      if (loadingFill) loadingFill.style.width = shown + '%';
+      if (loadingPct) loadingPct.textContent = shown + '%';
+    }
+
+    function showLoading() {
+      if (!loading) return;
+      loading.hidden = false;
+      creepTimer = setInterval(() => {
+        if (shown < 20) setPct(shown + 1);
+      }, 250);
+    }
+
+    function finishLoading(success) {
+      clearInterval(creepTimer);
+      if (!loading || loading.hidden) return;
+      if (success) {
+        setPct(100);
+        loading.classList.add('is-done');
+        setTimeout(() => { loading.hidden = true; }, 500);
+      } else {
+        loading.hidden = true;
+      }
+    }
+
+    window.addEventListener('shirt3d-progress', (event) => {
+      const percent = event.detail && event.detail.percent;
+      if (typeof percent === 'number') setPct(20 + (percent * 0.76));
+    });
+    window.addEventListener('shirt3d-ready', () => finishLoading(true));
+    window.addEventListener('shirt3d-error', () => finishLoading(false));
+
     let started = false;
     function load3d() {
       if (started) return;
       started = true;
       events.forEach(([target, name]) => target.removeEventListener(name, load3d));
-      import('./assets/js/viewer3d.js?v=20')
-        .catch((error) => console.warn('Manequim 3D indisponível, mantendo o palco 2D:', error));
+      showLoading();
+      import('./assets/js/viewer3d.js?v=21')
+        .catch((error) => {
+          console.warn('Manequim 3D indisponível, mantendo o palco 2D:', error);
+          finishLoading(false);
+        });
     }
     const events = [
       [window, 'pointerdown'],

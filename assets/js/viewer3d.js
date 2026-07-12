@@ -417,6 +417,13 @@ function init() {
   const gltfLoader = new GLTFLoader();
   gltfLoader.setDRACOLoader(dracoLoader);
 
+  // Avisa a página do andamento do download do modelo (a barra de
+  // progresso do palco escuta estes eventos). total pode vir 0 em
+  // servidores sem Content-Length — aí a barra fica indeterminada.
+  const reportProgress = (percent) => {
+    window.dispatchEvent(new CustomEvent('shirt3d-progress', { detail: { percent } }));
+  };
+
   gltfLoader.load(
     MODEL_URL,
     (gltf) => {
@@ -458,9 +465,12 @@ function init() {
       window.shirtViewer3D.ready = true;
       window.dispatchEvent(new Event('shirt3d-ready'));
     },
-    undefined,
+    (xhr) => {
+      if (xhr.total > 0) reportProgress(Math.round((xhr.loaded / xhr.total) * 100));
+    },
     (error) => {
       console.warn('Manequim 3D indisponível, mantendo o manequim 2D:', error);
+      window.dispatchEvent(new Event('shirt3d-error'));
     }
   );
 
@@ -497,4 +507,5 @@ try {
   init();
 } catch (error) {
   console.warn('WebGL indisponível, mantendo o manequim 2D:', error);
+  window.dispatchEvent(new Event('shirt3d-error'));
 }
