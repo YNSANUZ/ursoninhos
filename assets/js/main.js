@@ -25,13 +25,18 @@ if (navToggle && navList) {
    nenhuma cor é forçada, cada PNG é exibido como está.
    --------------------------------------------------------- */
 
+/* As versões web (JPEG otimizado, geradas a partir dos PNGs originais
+   de ARTE CAMISA/) ficam em assets/img/prints/: "file" é a versão
+   grande usada na camisa/3D e "thumb" a miniatura do carrossel.
+   Os PNGs originais continuam na pasta ARTE CAMISA/ só como matriz
+   de produção — o site não os carrega mais (eram ~6 MB no total). */
 const shirtPrints = [
-  { name: 'Coração', file: 'ARTE CAMISA/coração arte camisa.png' },
-  { name: 'Coração 2', file: 'ARTE CAMISA/coração 2 arte camisa.png' },
-  { name: 'Dog', file: 'ARTE CAMISA/dog arte camisa.png' },
-  { name: 'Logo Ursoninhos', file: 'ARTE CAMISA/logo ursoninhos arte camisa.png' },
-  { name: 'Samurai', file: 'ARTE CAMISA/samurai arte camisa.png' },
-  { name: 'Silene', file: 'ARTE CAMISA/silene arte camisa.png' },
+  { name: 'Coração', file: 'assets/img/prints/coracao.jpg', thumb: 'assets/img/prints/coracao-thumb.jpg' },
+  { name: 'Coração 2', file: 'assets/img/prints/coracao-2.jpg', thumb: 'assets/img/prints/coracao-2-thumb.jpg' },
+  { name: 'Dog', file: 'assets/img/prints/dog.jpg', thumb: 'assets/img/prints/dog-thumb.jpg' },
+  { name: 'Logo Ursoninhos', file: 'assets/img/prints/logo-ursoninhos.jpg', thumb: 'assets/img/prints/logo-ursoninhos-thumb.jpg' },
+  { name: 'Samurai', file: 'assets/img/prints/samurai.jpg', thumb: 'assets/img/prints/samurai-thumb.jpg' },
+  { name: 'Silene', file: 'assets/img/prints/silene.jpg', thumb: 'assets/img/prints/silene-thumb.jpg' },
 ];
 
 const shirtOverlay = document.getElementById('shirtPrintOverlay');
@@ -79,7 +84,7 @@ function renderPrintPicker() {
   printPickerTrack.innerHTML = shirtPrints
     .map((print, index) => `
       <button class="print-card" type="button" data-index="${index}" aria-label="Estampa ${print.name}">
-        <span class="print-card__thumb"><img src="${print.file}" alt="Estampa ${print.name}" loading="lazy"></span>
+        <span class="print-card__thumb"><img src="${print.thumb || print.file}" alt="Estampa ${print.name}" loading="lazy" decoding="async"></span>
       </button>
     `)
     .join('');
@@ -866,7 +871,7 @@ async function generateFrontPreview() {
     return canvas.toDataURL('image/jpeg', 0.9);
   } catch (error) {
     console.error('Nao foi possivel gerar o preview frontal da camisa:', error);
-    return 'assets/img/banner-estatico.png';
+    return 'assets/img/banner-estatico.jpg';
   }
 }
 

@@ -21,6 +21,10 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { DecalGeometry } from 'three/addons/geometries/DecalGeometry.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
+// Sem isto o TextureLoader baixa a MESMA estampa de novo a cada volta
+// do carrossel (o giro automático reaplica a arte o tempo todo).
+THREE.Cache.enabled = true;
+
 const MODEL_URL = 'assets/3d/manequim-web.glb';
 const DRACO_DECODER_URL = 'https://unpkg.com/three@0.160.0/examples/jsm/libs/draco/gltf/';
 

@@ -131,7 +131,7 @@
       return canvas.toDataURL('image/jpeg', 0.9);
     })().catch((error) => {
       console.error('Nao foi possivel compor a miniatura da camisa:', error);
-      return printUrl || 'assets/img/banner-estatico.png';
+      return printUrl || 'assets/img/banner-estatico.jpg';
     });
 
     previewCache.set(cacheKey, promise);
@@ -139,7 +139,7 @@
   }
 
   async function resolveCartPreview(item) {
-    const frontPreview = item.previewViews?.front || item.previewImage || 'assets/img/banner-estatico.png';
+    const frontPreview = item.previewViews?.front || item.previewImage || 'assets/img/banner-estatico.jpg';
     if (!isCustomShirt(item)) return frontPreview;
     if (!item.metadata?.frontPrintUrl) return frontPreview;
 
@@ -227,7 +227,7 @@
 
     selectedItemLineId = item.lineId;
     if (itemDetailImage) {
-      itemDetailImage.src = item.previewViews?.front || item.previewImage || 'assets/img/banner-estatico.png';
+      itemDetailImage.src = item.previewViews?.front || item.previewImage || 'assets/img/banner-estatico.jpg';
       itemDetailImage.alt = `${item.title} selecionado`;
     }
     if (itemDetailTitle) itemDetailTitle.textContent = item.title;
@@ -260,7 +260,7 @@
       <article class="checkout-item" data-line-id="${item.lineId}">
         <button type="button" class="checkout-item__preview" data-action="detail">
           <img
-            src="${item.previewViews?.front || item.previewImage || 'assets/img/banner-estatico.png'}"
+            src="${item.previewViews?.front || item.previewImage || 'assets/img/banner-estatico.jpg'}"
             alt="${escapeHtml(item.title)}"
             data-preview-line-id="${escapeHtml(item.lineId)}"
           >

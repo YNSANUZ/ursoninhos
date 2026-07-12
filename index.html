@@ -7,10 +7,14 @@
 <meta name="description" content="Camisas personalizadas, artes 3D e acessórios inspirados em anime, filmes e games.">
 <link rel="icon" type="image/webp" href="https://i.ibb.co/wrPpWWsf/ea990759-29d9-4e67-98ce-bb22e69f8e9e-Sem-T-tulo-1.webp">
 <!-- Fontes usadas nos estilos da estampa de texto (cursiva e condensada).
-     Precisam estar carregadas antes de desenhar o PNG no canvas. -->
+     Precisam estar carregadas antes de desenhar o PNG no canvas — mas o
+     canvas só é usado quando o cliente abre "Inserir texto", então elas
+     carregam em segundo plano (media="print" + onload) sem atrasar a
+     primeira pintura da página. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&family=Anton&family=Bebas+Neue&family=Caveat:wght@600&family=Dancing+Script:wght@600&family=Great+Vibes&family=Lobster&family=Oswald:wght@500&family=Pacifico&family=Permanent+Marker&family=Playfair+Display:ital,wght@1,600&family=Special+Elite&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&family=Anton&family=Bebas+Neue&family=Caveat:wght@600&family=Dancing+Script:wght@600&family=Great+Vibes&family=Lobster&family=Oswald:wght@500&family=Pacifico&family=Permanent+Marker&family=Playfair+Display:ital,wght@1,600&family=Special+Elite&display=swap" rel="stylesheet" media="print" onload="this.media='all'">
+<noscript><link href="https://fonts.googleapis.com/css2?family=Amatic+SC:wght@700&family=Anton&family=Bebas+Neue&family=Caveat:wght@600&family=Dancing+Script:wght@600&family=Great+Vibes&family=Lobster&family=Oswald:wght@500&family=Pacifico&family=Permanent+Marker&family=Playfair+Display:ital,wght@1,600&family=Special+Elite&display=swap" rel="stylesheet"></noscript>
 <!-- O "?v=" força o navegador a baixar a versão nova do arquivo em vez
      de usar o cache. Sempre que CSS ou JS mudarem, aumente este número
      aqui e no <script> do final da página. -->
@@ -20,7 +24,7 @@
 <script type="importmap">
 {
   "imports": {
-    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.min.js",
     "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
   }
 }
@@ -378,7 +382,7 @@
     <section class="section" id="colecoes">
       <div class="container">
         <div class="collections-banner">
-          <img src="assets/img/banner-fino-camisa-samurai-e-bau.png" alt="Coleção geek: camisa, estátua samurai, baú e itens colecionáveis" class="collections-banner__img">
+          <img src="assets/img/banner-fino-camisa-samurai-e-bau.jpg" alt="Coleção geek: camisa, estátua samurai, baú e itens colecionáveis" class="collections-banner__img" width="1600" height="533" loading="lazy" decoding="async">
           <div class="collections-banner__overlay">
             <h2>Coleções que<br>ganham vida</h2>
             <p>Peças exclusivas para fãs de anime, jogos, filmes, artes 3D e acessórios personalizados.</p>
@@ -834,8 +838,34 @@
        e dados das frases: precisam vir ANTES do main.js. -->
   <script src="assets/js/text-print-engine.js?v=19"></script>
   <script src="assets/js/frases-data.js?v=19"></script>
-  <script src="assets/js/main.js?v=21"></script>
+  <script src="assets/js/main.js?v=22"></script>
   <script src="assets/js/public-catalog.js?v=19"></script>
-  <script type="module" src="assets/js/viewer3d.js?v=19"></script>
+  <!-- Manequim 3D ADIADO: three.js + modelo GLB somam ~3 MB e travavam
+       o celular na abertura (nota 28 no PageSpeed). Agora o 3D só
+       carrega na primeira interação do visitante (toque, rolagem ou
+       mouse) ou, no máximo, alguns segundos depois da página pronta.
+       Até lá o palco 2D (overlay + portal) segura o visual do hero. -->
+  <script>
+  (function () {
+    let started = false;
+    function load3d() {
+      if (started) return;
+      started = true;
+      events.forEach(([target, name]) => target.removeEventListener(name, load3d));
+      import('./assets/js/viewer3d.js?v=20')
+        .catch((error) => console.warn('Manequim 3D indisponível, mantendo o palco 2D:', error));
+    }
+    const events = [
+      [window, 'pointerdown'],
+      [window, 'touchstart'],
+      [window, 'scroll'],
+      [window, 'keydown'],
+      [window, 'mousemove'],
+    ];
+    events.forEach(([target, name]) => target.addEventListener(name, load3d, { once: true, passive: true }));
+    // Ninguém interagiu? Carrega mesmo assim depois que tudo terminou.
+    window.addEventListener('load', () => setTimeout(load3d, 6000));
+  })();
+  </script>
 </body>
 </html>
