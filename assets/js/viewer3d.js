@@ -97,7 +97,7 @@ function setPrint(url, blend, side = 'front') {
       // Proporção REAL da imagem (altura/largura), sem forçar formato:
       // o decal usa uma caixa "contain", então nada amassa nem estica.
       sideState.aspect = clamp(texture.image.height / texture.image.width, 0.2, 5);
-      queueRebuild();
+      queueRebuild(side);
     },
     undefined,
     (error) => console.error('Não foi possível carregar a estampa no 3D:', error)
@@ -111,7 +111,7 @@ function setTransform({ scale, offsetX, offsetY }, side = 'front') {
   if (typeof scale === 'number') sideState.scale = scale;
   if (typeof offsetX === 'number') sideState.offsetX = offsetX;
   if (typeof offsetY === 'number') sideState.offsetY = offsetY;
-  queueRebuild();
+  queueRebuild(side);
 }
 
 // Remove a arte de um lado (ex.: verso ainda sem estampa escolhida).
@@ -120,29 +120,37 @@ function clearPrint(side) {
   if (!sideState) return;
   sideState.url = null;
   sideState.texture = null;
-  queueRebuild();
+  queueRebuild(side);
 }
 
 // Agrupa várias mudanças no mesmo frame numa única reconstrução,
-// porque gerar o decal varre a malha inteira do manequim.
-function queueRebuild() {
+// porque gerar o decal varre a malha inteira do manequim (que é
+// pesada — fotogrametria). Só os lados alterados são refeitos.
+const pendingSides = new Set();
+function queueRebuild(side) {
+  if (side) pendingSides.add(side);
+  else Object.keys(SIDE_CONFIG).forEach((key) => pendingSides.add(key));
   if (rebuildQueued) return;
   rebuildQueued = true;
   requestAnimationFrame(() => {
     rebuildQueued = false;
-    rebuildDecals();
+    const sides = [...pendingSides];
+    pendingSides.clear();
+    rebuildDecals(sides);
   });
 }
 
-function rebuildDecals() {
-  decals.forEach((decal) => {
+function rebuildDecals(sides = Object.keys(SIDE_CONFIG)) {
+  if (!anchors || !mannequinMesh) return;
+
+  // Remove apenas os decals dos lados que serão refeitos.
+  decals = decals.filter((decal) => {
+    if (!sides.includes(decal.userData.side)) return true;
     decal.geometry.dispose();
     decal.material.dispose();
     scene.remove(decal);
+    return false;
   });
-  decals = [];
-
-  if (!anchors || !mannequinMesh) return;
 
   const makeDecal = (sideKey) => {
     const sideState = state[sideKey];
@@ -200,11 +208,16 @@ function rebuildDecals() {
     const mesh = new THREE.Mesh(geometry, material);
     mesh.renderOrder = 2;
     mesh.userData.side = sideKey; // usado pelo arrasto para saber qual lado editar
+    // Offsets com que a geometria foi projetada: durante o arrasto o
+    // decal desliza (posição do mesh) relativo a estes valores, e a
+    // reprojeção de verdade só acontece ao soltar.
+    mesh.userData.builtOffsetX = sideState.offsetX;
+    mesh.userData.builtOffsetY = sideState.offsetY;
     scene.add(mesh);
     decals.push(mesh);
   };
 
-  Object.keys(SIDE_CONFIG).forEach(makeDecal);
+  sides.forEach(makeDecal);
 }
 
 /* Acha os pontos de ancoragem das estampas por raycast:
@@ -288,9 +301,11 @@ function setupDecalDrag() {
   const pointerNdc = new THREE.Vector2();
   let dragSide = null;
   let activePointerId = null;
-  let startPoint = null;
+  let startClientX = 0;
+  let startClientY = 0;
   let startOffsetX = 0;
   let startOffsetY = 0;
+  let worldPerPixel = 0;
 
   const setRayFromEvent = (event) => {
     const rect = renderer.domElement.getBoundingClientRect();
@@ -306,30 +321,30 @@ function setupDecalDrag() {
     return hit ? hit.object.userData.side : null;
   };
 
-  const shirtPointAt = (event) => {
-    if (!camera || !mannequinMesh) return null;
-    setRayFromEvent(event);
-    const hit = raycaster.intersectObject(mannequinMesh, true)[0];
-    return hit ? hit.point.clone() : null;
-  };
-
+  /* Durante o arrasto NADA de raycast nem reprojeção: o movimento do
+     ponteiro na tela é convertido direto para os "%" das setas
+     (worldPerPixel = metros de tecido por pixel na distância atual da
+     câmera) e o decal existente apenas DESLIZA (posição do mesh) — uma
+     operação instantânea. A reprojeção na malha (cara: varre o
+     manequim inteiro) acontece uma única vez, ao soltar. */
   const applyDragAt = (event) => {
     const sideState = state[dragSide];
     const config = SIDE_CONFIG[dragSide];
-    if (!sideState || !config || !startPoint) return;
+    if (!sideState || !config) return;
 
-    const point = shirtPointAt(event);
-    if (!point) return;
-
-    // Deslocamento relativo ao ponto onde o arrasto começou, convertido
-    // de metros no tecido para os "%" usados pelos botões de seta.
-    const [dx, , dz] = config.offsetXDir;
-    const deltaX = (dx * (point.x - startPoint.x) + dz * (point.z - startPoint.z)) / OFFSET_X_M_PER_PCT;
-    const deltaY = (startPoint.y - point.y) / OFFSET_Y_M_PER_PCT;
+    const deltaX = ((event.clientX - startClientX) * worldPerPixel) / OFFSET_X_M_PER_PCT;
+    const deltaY = ((event.clientY - startClientY) * worldPerPixel) / OFFSET_Y_M_PER_PCT;
 
     sideState.offsetX = clamp(startOffsetX + deltaX, -DRAG_LIMIT_X_PCT, DRAG_LIMIT_X_PCT);
     sideState.offsetY = clamp(startOffsetY + deltaY, -DRAG_LIMIT_Y_PCT, DRAG_LIMIT_Y_PCT);
-    queueRebuild();
+
+    const decal = decals.find((mesh) => mesh.userData.side === dragSide);
+    if (decal) {
+      const [dx, , dz] = config.offsetXDir;
+      const slideX = (sideState.offsetX - decal.userData.builtOffsetX) * OFFSET_X_M_PER_PCT;
+      const slideY = (sideState.offsetY - decal.userData.builtOffsetY) * OFFSET_Y_M_PER_PCT;
+      decal.position.set(dx * slideX, -slideY, dz * slideX);
+    }
 
     // Mantém o main.js em dia: setas, overlay 2D e preview do carrinho
     // continuam coerentes com a posição arrastada.
@@ -344,9 +359,14 @@ function setupDecalDrag() {
 
     dragSide = side;
     activePointerId = event.pointerId;
-    startPoint = shirtPointAt(event);
+    startClientX = event.clientX;
+    startClientY = event.clientY;
     startOffsetX = state[side].offsetX;
     startOffsetY = state[side].offsetY;
+    // Metros de mundo por pixel de tela na distância atual da câmera.
+    const rect = renderer.domElement.getBoundingClientRect();
+    const dist = camera.position.distanceTo(controls ? controls.target : new THREE.Vector3());
+    worldPerPixel = (2 * dist * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) / rect.height;
     if (controls) controls.enabled = false; // pausa o giro durante o arrasto
     renderer.domElement.style.cursor = 'grabbing';
     try {
@@ -367,11 +387,13 @@ function setupDecalDrag() {
 
   const endDrag = (event) => {
     if (!dragSide || event.pointerId !== activePointerId) return;
+    const releasedSide = dragSide;
     dragSide = null;
     activePointerId = null;
-    startPoint = null;
     if (controls) controls.enabled = true;
     renderer.domElement.style.cursor = '';
+    // Agora sim: reprojeta o decal na posição final, assentado no tecido.
+    queueRebuild(releasedSide);
   };
   renderer.domElement.addEventListener('pointerup', endDrag);
   renderer.domElement.addEventListener('pointercancel', endDrag);
