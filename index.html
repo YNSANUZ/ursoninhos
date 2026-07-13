@@ -18,7 +18,7 @@
 <!-- O "?v=" força o navegador a baixar a versão nova do arquivo em vez
      de usar o cache. Sempre que CSS ou JS mudarem, aumente este número
      aqui e no <script> do final da página. -->
-<link rel="stylesheet" href="assets/css/style.css?v=22">
+<link rel="stylesheet" href="assets/css/style.css?v=24">
 <!-- three.js para o manequim 3D do hero (decal da estampa no tecido).
      O importmap precisa vir antes de qualquer script type="module". -->
 <script type="importmap">
@@ -179,6 +179,9 @@
             <p class="stage-intro__line">Envie sua arte: imagem, frase ou logo.</p>
             <p class="stage-intro__line">Personalize frente, verso e mangas</p>
             <p class="stage-intro__line">e com um clique, ela chega na sua casa.</p>
+            <!-- Aviso simples logo abaixo do cartão (some junto com ele).
+                 Puro CSS: pulso de opacidade, nada de JS extra. -->
+            <p class="stage-intro__loading" aria-hidden="true">Carregando 3D…</p>
           </div>
           <!-- Controles sobre a base dourada: à esquerda do play, - e +
                (tamanho da estampa); à direita, setas para descer e

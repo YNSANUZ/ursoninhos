@@ -729,11 +729,15 @@ ul {
   opacity: 0;
 }
 
+/* O rótulo da pílula fica só para leitores de tela: o "Carregando 3D…"
+   do cartão de apresentação já diz o mesmo logo acima da barra. */
 .stage-loading__label {
-  font-size: 0.68rem;
-  font-weight: 600;
-  letter-spacing: 0.4px;
-  color: var(--text-muted);
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 .stage-loading__bar {
@@ -819,6 +823,28 @@ ul {
 .stage-intro__line.is-in {
   opacity: 1;
   transform: translateY(0);
+}
+
+/* "Carregando 3D…" logo abaixo do cartão embaçado: filho do cartão
+   (sai de cena junto no mesmo fade), mas posicionado fora dele. O
+   pulso é CSS puro — custo zero de JS. */
+.stage-intro__loading {
+  position: absolute;
+  top: calc(100% + 12px);
+  left: 0;
+  right: 0;
+  margin: 0;
+  font-size: 0.74rem;
+  font-weight: 600;
+  letter-spacing: 0.6px;
+  color: var(--gold);
+  text-shadow: 0 1px 6px rgba(13, 9, 6, 0.9);
+  animation: introLoadingPulse 1.4s ease-in-out infinite;
+}
+
+@keyframes introLoadingPulse {
+  0%, 100% { opacity: 0.45; }
+  50% { opacity: 1; }
 }
 
 /* No 3D o manequim é mais largo que a camisa da foto: o portal cresce
