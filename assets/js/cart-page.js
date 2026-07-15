@@ -523,6 +523,12 @@
     }
 
     if (successOrderNumber) successOrderNumber.textContent = store.generateOrderNumber();
+    // Vendas dos modelos públicos contam antes de esvaziar o carrinho.
+    store.loadCart().forEach((item) => {
+      if (item.metadata?.source === 'public-model') {
+        store.registerSale(item.metadata.productId, item.quantity);
+      }
+    });
     store.clearCart();
     renderSummary();
     renderCartItems();

@@ -1107,6 +1107,97 @@ addToCartBtn?.addEventListener('click', async () => {
 });
 
 /* ---------------------------------------------------------
+   Incluir modelo para venda pública
+   Qualquer usuário logado publica a camisa montada no manequim
+   como produto do catálogo (preço padrão). O crédito do criador
+   viaja na descrição via marcador [criador:Nome] — a página do
+   produto e os cards exibem "Criado por ...".
+   --------------------------------------------------------- */
+
+const publishModelBtn = document.getElementById('publishModelBtn');
+const publishFeedback = document.getElementById('publishFeedback');
+const PUBLIC_MODEL_DEFAULT_PRICE = 49.9; // o backend atual limita a R$ 50
+
+function setPublishFeedback(message, isError = false) {
+  if (!publishFeedback) return;
+  publishFeedback.innerHTML = message;
+  publishFeedback.classList.add('is-visible');
+  publishFeedback.style.color = isError ? '#e08a7a' : '';
+}
+
+// Converte o estado atual do manequim (arte/tamanho/posição de cada
+// lado) no formato de "model" que a página do produto sabe reproduzir.
+function buildModelFromCurrentShirt() {
+  const model = {};
+  Object.keys(sidePrintSelections).forEach((side) => {
+    const index = sidePrintSelections[side];
+    if (index === null || index === undefined) return;
+    const print = shirtPrints[index];
+    if (!print?.file) return;
+    model[side] = {
+      url: print.file,
+      blend: print.blend || 'screen',
+      transform: { ...sideTransforms[side] },
+    };
+  });
+  return model;
+}
+
+publishModelBtn?.addEventListener('click', async () => {
+  const user = getCurrentUser();
+  if (!user) {
+    setPublishFeedback('Entre na sua conta para publicar seu modelo.', true);
+    renderAuthState();
+    openAuth();
+    return;
+  }
+
+  const api = window.UrsoninhosApi;
+  const store = window.UrsoninhosStore;
+  const frontIndex = sidePrintSelections.front ?? shirtPrintIndex;
+  const frontPrint = shirtPrints[frontIndex];
+  if (!api || !store || !frontPrint) {
+    setPublishFeedback('Escolha uma estampa para a frente antes de publicar.', true);
+    return;
+  }
+
+  publishModelBtn.disabled = true;
+  setPublishFeedback('Publicando seu modelo no catálogo…');
+
+  try {
+    const catalogImage = await generateFrontPreview();
+    const firstName = String(user.name || 'Cliente').split(' ')[0];
+
+    const product = await api.createProduct({
+      title: `Camisa ${frontPrint.name}`,
+      description: store.embedCreator(
+        `Modelo criado pela comunidade Ursoninhos com a estampa ${frontPrint.name}.`,
+        user.name
+      ),
+      price: PUBLIC_MODEL_DEFAULT_PRICE,
+      catalogImage,
+      views: { front: catalogImage },
+      model: buildModelFromCurrentShirt(),
+      // O backend atual ignora este campo; a versão nova (backend/
+      // products.php) passa a persisti-lo. O marcador na descrição
+      // garante o crédito nos dois casos.
+      creator: user.name,
+    });
+
+    setPublishFeedback(
+      `Modelo publicado, ${firstName}! Ele já está na vitrine com seu crédito. ` +
+      `<a href="produto.html?id=${encodeURIComponent(product.id)}">Ver página do produto</a>`
+    );
+    window.UrsoninhosCatalog?.refresh();
+  } catch (error) {
+    console.error('Não foi possível publicar o modelo:', error);
+    setPublishFeedback('Não foi possível publicar agora. Tente novamente em instantes.', true);
+  } finally {
+    publishModelBtn.disabled = false;
+  }
+});
+
+/* ---------------------------------------------------------
    Login / Cadastro / Perfil (Fase 2 do fluxo de compra)
    Só front-end: usuários e sessão ficam no localStorage.
    ATENÇÃO: isso é um mock para demonstrar o fluxo — a senha é
@@ -1168,12 +1259,18 @@ const authBackdrop = document.getElementById('authBackdrop');
 const authDrawer = document.getElementById('authDrawer');
 const authDrawerTitle = document.getElementById('authDrawerTitle');
 const authCloseBtn = document.getElementById('authCloseBtn');
-const authTabLogin = document.getElementById('authTabLogin');
-const authTabRegister = document.getElementById('authTabRegister');
 const loginForm = document.getElementById('loginForm');
 const registerForm = document.getElementById('registerForm');
 const loginError = document.getElementById('loginError');
 const registerError = document.getElementById('registerError');
+const showRegisterBtn = document.getElementById('showRegisterBtn');
+const showLoginBtn = document.getElementById('showLoginBtn');
+const authRegisterHint = document.getElementById('authRegisterHint');
+const authDivider = document.getElementById('authDivider');
+const googleLoginBtn = document.getElementById('googleLoginBtn');
+const googleSigninContainer = document.getElementById('googleSigninContainer');
+const registerCpfInput = document.getElementById('registerCpfInput');
+const registerPhoneInput = document.getElementById('registerPhoneInput');
 const authGuestView = document.getElementById('authGuestView');
 const authProfileView = document.getElementById('authProfileView');
 const profileAvatar = document.getElementById('profileAvatar');
@@ -1194,15 +1291,66 @@ function closeAuth() {
   document.body.style.overflow = '';
 }
 
+/* Alterna login <-> cadastro: o cadastro fica escondido atrás do link
+   discreto "Cadastre-se" (padrão dos marketplaces); ao abrir, esconde
+   login, divisor e botões Google para focar no formulário. */
+// true quando o botão OFICIAL do Google (GIS) está renderizado — aí o
+// botão de demonstração some para não duplicar.
+let googleRealActive = false;
+
+function updateGoogleButtons(isLogin) {
+  if (googleSigninContainer) googleSigninContainer.style.display = isLogin && googleRealActive ? '' : 'none';
+  if (googleLoginBtn) googleLoginBtn.hidden = !isLogin || googleRealActive;
+}
+
 function switchAuthTab(tab) {
   const isLogin = tab === 'login';
-  authTabLogin?.classList.toggle('is-active', isLogin);
-  authTabRegister?.classList.toggle('is-active', !isLogin);
   if (loginForm) loginForm.hidden = !isLogin;
   if (registerForm) registerForm.hidden = isLogin;
+  if (authDivider) authDivider.hidden = !isLogin;
+  if (authRegisterHint) authRegisterHint.hidden = !isLogin;
+  updateGoogleButtons(isLogin);
+  if (authDrawerTitle && !getCurrentUser()) authDrawerTitle.textContent = isLogin ? 'Entrar' : 'Criar conta';
   if (loginError) loginError.textContent = '';
   if (registerError) registerError.textContent = '';
 }
+
+/* --- Validações de cadastro (padrão marketplace) --- */
+
+// Valida CPF pelos dígitos verificadores (mesma conta usada pela Receita).
+function isValidCpf(rawCpf) {
+  const cpf = String(rawCpf || '').replace(/\D/g, '');
+  if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+  const digit = (count) => {
+    let sum = 0;
+    for (let i = 0; i < count; i++) sum += Number(cpf[i]) * (count + 1 - i);
+    const rest = (sum * 10) % 11;
+    return rest === 10 ? 0 : rest;
+  };
+  return digit(9) === Number(cpf[9]) && digit(10) === Number(cpf[10]);
+}
+
+function maskCpf(value) {
+  return String(value).replace(/\D/g, '').slice(0, 11)
+    .replace(/(\d{3})(\d)/, '$1.$2')
+    .replace(/(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+    .replace(/\.(\d{3})(\d{1,2})$/, '.$1-$2');
+}
+
+function maskPhone(value) {
+  const digits = String(value).replace(/\D/g, '').slice(0, 11);
+  if (digits.length <= 2) return digits;
+  if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+  if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+  return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+}
+
+registerCpfInput?.addEventListener('input', () => {
+  registerCpfInput.value = maskCpf(registerCpfInput.value);
+});
+registerPhoneInput?.addEventListener('input', () => {
+  registerPhoneInput.value = maskPhone(registerPhoneInput.value);
+});
 
 function getInitials(name) {
   return name
@@ -1248,8 +1396,8 @@ authToggleBtn?.addEventListener('click', () => {
 authCloseBtn?.addEventListener('click', closeAuth);
 authBackdrop?.addEventListener('click', closeAuth);
 
-authTabLogin?.addEventListener('click', () => switchAuthTab('login'));
-authTabRegister?.addEventListener('click', () => switchAuthTab('register'));
+showRegisterBtn?.addEventListener('click', () => switchAuthTab('register'));
+showLoginBtn?.addEventListener('click', () => switchAuthTab('login'));
 
 loginForm?.addEventListener('submit', (event) => {
   event.preventDefault();
@@ -1269,7 +1417,7 @@ loginForm?.addEventListener('submit', (event) => {
   loginError.textContent = '';
   saveSession(user.email);
   loginForm.reset();
-  renderAuthState();
+  finishLogin();
 });
 
 registerForm?.addEventListener('submit', (event) => {
@@ -1279,33 +1427,104 @@ registerForm?.addEventListener('submit', (event) => {
   const formData = new FormData(registerForm);
   const name = String(formData.get('name') || '').trim();
   const email = String(formData.get('email') || '').trim().toLowerCase();
+  const cpf = String(formData.get('cpf') || '');
+  const phone = String(formData.get('phone') || '');
   const password = String(formData.get('password') || '');
   const confirmPassword = String(formData.get('confirmPassword') || '');
 
+  if (name.split(/\s+/).length < 2) {
+    registerError.textContent = 'Informe seu nome completo (nome e sobrenome).';
+    return;
+  }
+  if (!isValidCpf(cpf)) {
+    registerError.textContent = 'CPF inválido. Confira os números digitados.';
+    return;
+  }
+  if (phone.replace(/\D/g, '').length < 10) {
+    registerError.textContent = 'Celular inválido. Use o DDD + número.';
+    return;
+  }
   if (password !== confirmPassword) {
     registerError.textContent = 'As senhas não coincidem.';
     return;
   }
 
-  const users = loadUsers();
-  if (users.some((entry) => entry.email === email)) {
-    registerError.textContent = 'Já existe uma conta com esse e-mail.';
+  const result = window.UrsoninhosStore?.register({ name, email, cpf, phone, password });
+  if (!result?.ok) {
+    registerError.textContent = result?.error || 'Não foi possível criar a conta.';
     return;
   }
 
-  users.push({ name, email, password });
-  saveUsers(users);
-  saveSession(email);
-
   registerError.textContent = '';
   registerForm.reset();
-  renderAuthState();
+  switchAuthTab('login');
+  finishLogin();
 });
+
+// Pós-login comum: atualiza o painel, o topo e o sino de notificações.
+function finishLogin() {
+  renderAuthState();
+  window.UrsoninhosNotifications?.refresh();
+}
+
+/* --- Entrar com Google ---
+   Com googleClientId preenchido no app-config.js, o SDK oficial
+   (Google Identity Services) entra em cena e o botão verdadeiro do
+   Google substitui o de demonstração. O JWT que o Google devolve traz
+   nome, e-mail e foto — o suficiente para criar a conta na hora.
+   Sem client id, o botão de demonstração simula o mesmo fluxo. */
+function handleGoogleProfile(profile) {
+  const user = window.UrsoninhosStore?.loginWithGoogle(profile);
+  if (!user) return;
+  finishLogin();
+}
+
+googleLoginBtn?.addEventListener('click', () => {
+  const user = window.UrsoninhosStore?.loginWithGoogleMock();
+  if (!user) return;
+  finishLogin();
+});
+
+function setupGoogleSignin() {
+  const clientId = window.URSONINHOS_APP_CONFIG?.googleClientId;
+  if (!clientId || !googleSigninContainer) return;
+
+  const script = document.createElement('script');
+  script.src = 'https://accounts.google.com/gsi/client';
+  script.async = true;
+  script.onload = () => {
+    if (!window.google?.accounts?.id) return;
+    window.google.accounts.id.initialize({
+      client_id: clientId,
+      callback: (response) => {
+        try {
+          // O credential é um JWT; o payload (parte do meio) tem os dados.
+          const payload = JSON.parse(atob(response.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
+          handleGoogleProfile({ name: payload.name, email: payload.email, photoUrl: payload.picture, provider: 'google' });
+        } catch (error) {
+          console.error('Não foi possível ler a credencial do Google:', error);
+        }
+      },
+    });
+    window.google.accounts.id.renderButton(googleSigninContainer, {
+      theme: 'filled_black',
+      size: 'large',
+      width: 320,
+      text: 'signin_with',
+      locale: 'pt-BR',
+    });
+    googleRealActive = true;
+    updateGoogleButtons(!registerForm || registerForm.hidden);
+  };
+  document.head.appendChild(script);
+}
+setupGoogleSignin();
 
 logoutBtn?.addEventListener('click', () => {
   clearSession();
   switchAuthTab('login');
   renderAuthState();
+  window.UrsoninhosNotifications?.refresh();
 });
 
 /* ---------------------------------------------------------
@@ -1584,6 +1803,14 @@ backToCartBtn?.addEventListener('click', () => showCartStep('shopping'));
 
 confirmOrderBtn?.addEventListener('click', () => {
   if (orderNumberEl) orderNumberEl.textContent = generateOrderNumber();
+
+  // Registra as vendas dos modelos públicos ANTES de esvaziar o
+  // carrinho — o contador aparece no card e na página do produto.
+  (shopStore?.loadCart() || []).forEach((item) => {
+    if (item.metadata?.source === 'public-model') {
+      shopStore?.registerSale(item.metadata.productId, item.quantity);
+    }
+  });
 
   // O pedido foi "fechado": esvazia o carrinho para a próxima compra.
   shopStore?.clearCart();

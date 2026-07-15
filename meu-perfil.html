@@ -6,7 +6,7 @@
 <title>Ursoninhos | Meu Perfil</title>
 <meta name="description" content="Area de perfil da Ursoninhos.">
 <link rel="icon" type="image/webp" href="https://i.ibb.co/wrPpWWsf/ea990759-29d9-4e67-98ce-bb22e69f8e9e-Sem-T-tulo-1.webp">
-<link rel="stylesheet" href="assets/css/style.css?v=20">
+<link rel="stylesheet" href="assets/css/style.css?v=28">
 </head>
 <body class="checkout-page profile-page">
   <div class="topbar">
@@ -77,6 +77,16 @@
                 <span>E-mail</span>
                 <input type="email" id="profileEmailInput" autocomplete="email" disabled>
               </label>
+              <div class="form-row">
+                <label class="form-field">
+                  <span>CPF</span>
+                  <input type="text" id="profileCpfInput" inputmode="numeric" maxlength="14" placeholder="000.000.000-00" autocomplete="off">
+                </label>
+                <label class="form-field">
+                  <span>Celular</span>
+                  <input type="tel" id="profilePhoneInput" inputmode="numeric" maxlength="15" placeholder="(00) 00000-0000" autocomplete="tel">
+                </label>
+              </div>
               <label class="form-field">
                 <span>Foto de perfil (URL)</span>
                 <input type="url" id="profilePhotoInput" placeholder="https://...">
@@ -121,8 +131,8 @@
     </div>
   </main>
 
-  <script src="assets/js/shop-store.js?v=20"></script>
+  <script src="assets/js/shop-store.js?v=21"></script>
   <script src="assets/js/account-ui.js?v=20"></script>
-  <script src="assets/js/profile-page.js?v=20"></script>
+  <script src="assets/js/profile-page.js?v=21"></script>
 </body>
 </html>

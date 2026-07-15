@@ -8,7 +8,27 @@
   const profileSidebarEmail = document.getElementById('profileSidebarEmail');
   const profileNameInput = document.getElementById('profileNameInput');
   const profileEmailInput = document.getElementById('profileEmailInput');
+  const profileCpfInput = document.getElementById('profileCpfInput');
+  const profilePhoneInput = document.getElementById('profilePhoneInput');
   const profilePhotoInput = document.getElementById('profilePhotoInput');
+
+  function maskCpf(value) {
+    return String(value).replace(/\D/g, '').slice(0, 11)
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d{1,2})$/, '.$1-$2');
+  }
+
+  function maskPhone(value) {
+    const digits = String(value).replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+    if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  }
+
+  profileCpfInput?.addEventListener('input', () => { profileCpfInput.value = maskCpf(profileCpfInput.value); });
+  profilePhoneInput?.addEventListener('input', () => { profilePhoneInput.value = maskPhone(profilePhoneInput.value); });
   const profileAddressText = document.getElementById('profileAddressText');
   const profileSaveNote = document.getElementById('profileSaveNote');
   const profileForm = document.getElementById('profileForm');
@@ -41,6 +61,8 @@
     if (profileSidebarEmail) profileSidebarEmail.textContent = user.email;
     if (profileNameInput) profileNameInput.value = user.name || '';
     if (profileEmailInput) profileEmailInput.value = user.email || '';
+    if (profileCpfInput) profileCpfInput.value = maskCpf(user.cpf || '');
+    if (profilePhoneInput) profilePhoneInput.value = maskPhone(user.phone || '');
     if (profilePhotoInput) profilePhotoInput.value = user.photoUrl || '';
     if (profileAddressText) profileAddressText.textContent = formatAddress(user.address);
   }
@@ -62,6 +84,8 @@
 
     store.updateCurrentUser({
       name: profileNameInput?.value.trim() || user.name,
+      cpf: (profileCpfInput?.value || '').replace(/\D/g, ''),
+      phone: (profilePhoneInput?.value || '').replace(/\D/g, ''),
       photoUrl: profilePhotoInput?.value.trim() || '',
     });
 

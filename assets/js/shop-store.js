@@ -130,6 +130,8 @@
       name: String(userInput.name || '').trim(),
       email: String(userInput.email || '').trim().toLowerCase(),
       password: String(userInput.password || ''),
+      cpf: String(userInput.cpf || '').replace(/\D/g, ''),
+      phone: String(userInput.phone || '').replace(/\D/g, ''),
       address: userInput.address || null,
       provider: userInput.provider || 'local',
     };
@@ -144,25 +146,90 @@
     return { ok: true, user };
   }
 
-  function loginWithGoogleMock() {
-    const email = 'cliente.google@ursoninhos.mock';
+  /* Login com Google (perfil vindo do Google Identity Services ou do
+     mock): cria a conta na primeira vez e reaproveita nas seguintes.
+     Quem entra so com Google usa o site normalmente — CPF, celular e
+     endereco ficam pendentes e viram a notificacao "Atualize seus
+     dados" no sino da home. */
+  function loginWithGoogle(profile) {
+    const email = String(profile.email || '').trim().toLowerCase();
+    if (!email) return null;
+
     const users = loadUsers();
     let user = users.find((entry) => entry.email === email);
 
     if (!user) {
       user = {
-        name: 'Cliente Google',
+        name: String(profile.name || 'Cliente Google').trim(),
         email,
         password: '',
-        provider: 'google-mock',
+        cpf: '',
+        phone: '',
+        photoUrl: profile.photoUrl || '',
+        provider: profile.provider || 'google',
         address: null,
       };
       users.push(user);
-      saveUsers(users);
+    } else {
+      user.provider = user.provider || 'google';
+      if (profile.photoUrl && !user.photoUrl) user.photoUrl = profile.photoUrl;
     }
 
+    saveUsers(users);
     localStorage.setItem(SESSION_STORAGE_KEY, user.email);
     return user;
+  }
+
+  function loginWithGoogleMock() {
+    return loginWithGoogle({
+      name: 'Cliente Google',
+      email: 'cliente.google@ursoninhos.mock',
+      provider: 'google-mock',
+    });
+  }
+
+  // Dados minimos de um perfil de marketplace: CPF, celular e endereco.
+  function getMissingProfileFields(user) {
+    if (!user) return [];
+    const missing = [];
+    if (!user.cpf) missing.push('CPF');
+    if (!user.phone) missing.push('celular');
+    if (!user.address) missing.push('endereço');
+    return missing;
+  }
+
+  /* --- Vendas por produto (mock local) ---
+     Sem endpoint de atualizacao no backend ainda, o contador vive no
+     localStorage deste navegador. Quando products.php ganhar o campo
+     "sales", o total exibido soma backend + local. */
+  const SALES_STORAGE_KEY = 'ursoninhos_sales';
+
+  function loadSales() {
+    const sales = readJson(SALES_STORAGE_KEY, {});
+    return sales && typeof sales === 'object' ? sales : {};
+  }
+
+  function getLocalSales(productId) {
+    return Number(loadSales()[productId] || 0);
+  }
+
+  function registerSale(productId, quantity) {
+    if (!productId) return;
+    const sales = loadSales();
+    sales[productId] = Number(sales[productId] || 0) + Math.max(1, Number(quantity || 1));
+    writeJson(SALES_STORAGE_KEY, sales);
+
+    // Tenta somar tambem no backend (products.php v2). Na versao atual
+    // do backend a rota nao existe — o erro e ignorado de proposito e o
+    // contador local segue valendo.
+    const baseUrl = window.URSONINHOS_APP_CONFIG?.backendBaseUrl;
+    if (baseUrl) {
+      fetch(`${baseUrl}/products.php?action=sale`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: productId, quantity }),
+      }).catch(() => {});
+    }
   }
 
   function updateCurrentUser(patch) {
@@ -188,6 +255,28 @@
     return `URS-${timestamp}${random}`;
   }
 
+  /* --- Créditos do criador ---
+     O backend atual so persiste campos fixos, entao o nome de quem
+     criou o modelo viaja DENTRO da descricao, num marcador no formato
+     "[criador:Nome]". parseCreator separa o texto limpo do nome para
+     exibicao; embedCreator monta a descricao com o marcador. */
+  const CREATOR_MARKER = /\s*\[criador:([^\]]+)\]\s*/i;
+
+  function embedCreator(description, creatorName) {
+    const clean = String(description || '').replace(CREATOR_MARKER, ' ').trim();
+    const name = String(creatorName || '').trim();
+    return name ? `${clean} [criador:${name}]` : clean;
+  }
+
+  function parseCreator(description) {
+    const raw = String(description || '');
+    const match = raw.match(CREATOR_MARKER);
+    return {
+      description: raw.replace(CREATOR_MARKER, ' ').replace(/\s{2,}/g, ' ').trim(),
+      creator: match ? match[1].trim() : '',
+    };
+  }
+
   window.UrsoninhosStore = {
     formatBRL,
     loadCart,
@@ -203,7 +292,13 @@
     getCurrentUser,
     login,
     register,
+    loginWithGoogle,
     loginWithGoogleMock,
+    getMissingProfileFields,
+    getLocalSales,
+    registerSale,
+    embedCreator,
+    parseCreator,
     updateCurrentUser,
     logout,
     generateOrderNumber,

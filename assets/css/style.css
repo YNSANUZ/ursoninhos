@@ -3405,6 +3405,15 @@ ul {
   gap: 16px;
 }
 
+/* display:flex acima venceria o atributo hidden — garante que o
+   formulário escondido (login OU cadastro) realmente suma. */
+.auth-form[hidden],
+.auth-divider[hidden],
+.btn--google[hidden],
+.auth-register-hint[hidden] {
+  display: none;
+}
+
 .form-field {
   display: flex;
   flex-direction: column;
@@ -3839,4 +3848,234 @@ ul {
   .instagram__grid {
     grid-template-columns: repeat(2, 1fr);
   }
+}
+
+/* =========================================================
+   Login marketplace: divisor "ou", botão Google, link
+   discreto de cadastro.
+   ========================================================= */
+.auth-divider {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 18px 0;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.auth-divider::before,
+.auth-divider::after {
+  content: "";
+  flex: 1;
+  height: 1px;
+  background: rgba(217, 167, 92, 0.18);
+}
+
+.btn--google {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 16px;
+  border-radius: 10px;
+  border: 1px solid rgba(217, 167, 92, 0.35);
+  background: #fff;
+  color: #1f1f1f;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.btn--google:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+}
+
+.google-signin {
+  display: flex;
+  justify-content: center;
+}
+
+.auth-register-hint {
+  margin: 18px 0 0;
+  text-align: center;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.auth-register-hint .link-edit {
+  border: none;
+  background: none;
+  color: var(--gold);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+
+/* =========================================================
+   Sino de notificações do cabeçalho (bolinha vermelha conta
+   avisos pendentes; painel abre embaixo do sino).
+   ========================================================= */
+.topbar__notif {
+  position: relative;
+}
+
+.topbar__notif button#notifBellBtn {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  border: none;
+  background: none;
+  color: inherit;
+  cursor: pointer;
+  padding: 2px;
+}
+
+.notif-badge {
+  position: absolute;
+  top: -7px;
+  right: -9px;
+  min-width: 16px;
+  height: 16px;
+  padding: 0 4px;
+  border-radius: 999px;
+  background: #e23c3c;
+  color: #fff;
+  font-size: 0.62rem;
+  font-weight: 700;
+  line-height: 16px;
+  text-align: center;
+}
+
+.notif-panel {
+  position: absolute;
+  top: calc(100% + 10px);
+  right: -10px;
+  z-index: 60;
+  width: min(320px, 86vw);
+  padding: 10px;
+  border-radius: var(--radius-m);
+  border: 1px solid var(--gold-soft);
+  background: var(--bg-panel);
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.5);
+  text-align: left;
+}
+
+/* Em telas estreitas o painel ancorado no sino vazaria da tela:
+   passa a ocupar a largura toda, logo abaixo da barra superior. */
+@media (max-width: 640px) {
+  .notif-panel {
+    position: fixed;
+    top: 64px;
+    left: 12px;
+    right: 12px;
+    width: auto;
+  }
+}
+
+.notif-panel__empty {
+  margin: 6px;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.notif-item {
+  padding: 10px;
+  border-radius: var(--radius-s);
+}
+
+.notif-item + .notif-item {
+  border-top: 1px solid rgba(217, 167, 92, 0.14);
+}
+
+.notif-item strong {
+  display: block;
+  color: var(--gold);
+  font-size: 0.85rem;
+  margin-bottom: 4px;
+}
+
+.notif-item p {
+  margin: 0 0 8px;
+  color: var(--text-muted);
+  font-size: 0.8rem;
+  line-height: 1.45;
+}
+
+.notif-item__actions {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.notif-item__action {
+  border: none;
+  border-radius: 999px;
+  padding: 6px 14px;
+  background: linear-gradient(180deg, #e8b878, var(--caramel));
+  color: #2a1c11;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.notif-item__dismiss {
+  border: none;
+  background: none;
+  color: var(--text-dim);
+  font-size: 0.75rem;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+/* =========================================================
+   Botão "Incluir modelo para venda pública" (coluna do hero)
+   e créditos/vendas nos produtos.
+   ========================================================= */
+.btn--publish-model {
+  width: 100%;
+  margin-top: 10px;
+  font-size: 0.82rem;
+}
+
+.product-card__creator {
+  margin: 2px 0 0;
+  font-size: 0.74rem;
+  color: var(--text-dim);
+}
+
+.product-card__creator strong {
+  color: var(--gold);
+  font-weight: 600;
+}
+
+.product-card__sales {
+  display: inline-block;
+  margin-top: 4px;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: rgba(217, 167, 92, 0.14);
+  color: var(--gold);
+  font-size: 0.7rem;
+  font-weight: 700;
+}
+
+.product-credits {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin: 10px 0 0;
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.product-credits strong {
+  color: var(--gold);
 }

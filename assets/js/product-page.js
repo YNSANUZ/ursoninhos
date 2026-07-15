@@ -67,10 +67,28 @@ async function loadProduct3d(product) {
 }
 
 function renderProductInfo(product) {
+  // A descrição pode carregar o marcador [criador:Nome]; separa o
+  // texto limpo do crédito antes de exibir.
+  const { description, creator } = store.parseCreator(product.description);
+
   if (productTitle) productTitle.textContent = product.title;
-  if (productDescription) productDescription.textContent = product.description;
+  if (productDescription) productDescription.textContent = description;
   if (productPricePill) productPricePill.textContent = store.formatBRL(product.price);
   document.title = `Ursoninhos | ${product.title}`;
+
+  const creditsEl = document.getElementById('productCredits');
+  const creatorEl = document.getElementById('productCreator');
+  const salesEl = document.getElementById('productSales');
+  if (creditsEl && creatorEl) {
+    creatorEl.textContent = creator || 'Loja Ursoninhos';
+    creditsEl.hidden = false;
+  }
+  // Vendas: backend (futuro campo "sales") + vendas locais; só mostra ≥1.
+  const sales = Number(product.sales || 0) + store.getLocalSales(product.id);
+  if (salesEl) {
+    salesEl.textContent = `${sales} ${sales === 1 ? 'venda' : 'vendas'}`;
+    salesEl.hidden = sales < 1;
+  }
 }
 
 function addCurrentProductToCart() {
@@ -130,6 +148,7 @@ function renderRelatedProducts(products) {
 
   const others = products
     .filter((product) => product.id !== currentProduct?.id)
+    .filter((product) => String(product.catalogImage || '').startsWith('data:') || String(product.catalogImage || '').startsWith('http'))
     .slice(0, 4);
 
   if (!others.length) {
@@ -144,7 +163,7 @@ function renderRelatedProducts(products) {
       </button>
       <h3>${product.title}</h3>
       <p class="product-card__price">${store.formatBRL(product.price)}</p>
-      <p class="product-card__meta">${product.description}</p>
+      <p class="product-card__meta">${store.parseCreator(product.description).description}</p>
       <div class="product-card__actions">
         <button type="button" class="product-card__add" data-action="open">Ver produto</button>
       </div>

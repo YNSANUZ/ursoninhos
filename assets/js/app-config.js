@@ -5,5 +5,10 @@
   window.URSONINHOS_APP_CONFIG = {
     backendBaseUrl: `${backendOrigin}/_ursoninhos_backend/api`,
     defaultLogoUrl: 'https://i.ibb.co/6qrP8SY/ursoninhos-logo-fundo-transparente.png',
+    // Login com Google de verdade: crie um "OAuth Client ID" (tipo Web)
+    // em console.cloud.google.com > APIs e servicos > Credenciais, com
+    // https://ursoninhos.com nas origens autorizadas, e cole aqui.
+    // Vazio = botao de demonstracao (conta Google simulada).
+    googleClientId: '',
   };
 })();
