@@ -16,7 +16,8 @@
     productsSheetId: '1FTHI9piD4iKAiQtldgm8dfp2-TOKosk5LPN-9a9KoFQ',
     // URL do Web App do Google Apps Script (backend/google-apps-script.gs)
     // que permite ao site ESCREVER na planilha (publicar modelo, botao
-    // "Sincronizar planilha" do painel ADM). Vazio = so leitura.
-    sheetWebAppUrl: '',
+    // "Sincronizar planilha" do painel ADM). O "?key=" precisa bater com
+    // o SYNC_KEY definido no proprio script.
+    sheetWebAppUrl: 'https://script.google.com/macros/s/AKfycbyI8n3r0nFQsCXJuAsS8uUg3djgGkHFmGlffF3Dx0Cd5YtxBZfYLcQXpUXxaZGn4G3S/exec?key=TROQUE-ESTA-CHAVE',
   };
 })();
