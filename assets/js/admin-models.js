@@ -248,3 +248,90 @@ init().catch((error) => {
   console.error('Falha ao iniciar o painel ADM:', error);
   setNote('Nao foi possivel iniciar o viewer 3D do painel ADM.', true);
 });
+
+/* ---------------------------------------------------------
+   Sincronizar produtos com a planilha Google
+   Monta a lista COMPLETA de produtos do site — as camisas de
+   frases (cada frase é um produto, camisa preta) e os modelos
+   públicos do backend — e envia para a planilha via Web App
+   (upsert por id; preço editado na planilha é preservado).
+   --------------------------------------------------------- */
+
+const SITE_URL = 'https://ursoninhos.com';
+const sheetSyncBtn = document.getElementById('sheetSyncBtn');
+const sheetSyncNote = document.getElementById('sheetSyncNote');
+
+function setSyncNote(message, isError = false) {
+  if (!sheetSyncNote) return;
+  sheetSyncNote.textContent = message;
+  sheetSyncNote.style.color = isError ? '#e08a7a' : '';
+}
+
+// Nome do produto = "Camisa Preta" + a frase (ou o começo dela).
+function nomeDeFrase(frase) {
+  const limpa = String(frase).replace(/\s+/g, ' ').trim();
+  const parte = limpa.length > 70 ? `${limpa.slice(0, 67).trim()}…` : limpa;
+  return `Camisa Preta — "${parte}"`;
+}
+
+async function montarTodosOsProdutos() {
+  const linhas = [];
+
+  const frases = window.UrsoninhosFrases?.gerarProdutosDeFrases() || [];
+  frases.forEach((produto) => {
+    linhas.push({
+      id: produto.id,
+      nome: nomeDeFrase(produto.frase),
+      tipo: 'camisa-frase',
+      cor: 'Preta',
+      preco: produto.preco,
+      link: `${SITE_URL}/produto-frase.html?id=${encodeURIComponent(produto.id)}`,
+    });
+  });
+
+  try {
+    const publicos = await api.listProducts();
+    publicos
+      .filter((p) => String(p.catalogImage || '').startsWith('data:') || String(p.catalogImage || '').startsWith('http'))
+      .forEach((produto) => {
+        linhas.push({
+          id: produto.id,
+          nome: produto.title,
+          tipo: 'modelo-publico',
+          cor: 'Preta',
+          preco: Number(produto.price || 0),
+          link: `${SITE_URL}/produto.html?id=${encodeURIComponent(produto.id)}`,
+        });
+      });
+  } catch (error) {
+    console.warn('Backend de modelos publicos indisponivel; sincronizando so as frases.', error);
+  }
+
+  return linhas;
+}
+
+sheetSyncBtn?.addEventListener('click', async () => {
+  const sheet = window.UrsoninhosSheet;
+  if (!sheet?.canWrite) {
+    setSyncNote('Configure a URL do Web App (sheetWebAppUrl em app-config.js) para escrever na planilha. Veja backend/google-apps-script.gs.', true);
+    return;
+  }
+
+  sheetSyncBtn.disabled = true;
+  setSyncNote('Enviando produtos para a planilha…');
+
+  try {
+    const linhas = await montarTodosOsProdutos();
+    const resultado = await sheet.push(linhas);
+    if (resultado?.ok) {
+      setSyncNote(`Planilha sincronizada: ${resultado.created || 0} produtos novos, ${resultado.updated || 0} atualizados (total enviado: ${linhas.length}).`);
+    } else {
+      setSyncNote(resultado?.error || 'A planilha nao confirmou a gravacao.', true);
+    }
+  } catch (error) {
+    console.error('Falha ao sincronizar a planilha:', error);
+    setSyncNote('Nao foi possivel sincronizar agora. Confira a URL do Web App.', true);
+  } finally {
+    sheetSyncBtn.disabled = false;
+  }
+});

@@ -191,6 +191,15 @@ async function init() {
   bindControls();
 
   currentProduct = await api.getProduct(productId);
+
+  // Preço/nome da planilha Google valem sobre os do backend.
+  try {
+    const linhas = await window.UrsoninhosSheet?.load();
+    const row = linhas?.[currentProduct.id];
+    if (row?.preco > 0) currentProduct.price = row.preco;
+    if (row?.nome) currentProduct.title = row.nome;
+  } catch (error) { /* segue com os dados do backend */ }
+
   renderProductInfo(currentProduct);
   await loadProduct3d(currentProduct);
 

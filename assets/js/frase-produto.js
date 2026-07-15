@@ -98,7 +98,7 @@
     document.title = `Camisa de Frase "${produto.frase}" | Ursoninhos`;
 
     const titleEl = document.getElementById('pfTitle');
-    if (titleEl) titleEl.textContent = produto.frase;
+    if (titleEl) titleEl.textContent = produto.nomePlanilha || produto.frase;
 
     const starsFill = document.getElementById('pfStarsFill');
     if (starsFill) starsFill.style.width = `${(nota / 5) * 100}%`;
@@ -124,7 +124,7 @@
     const descricao = document.getElementById('pfPanelDescricao');
     if (descricao) {
       descricao.innerHTML = `
-        <p>A Camisa de Frase <strong>“${escapeHtml(produto.frase)}”</strong> é perfeita para quem curte frases sarcásticas e diretas.</p>
+        <p>A camisa <strong>preta</strong> com a frase <strong>“${escapeHtml(produto.frase)}”</strong> é perfeita para quem curte frases sarcásticas e diretas. (Em breve também na versão branca!)</p>
         <p>Produzida com materiais premium, ela oferece conforto, durabilidade e um caimento impecável.</p>
         <p>Ideal para o dia a dia, a estampa em alta definição no estilo <strong>${escapeHtml(produto.presetName)}</strong> ainda garante que sua mensagem seja resistente à lavagem.</p>
       `;
@@ -135,6 +135,7 @@
       detalhes.innerHTML = `
         <ul class="pf-details-list">
           <li><strong>Categoria:</strong> Camisas de Frases (frases desmotivacionais)</li>
+          <li><strong>Cor da camisa:</strong> Preta</li>
           <li><strong>Frase:</strong> ${escapeHtml(produto.frase)}</li>
           <li><strong>Estilo da estampa:</strong> ${escapeHtml(produto.presetName)}</li>
           <li><strong>Malha:</strong> 100% algodão fio 30.1 penteado</li>
@@ -210,7 +211,7 @@
     const qty = Math.max(1, parseInt(document.getElementById('pfQtyInput')?.value || '1', 10) || 1);
     store.addCartItem({
       productId: `camisa-frase::${produto.id}`,
-      title: 'Camisa de Frase',
+      title: produto.nomePlanilha || 'Camisa Preta de Frase',
       variantLabel: `Frase: ${produto.titulo}`,
       price: produto.preco,
       size: tamanhoSelecionado,
@@ -331,13 +332,25 @@
     });
   }
 
-  preencherCabecalhoProduto();
-  preencherAbas();
-  configurarAbas();
-  configurarOpcoes();
-  configurarAcoes();
-  configurarGaleria();
-  atualizarContadorCarrinho();
-  renderImagemPrincipal();
-  renderRelacionados();
+  /* A planilha Google de produtos manda no preço/nome: aplica as
+     alterações dela (por id) antes de desenhar a página. Se a planilha
+     não responder, os valores padrão do código continuam valendo. */
+  async function aplicarPlanilha() {
+    try {
+      const linhas = await window.UrsoninhosSheet?.load();
+      if (linhas) produtos.forEach((p) => window.UrsoninhosSheet.applyOverride(p, linhas[p.id]));
+    } catch (error) { /* segue com os padrões */ }
+  }
+
+  aplicarPlanilha().finally(() => {
+    preencherCabecalhoProduto();
+    preencherAbas();
+    configurarAbas();
+    configurarOpcoes();
+    configurarAcoes();
+    configurarGaleria();
+    atualizarContadorCarrinho();
+    renderImagemPrincipal();
+    renderRelacionados();
+  });
 })();

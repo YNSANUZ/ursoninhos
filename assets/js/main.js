@@ -1189,6 +1189,17 @@ publishModelBtn?.addEventListener('click', async () => {
       `<a href="produto.html?id=${encodeURIComponent(product.id)}">Ver página do produto</a>`
     );
     window.UrsoninhosCatalog?.refresh();
+
+    // Registra o produto novo também na planilha Google de controle
+    // (só funciona com o Web App configurado; sem ele, não faz nada).
+    window.UrsoninhosSheet?.push([{
+      id: product.id,
+      nome: product.title,
+      tipo: 'modelo-publico',
+      cor: 'Preta',
+      preco: product.price,
+      link: `https://ursoninhos.com/produto.html?id=${encodeURIComponent(product.id)}`,
+    }]).catch(() => {});
   } catch (error) {
     console.error('Não foi possível publicar o modelo:', error);
     setPublishFeedback('Não foi possível publicar agora. Tente novamente em instantes.', true);

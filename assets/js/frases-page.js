@@ -96,7 +96,7 @@
   function adicionarAoCarrinho(produto, imagem) {
     store.addCartItem({
       productId: `camisa-frase::${produto.id}`,
-      title: 'Camisa de Frase',
+      title: produto.nomePlanilha || 'Camisa Preta de Frase',
       variantLabel: `Frase: ${produto.titulo}`,
       price: produto.preco,
       size: 'M',
@@ -125,7 +125,7 @@
         <a class="product-card__thumb product-card__thumb--catalog frase-card__thumb" href="produto-frase.html?id=${encodeURIComponent(produto.id)}" aria-label="Ver produto: ${escapeHtml(produto.frase)}">
           <span class="frase-card__loading">Gerando mockup…</span>
         </a>
-        <h3 title="${escapeHtml(produto.frase)}">${escapeHtml(produto.titulo)}</h3>
+        <h3 title="${escapeHtml(produto.frase)}">${escapeHtml(produto.nomePlanilha || produto.titulo)}</h3>
         <p class="product-card__price">${store.formatBRL(produto.preco)}</p>
         <p class="product-card__meta">Estilo: ${escapeHtml(produto.presetName)}</p>
         <div class="product-card__actions">
@@ -174,5 +174,15 @@
   });
 
   atualizarContadorCarrinho();
-  renderGrid();
+
+  /* Preço/nome da PLANILHA GOOGLE valem sobre os padrões do código:
+     aplica as linhas dela (por id) antes de montar o grid. Planilha
+     fora do ar? O grid abre igual, com os valores padrão. */
+  (async () => {
+    try {
+      const linhas = await window.UrsoninhosSheet?.load();
+      if (linhas) produtos.forEach((p) => window.UrsoninhosSheet.applyOverride(p, linhas[p.id]));
+    } catch (error) { /* segue com os padrões */ }
+    renderGrid();
+  })();
 })();

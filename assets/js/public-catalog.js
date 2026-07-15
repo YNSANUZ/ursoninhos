@@ -61,9 +61,23 @@
     return Number(product.sales || 0) + store.getLocalSales(product.id);
   }
 
+  // Preço da planilha Google vale sobre o preço do backend (match por id).
+  async function applySheetPrices(products) {
+    try {
+      const linhas = await window.UrsoninhosSheet?.load();
+      if (!linhas) return;
+      products.forEach((product) => {
+        const row = linhas[product.id];
+        if (row?.preco > 0) product.price = row.preco;
+        if (row?.nome) product.title = row.nome;
+      });
+    } catch (error) { /* segue com os preços do backend */ }
+  }
+
   async function renderPublicProducts() {
     try {
       const products = (await api.listProducts()).filter(isValidProduct);
+      await applySheetPrices(products);
 
       if (!products.length) {
         grid.innerHTML = '<p class="catalog-placeholder">Nenhum modelo publico foi publicado ainda.</p>';

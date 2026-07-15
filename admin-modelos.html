@@ -136,15 +136,31 @@
             <button type="submit" class="btn btn--gold">Adicionar modelo ao site público</button>
             <p class="cart-drawer__note" id="adminPublishNote"></p>
           </form>
+
+          <!-- Controle de produtos na planilha Google: manda TODOS os
+               produtos do site (camisas de frases + modelos públicos)
+               para a planilha, com id, nome, preço e link únicos.
+               Precisa do Web App configurado (backend/google-apps-script.gs). -->
+          <div class="checkout-form" style="margin-top: 18px;">
+            <h3>Planilha de produtos</h3>
+            <p>Envia todos os produtos do site para a planilha Google (id, nome, preço e link). Preços editados na planilha são preservados.</p>
+            <button type="button" class="btn btn--outline" id="sheetSyncBtn">Sincronizar planilha</button>
+            <p class="cart-drawer__note" id="sheetSyncNote"></p>
+          </div>
         </aside>
       </div>
     </div>
   </main>
 
-  <script src="assets/js/shop-store.js?v=20"></script>
+  <script src="assets/js/shop-store.js?v=21"></script>
   <script src="assets/js/account-ui.js?v=20"></script>
-  <script src="assets/js/app-config.js?v=20"></script>
+  <script src="assets/js/app-config.js?v=21"></script>
+  <script src="assets/js/sheet-products.js?v=1"></script>
   <script src="assets/js/public-api.js?v=20"></script>
-  <script type="module" src="assets/js/admin-models.js?v=20"></script>
+  <!-- Motor de texto + frases: necessários para listar as camisas de
+       frases na sincronização com a planilha Google. -->
+  <script src="assets/js/text-print-engine.js?v=19"></script>
+  <script src="assets/js/frases-data.js?v=19"></script>
+  <script type="module" src="assets/js/admin-models.js?v=21"></script>
 </body>
 </html>
