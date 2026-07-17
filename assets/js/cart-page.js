@@ -782,6 +782,17 @@
       refreshButton.textContent = 'Verificar pagamento';
       refreshButton.addEventListener('click', () => refreshPaymentStatus(order.id));
       paymentResultDetails.appendChild(refreshButton);
+
+      const retryButton = document.createElement('button');
+      retryButton.type = 'button';
+      retryButton.className = 'btn btn--outline';
+      retryButton.textContent = 'Escolher outra forma de pagamento';
+      retryButton.addEventListener('click', () => {
+        paymentSession = null;
+        localStorage.removeItem(PENDING_ORDER_STORAGE_KEY);
+        goToStep('review');
+      });
+      paymentResultDetails.appendChild(retryButton);
     }
   }
 
