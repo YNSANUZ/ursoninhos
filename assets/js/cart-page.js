@@ -706,8 +706,10 @@
             } catch (error) {
               if (paymentVisualTitle) paymentVisualTitle.textContent = 'Pagamento nao concluido';
               if (checkoutPaymentError) {
-                checkoutPaymentError.textContent = 'O pagamento nao foi aprovado. Confira os dados ou tente outro cartao ou forma de pagamento.';
+                checkoutPaymentError.textContent = error?.message
+                  || 'O pagamento nao foi aprovado. Confira os dados ou tente outro cartao ou forma de pagamento.';
               }
+              console.error('Falha ao processar pagamento:', error);
               throw error;
             }
           },
