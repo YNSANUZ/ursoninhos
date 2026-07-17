@@ -134,6 +134,7 @@
       phone: String(userInput.phone || '').replace(/\D/g, ''),
       address: userInput.address || null,
       provider: userInput.provider || 'local',
+      createdAt: new Date().toISOString(),
     };
 
     if (users.some((entry) => entry.email === user.email)) {
@@ -168,6 +169,7 @@
         photoUrl: profile.photoUrl || '',
         provider: profile.provider || 'google',
         address: null,
+        createdAt: new Date().toISOString(),
       };
       users.push(user);
     } else {
@@ -178,14 +180,6 @@
     saveUsers(users);
     localStorage.setItem(SESSION_STORAGE_KEY, user.email);
     return user;
-  }
-
-  function loginWithGoogleMock() {
-    return loginWithGoogle({
-      name: 'Cliente Google',
-      email: 'cliente.google@ursoninhos.mock',
-      provider: 'google-mock',
-    });
   }
 
   // Dados minimos de um perfil de marketplace: CPF, celular e endereco.
@@ -293,7 +287,6 @@
     login,
     register,
     loginWithGoogle,
-    loginWithGoogleMock,
     getMissingProfileFields,
     getLocalSales,
     registerSale,
