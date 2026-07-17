@@ -6,7 +6,7 @@
 <title>Ursoninhos | Carrinho e checkout</title>
 <meta name="description" content="Carrinho e fluxo de compra inicial da Ursoninhos.">
 <link rel="icon" type="image/webp" href="https://i.ibb.co/wrPpWWsf/ea990759-29d9-4e67-98ce-bb22e69f8e9e-Sem-T-tulo-1.webp">
-<link rel="stylesheet" href="assets/css/style.css?v=28">
+<link rel="stylesheet" href="assets/css/style.css?v=29">
 </head>
 <body class="checkout-page">
   <div class="topbar">
@@ -52,7 +52,7 @@
     <div class="container">
       <div class="checkout-head">
         <h1>Seu carrinho e fluxo de compra</h1>
-        <p>Primeira versao funcional com preview da frente da camisa, login liberado so a partir da etapa 2, endereco, revisao do pedido e pagamento visual sem integracao real.</p>
+        <p>Revise o carrinho, informe a entrega e conclua o pagamento no ambiente seguro do Mercado Pago.</p>
       </div>
 
       <div class="checkout-steps" id="checkoutSteps">
@@ -105,7 +105,8 @@
             <div class="checkout-info" id="loggedUserCard" hidden></div>
 
             <div id="guestAuthSection">
-              <button type="button" class="btn btn--outline google-login-btn" id="googleLoginBtn">Entrar com Google</button>
+              <div class="google-signin" id="googleSigninContainer"></div>
+              <button type="button" class="btn btn--outline google-login-btn" id="googleLoginBtn" disabled title="Login com Google em configuracao">Entrar com Google</button>
               <div class="checkout-divider">ou</div>
 
               <div class="checkout-grid-2">
@@ -225,7 +226,7 @@
             </div>
             <div class="review-card" style="margin-top: 14px;">
               <strong>Observacao</strong>
-              <span>Nesta fase inicial o pedido ainda nao vai para banco de dados nem gateway real.</span>
+              <span>O pedido de teste sera registrado no backend antes do redirecionamento ao Mercado Pago.</span>
             </div>
             <div class="checkout-nav">
               <button type="button" class="btn btn--outline" data-goto-step="address">Editar endereco</button>
@@ -237,42 +238,28 @@
             <div class="checkout-stage__head">
               <div>
                 <h2>5. Pagamento</h2>
-                <p>Tela visual para a primeira etapa do fluxo. Ainda sem integracao real.</p>
+                <p>Checkout transparente em modo de teste: o pagamento acontece sem sair do Ursoninhos.</p>
               </div>
             </div>
 
-            <div class="payment-options-grid" id="paymentChoices">
-              <button type="button" class="payment-choice" data-method="pix">
-                <strong>Pix</strong>
-                <span>Confirmacao rapida com QR e codigo visual.</span>
-              </button>
-              <button type="button" class="payment-choice" data-method="card">
-                <strong>Cartao</strong>
-                <span>Formulario visual para futura integracao.</span>
-              </button>
-              <button type="button" class="payment-choice" data-method="boleto">
-                <strong>Boleto</strong>
-                <span>Opcao visual de pagamento em ate 3 dias.</span>
-              </button>
-            </div>
-
             <div class="payment-card" id="paymentVisualBox">
-              <strong id="paymentVisualTitle">Escolha uma forma de pagamento</strong>
-              <span id="paymentVisualText">Depois, aqui entra a integracao real com gateway.</span>
+              <strong id="paymentVisualTitle">Carregando formas de pagamento</strong>
+              <span id="paymentVisualText">O componente seguro do Mercado Pago aparecera abaixo.</span>
             </div>
+            <div id="paymentBrick_container" aria-live="polite"></div>
+            <p class="form-error" id="checkoutPaymentError" role="alert"></p>
 
             <div class="checkout-nav">
               <button type="button" class="btn btn--outline" data-goto-step="review">Voltar para revisao</button>
-              <button type="button" class="btn btn--gold" id="finishOrderBtn">Finalizar pedido visual</button>
             </div>
           </div>
 
           <div class="checkout-stage" id="stageSuccess" hidden>
             <div class="checkout-success">
-              <h2>Pedido criado</h2>
-              <p>Fluxo concluido com sucesso nesta primeira versao.</p>
+              <h2 id="successOrderTitle">Consultando pagamento</h2>
+              <p id="successOrderStatus">Aguarde enquanto confirmamos o resultado com o servidor.</p>
               <span class="checkout-success__number" id="successOrderNumber"></span>
-              <p>O carrinho foi limpo e a estrutura ficou pronta para a futura integracao com backend.</p>
+              <div id="paymentResultDetails"></div>
               <div class="checkout-nav" style="justify-content: center;">
                 <a href="index.html#hero" class="btn btn--gold">Criar nova camisa</a>
               </div>
@@ -304,7 +291,7 @@
               <span>Total</span>
               <strong id="summaryTotal">R$ 0,00</strong>
             </div>
-            <p class="summary-note">Estrutura pronta para evoluir depois com login Google real, pedido persistido em backend e previews de frente, verso e laterais.</p>
+            <p class="summary-note">Checkout transparente em modo de teste. Os dados de cartao sao capturados pelo componente seguro do Mercado Pago.</p>
           </div>
 
           <div class="item-detail-card" id="itemDetailCard" style="margin-top: 20px;">
@@ -327,8 +314,10 @@
     </div>
   </main>
 
-  <script src="assets/js/shop-store.js?v=21"></script>
+  <script src="assets/js/app-config.js?v=24"></script>
+  <script src="assets/js/shop-store.js?v=22"></script>
   <script src="assets/js/account-ui.js?v=20"></script>
-  <script src="assets/js/cart-page.js?v=23"></script>
+  <script src="https://sdk.mercadopago.com/js/v2"></script>
+  <script src="assets/js/cart-page.js?v=26"></script>
 </body>
 </html>
