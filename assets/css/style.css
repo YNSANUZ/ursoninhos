@@ -775,7 +775,8 @@ ul {
   left: 50%;
   transform: translate(-50%, -50%);
   z-index: 5;
-  width: min(72%, 320px);
+  width: min(88%, 420px);
+  max-height: 88%;
   padding: 10px;
   border-radius: calc(var(--radius-m) + 2px);
   border: 1px solid var(--gold-soft);
@@ -803,13 +804,15 @@ ul {
   border-radius: calc(var(--radius-m) - 2px);
   background: #000;
   aspect-ratio: 3 / 4;
+  max-height: min(72vh, 560px);
 }
 
 .stage-intro__gif {
   display: block;
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
 }
 
 .stage-intro__close {
@@ -874,6 +877,11 @@ ul {
 .stage-tutorial-btn:hover {
   background: rgba(38, 27, 18, 0.94);
   transform: translateY(-1px);
+}
+
+.stage-intro:not([hidden]) + .stage-tutorial-btn {
+  opacity: 0;
+  pointer-events: none;
 }
 
 /* No 3D o manequim é mais largo que a camisa da foto: o portal cresce
@@ -3727,7 +3735,7 @@ ul {
   }
 
   .stage-intro {
-    width: min(78%, 280px);
+    width: min(82%, 320px);
     top: 46%;
   }
 
