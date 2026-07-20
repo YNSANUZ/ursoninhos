@@ -24,18 +24,62 @@
     });
   }
 
+  const STANDARD_SHIRT_PRICING = {
+    front: 49.9,
+    back: 20,
+    sleeveLeft: 7,
+    sleeveRight: 7,
+  };
+
+  function normalizeSides(sides = {}) {
+    return {
+      front: sides.front !== false,
+      back: Boolean(sides.back),
+      sleeveLeft: Boolean(sides.sleeveLeft),
+      sleeveRight: Boolean(sides.sleeveRight),
+    };
+  }
+
+  function getStandardShirtPrice(sides = {}) {
+    const normalized = normalizeSides(sides);
+    let total = STANDARD_SHIRT_PRICING.front;
+    if (normalized.back) total += STANDARD_SHIRT_PRICING.back;
+    if (normalized.sleeveLeft) total += STANDARD_SHIRT_PRICING.sleeveLeft;
+    if (normalized.sleeveRight) total += STANDARD_SHIRT_PRICING.sleeveRight;
+    return Number(total.toFixed(2));
+  }
+
+  function describeShirtSides(sides = {}) {
+    const normalized = normalizeSides(sides);
+    const parts = ['Frente'];
+    const sleeveCount = Number(normalized.sleeveLeft) + Number(normalized.sleeveRight);
+
+    if (normalized.back) parts.push('Costas');
+    if (sleeveCount === 2) parts.push('2 mangas');
+    else if (normalized.sleeveLeft) parts.push('Manga esquerda');
+    else if (normalized.sleeveRight) parts.push('Manga direita');
+
+    return parts.join(' + ');
+  }
+
   function normalizeCartItem(item) {
+    const metadata = item.metadata || {};
+    const normalizedSides = normalizeSides(metadata.sides || {});
+    const normalizedPrice = metadata.pricingMode === 'standard-shirt'
+      ? getStandardShirtPrice(normalizedSides)
+      : Number(item.price || 0);
+
     return {
       lineId: item.lineId || `${item.productId || item.id}::${item.size || 'UN'}::${item.variantLabel || ''}`,
       productId: item.productId || item.id || 'produto',
       title: item.title || item.name || 'Produto',
-      price: Number(item.price || 0),
+      price: normalizedPrice,
       size: item.size || '',
       quantity: Math.max(1, Number(item.quantity || item.qty || 1)),
       previewImage: item.previewImage || item.thumb || '',
       previewViews: item.previewViews || { front: item.previewImage || item.thumb || '' },
       variantLabel: item.variantLabel || item.variant || '',
-      metadata: item.metadata || {},
+      metadata,
     };
   }
 
@@ -280,6 +324,8 @@
     clearCart,
     getCartCount,
     getCartTotal,
+    getStandardShirtPrice,
+    describeShirtSides,
     getCurrentUser,
     getAuthHeaders,
     refreshSession,
