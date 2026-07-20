@@ -885,7 +885,8 @@ ul {
 .stage-tutorial-btn {
   position: absolute;
   right: 12px;
-  bottom: 12px;
+  top: 12px;
+  bottom: auto;
   z-index: 4;
   border: 1px solid var(--gold-soft);
   border-radius: 999px;
