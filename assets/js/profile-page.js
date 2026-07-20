@@ -53,9 +53,7 @@
     }
 
     if (profileSidebarAvatar) {
-      profileSidebarAvatar.innerHTML = user.photoUrl
-        ? `<img src="${user.photoUrl}" alt="${user.name}">`
-        : accountUI.buildAvatarMarkup(user, 'profile-sidebar__avatar-badge');
+      profileSidebarAvatar.innerHTML = accountUI.buildAvatarMarkup(user, 'profile-sidebar__avatar-badge');
     }
     if (profileSidebarName) profileSidebarName.textContent = user.name;
     if (profileSidebarEmail) profileSidebarEmail.textContent = user.email;

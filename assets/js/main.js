@@ -1390,10 +1390,9 @@ function renderAuthState() {
     if (authProfileView) authProfileView.hidden = false;
     if (authDrawerTitle) authDrawerTitle.textContent = 'Meu perfil';
     if (profileAvatar) {
-      profileAvatar.innerHTML = user.photoUrl
-        ? `<img src="${user.photoUrl}" alt="${user.name}">`
-        : '';
-      profileAvatar.textContent = user.photoUrl ? '' : getInitials(user.name) || '?';
+      profileAvatar.innerHTML = window.UrsoninhosAccountUI?.buildAvatarMarkup(user, 'profile-card__avatar-badge')
+        || (user.photoUrl ? `<img src="${user.photoUrl}" alt="${user.name}">` : '');
+      profileAvatar.textContent = '';
     }
     if (profileName) profileName.textContent = user.name;
     if (profileEmail) profileEmail.textContent = user.email;

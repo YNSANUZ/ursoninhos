@@ -6,7 +6,7 @@
 <title>Ursoninhos | Carrinho e checkout</title>
 <meta name="description" content="Carrinho e fluxo de compra inicial da Ursoninhos.">
 <link rel="icon" type="image/webp" href="https://i.ibb.co/wrPpWWsf/ea990759-29d9-4e67-98ce-bb22e69f8e9e-Sem-T-tulo-1.webp">
-<link rel="stylesheet" href="assets/css/style.css?v=29">
+<link rel="stylesheet" href="assets/css/style.css?v=30">
 </head>
 <body class="checkout-page">
   <div class="topbar">
@@ -52,7 +52,7 @@
     <div class="container">
       <div class="checkout-head">
         <h1>Seu carrinho e fluxo de compra</h1>
-        <p>Revise o carrinho, informe a entrega e conclua o pagamento no ambiente seguro do Mercado Pago.</p>
+        <p>Revise o carrinho, informe a entrega e conclua o pagamento com seguranca.</p>
       </div>
 
       <div class="checkout-steps" id="checkoutSteps">
@@ -224,10 +224,6 @@
               <strong>Endereco de entrega</strong>
               <span id="reviewAddressText"></span>
             </div>
-            <div class="review-card" style="margin-top: 14px;">
-              <strong>Observacao</strong>
-              <span>O pedido de teste sera registrado no backend antes do redirecionamento ao Mercado Pago.</span>
-            </div>
             <div class="checkout-nav">
               <button type="button" class="btn btn--outline" data-goto-step="address">Editar endereco</button>
               <button type="button" class="btn btn--gold" id="goToPaymentBtn">Ir para pagamento</button>
@@ -238,13 +234,13 @@
             <div class="checkout-stage__head">
               <div>
                 <h2>5. Pagamento</h2>
-                <p>Checkout transparente em modo de teste: o pagamento acontece sem sair do Ursoninhos.</p>
+                <p>Escolha a forma de pagamento e finalize seu pedido sem sair do Ursoninhos.</p>
               </div>
             </div>
 
             <div class="payment-card" id="paymentVisualBox">
               <strong id="paymentVisualTitle">Carregando formas de pagamento</strong>
-              <span id="paymentVisualText">O componente seguro do Mercado Pago aparecera abaixo.</span>
+              <span id="paymentVisualText">As opcoes de pagamento vao aparecer abaixo.</span>
             </div>
             <div id="paymentBrick_container" aria-live="polite"></div>
             <p class="form-error" id="checkoutPaymentError" role="alert"></p>
@@ -291,7 +287,7 @@
               <span>Total</span>
               <strong id="summaryTotal">R$ 0,00</strong>
             </div>
-            <p class="summary-note">Checkout transparente em modo de teste. Os dados de cartao sao capturados pelo componente seguro do Mercado Pago.</p>
+            <p class="summary-note">Pagamento protegido com processamento seguro pelo Mercado Pago.</p>
           </div>
 
           <div class="item-detail-card" id="itemDetailCard" style="margin-top: 20px;">
@@ -316,7 +312,7 @@
 
   <script src="assets/js/app-config.js?v=25"></script>
   <script src="assets/js/shop-store.js?v=23"></script>
-  <script src="assets/js/account-ui.js?v=21"></script>
+  <script src="assets/js/account-ui.js?v=22"></script>
   <script src="https://sdk.mercadopago.com/js/v2"></script>
   <script src="assets/js/cart-page.js?v=29"></script>
 </body>

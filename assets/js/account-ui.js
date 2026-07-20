@@ -12,10 +12,16 @@
   }
 
   function buildAvatarMarkup(user, className = 'account-chip__avatar') {
-    if (user?.photoUrl) {
-      return `<img class="${className} ${className}--image" src="${user.photoUrl}" alt="${user.name}">`;
-    }
-    return `<span class="${className}">${getInitials(user?.name)}</span>`;
+    const initials = getInitials(user?.name);
+    const image = user?.photoUrl
+      ? `<img class="${className}__image" src="${user.photoUrl}" alt="${user.name}">`
+      : '';
+    return `
+      <span class="${className}">
+        <span class="${className}__fallback">${initials}</span>
+        ${image}
+      </span>
+    `;
   }
 
   function renderAccountSlot(slot) {

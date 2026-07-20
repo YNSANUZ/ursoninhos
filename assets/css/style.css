@@ -189,10 +189,12 @@ ul {
 
 .account-chip__avatar,
 .profile-sidebar__avatar,
-.profile-sidebar__avatar-badge {
+.profile-card__avatar {
+  position: relative;
   width: 30px;
   height: 30px;
-  border-radius: 999px;
+  aspect-ratio: 1 / 1;
+  border-radius: 12px;
   background: linear-gradient(180deg, #e0ac67, var(--caramel));
   color: #1a1108;
   display: inline-flex;
@@ -204,12 +206,47 @@ ul {
   box-shadow: 0 8px 20px rgba(201, 143, 77, 0.18);
 }
 
-.account-chip__avatar--image,
+.profile-sidebar__avatar-badge,
+.profile-card__avatar-badge {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  aspect-ratio: 1 / 1;
+  border-radius: inherit;
+  background: linear-gradient(180deg, #e0ac67, var(--caramel));
+  color: #1a1108;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: inherit;
+  font-weight: 800;
+  overflow: hidden;
+}
+
+.account-chip__avatar__fallback,
+.profile-sidebar__avatar__fallback,
+.profile-sidebar__avatar-badge__fallback,
+.profile-card__avatar__fallback,
+.profile-card__avatar-badge__fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-top: 1px;
+}
+
+.account-chip__avatar__image,
 .profile-sidebar__avatar img,
-.profile-sidebar__avatar-badge--image {
+.profile-sidebar__avatar-badge__image,
+.profile-card__avatar img,
+.profile-card__avatar-badge__image {
+  position: relative;
+  z-index: 1;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
   border-radius: inherit;
 }
 
@@ -339,6 +376,7 @@ ul {
 .profile-sidebar__avatar {
   width: 62px;
   height: 62px;
+  border-radius: 18px;
   font-size: 1rem;
   flex-shrink: 0;
 }
@@ -3541,7 +3579,7 @@ ul {
   width: 64px;
   height: 64px;
   margin: 0 auto 16px;
-  border-radius: 50%;
+  border-radius: 18px;
   background: linear-gradient(160deg, var(--caramel), var(--brown-mid));
   color: #1a1108;
   font-size: 1.4rem;
@@ -3556,6 +3594,7 @@ ul {
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
 }
 
 .profile-card h3 {
