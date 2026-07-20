@@ -3741,6 +3741,73 @@ ul {
   margin: 0;
 }
 
+.profile-inline-summary {
+  display: grid;
+  gap: 10px;
+}
+
+.profile-inline-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 11px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(217, 167, 92, 0.16);
+  background: rgba(255, 255, 255, 0.015);
+  font-size: 0.84rem;
+}
+
+.profile-inline-row span {
+  color: var(--text-dim);
+}
+
+.profile-inline-row strong {
+  color: var(--text-main);
+  font-weight: 600;
+  text-align: right;
+}
+
+.profile-inline-form {
+  display: grid;
+  gap: 12px;
+}
+
+.profile-inline-form__field {
+  display: grid;
+  gap: 6px;
+}
+
+.profile-inline-form__field span {
+  font-size: 0.8rem;
+  color: var(--text-dim);
+}
+
+.profile-inline-form__field input {
+  width: 100%;
+  background: var(--bg-panel);
+  border: 1px solid rgba(217, 167, 92, 0.22);
+  border-radius: var(--radius-s);
+  color: var(--text-main);
+  padding: 11px 14px;
+  min-height: 44px;
+}
+
+.profile-inline-form__field input:focus {
+  outline: none;
+  border-color: var(--gold);
+}
+
+.profile-inline-form__actions {
+  display: flex;
+  gap: 10px;
+}
+
+.profile-inline-form__actions .btn {
+  flex: 1;
+  justify-content: center;
+}
+
 .form-row {
   display: flex;
   gap: 12px;

@@ -1655,11 +1655,29 @@ function maskPhone(value) {
   return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
 }
 
+function maskCpfPreview(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (digits.length !== 11) return 'Adicionar CPF';
+  return `***.${digits.slice(3, 6)}.${digits.slice(6, 9)}-${digits.slice(9)}`;
+}
+
+function maskPhonePreview(value) {
+  const digits = String(value || '').replace(/\D/g, '');
+  if (digits.length < 10) return 'Adicionar celular';
+  return `(**) *****-${digits.slice(-4)}`;
+}
+
 registerCpfInput?.addEventListener('input', () => {
   registerCpfInput.value = maskCpf(registerCpfInput.value);
 });
 registerPhoneInput?.addEventListener('input', () => {
   registerPhoneInput.value = maskPhone(registerPhoneInput.value);
+});
+profileInlineCpfInput?.addEventListener('input', () => {
+  profileInlineCpfInput.value = maskCpf(profileInlineCpfInput.value);
+});
+profileInlinePhoneInput?.addEventListener('input', () => {
+  profileInlinePhoneInput.value = maskPhone(profileInlinePhoneInput.value);
 });
 
 function getInitials(name) {
@@ -1688,6 +1706,7 @@ function renderAuthState() {
     if (profileEmail) profileEmail.textContent = user.email;
     if (authToggleBtn) authToggleBtn.textContent = `Olá, ${user.name.split(' ')[0]}`;
     renderAddressSection(user);
+    renderProfileDetailsSection(user);
   } else {
     if (authGuestView) authGuestView.hidden = false;
     if (authProfileView) authProfileView.hidden = true;
@@ -1853,6 +1872,16 @@ const addressDisplay = document.getElementById('addressDisplay');
 const addressText = document.getElementById('addressText');
 const editAddressBtn = document.getElementById('editAddressBtn');
 const cancelAddressBtn = document.getElementById('cancelAddressBtn');
+const profileDetailsSummary = document.getElementById('profileDetailsSummary');
+const profileInlineEmail = document.getElementById('profileInlineEmail');
+const profileInlineCpf = document.getElementById('profileInlineCpf');
+const profileInlinePhone = document.getElementById('profileInlinePhone');
+const editProfileDetailsBtn = document.getElementById('editProfileDetailsBtn');
+const profileDetailsForm = document.getElementById('profileDetailsForm');
+const profileInlineCpfInput = document.getElementById('profileInlineCpfInput');
+const profileInlinePhoneInput = document.getElementById('profileInlinePhoneInput');
+const profileDetailsNote = document.getElementById('profileDetailsNote');
+const cancelProfileDetailsBtn = document.getElementById('cancelProfileDetailsBtn');
 const cepInput = document.getElementById('cepInput');
 const cepStatus = document.getElementById('cepStatus');
 const streetInput = document.getElementById('streetInput');
@@ -1908,6 +1937,39 @@ function renderAddressSection(user) {
   }
 }
 
+function showProfileDetailsForm(user) {
+  if (profileDetailsSummary) profileDetailsSummary.hidden = true;
+  if (profileDetailsForm) profileDetailsForm.hidden = false;
+  if (editProfileDetailsBtn) editProfileDetailsBtn.hidden = true;
+  if (profileInlineCpfInput) profileInlineCpfInput.value = maskCpf(user?.cpf || '');
+  if (profileInlinePhoneInput) profileInlinePhoneInput.value = maskPhone(user?.phone || '');
+  if (profileDetailsNote) profileDetailsNote.textContent = 'Preencha só se quiser completar ou atualizar agora.';
+}
+
+function showProfileDetailsSummary() {
+  if (profileDetailsSummary) profileDetailsSummary.hidden = false;
+  if (profileDetailsForm) profileDetailsForm.hidden = true;
+}
+
+function renderProfileDetailsSection(user) {
+  if (!user) return;
+  const hasCpf = String(user.cpf || '').replace(/\D/g, '').length === 11;
+  const hasPhone = String(user.phone || '').replace(/\D/g, '').length >= 10;
+
+  if (profileInlineEmail) profileInlineEmail.textContent = user.email || '';
+  if (profileInlineCpf) profileInlineCpf.textContent = maskCpfPreview(user.cpf || '');
+  if (profileInlinePhone) profileInlinePhone.textContent = maskPhonePreview(user.phone || '');
+  if (editProfileDetailsBtn) editProfileDetailsBtn.hidden = !(hasCpf || hasPhone);
+  if (profileDetailsNote) profileDetailsNote.textContent = '';
+
+  if (!hasCpf || !hasPhone) {
+    showProfileDetailsForm(user);
+    return;
+  }
+
+  showProfileDetailsSummary();
+}
+
 function formatCep(value) {
   const digits = value.replace(/\D/g, '').slice(0, 8);
   return digits.length > 5 ? `${digits.slice(0, 5)}-${digits.slice(5)}` : digits;
@@ -1961,6 +2023,14 @@ cancelAddressBtn?.addEventListener('click', () => {
   if (user?.address) showAddressDisplay(user.address);
 });
 
+editProfileDetailsBtn?.addEventListener('click', () => {
+  showProfileDetailsForm(getCurrentUser());
+});
+
+cancelProfileDetailsBtn?.addEventListener('click', () => {
+  renderProfileDetailsSection(getCurrentUser());
+});
+
 addressForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
   if (!addressError) return;
@@ -1988,6 +2058,46 @@ addressForm?.addEventListener('submit', async (event) => {
     return;
   }
   showAddressDisplay(address);
+});
+
+profileDetailsForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!profileDetailsNote) return;
+
+  const cpf = String(profileInlineCpfInput?.value || '').replace(/\D/g, '');
+  const phone = String(profileInlinePhoneInput?.value || '').replace(/\D/g, '');
+  const patch = {};
+
+  if (cpf) {
+    if (!isValidCpf(cpf)) {
+      profileDetailsNote.textContent = 'CPF inválido. Confira os números digitados.';
+      return;
+    }
+    patch.cpf = cpf;
+  }
+
+  if (phone) {
+    if (phone.length < 10) {
+      profileDetailsNote.textContent = 'Informe um celular válido com DDD.';
+      return;
+    }
+    patch.phone = phone;
+  }
+
+  if (!Object.keys(patch).length) {
+    profileDetailsNote.textContent = 'Nada para atualizar por enquanto.';
+    return;
+  }
+
+  const result = await updateCurrentUser(patch);
+  if (!result?.ok) {
+    profileDetailsNote.textContent = result?.error || 'Não foi possível salvar esses dados agora.';
+    return;
+  }
+
+  profileDetailsNote.textContent = '';
+  renderAuthState();
+  window.UrsoninhosNotifications?.refresh();
 });
 
 window.addEventListener('ursoninhos-auth-changed', renderAuthState);
