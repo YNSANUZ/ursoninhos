@@ -9,7 +9,7 @@
   const paymentCopy = {
     mercadopago: {
       title: 'Checkout transparente Mercado Pago',
-      text: 'Escolha Pix, cartao ou boleto abaixo sem sair do Ursoninhos. O ambiente ainda e de teste.',
+      text: 'Escolha Pix, cartao ou boleto abaixo sem sair do Ursoninhos.',
     },
   };
 
@@ -1003,7 +1003,7 @@
     paymentBrickContainer.hidden = false;
     if (!publicKey) {
       paymentBrickContainer.hidden = true;
-      if (checkoutPaymentError) checkoutPaymentError.textContent = 'A Public Key de teste do Mercado Pago ainda nao foi configurada no site.';
+      if (checkoutPaymentError) checkoutPaymentError.textContent = 'A Public Key do Mercado Pago ainda nao foi configurada no site.';
       if (paymentVisualTitle) paymentVisualTitle.textContent = 'Configuracao pendente';
       return;
     }
@@ -1039,7 +1039,7 @@
           onReady: () => {
             paymentBrickLoading = false;
             if (paymentVisualTitle) paymentVisualTitle.textContent = 'Pagamento seguro Mercado Pago';
-            if (paymentVisualText) paymentVisualText.textContent = 'Escolha Pix, cartao ou boleto. Nenhuma cobranca real sera feita neste modo de teste.';
+            if (paymentVisualText) paymentVisualText.textContent = 'Escolha Pix, cartao ou boleto para concluir seu pedido com seguranca.';
           },
           onSubmit: async ({ selectedPaymentMethod, formData }) => {
             try {
@@ -1150,7 +1150,7 @@
     }
     if (successOrderStatus) {
       successOrderStatus.textContent = approved
-        ? 'O Mercado Pago confirmou o pagamento de teste deste pedido.'
+        ? 'O Mercado Pago confirmou o pagamento deste pedido.'
         : pending
           ? 'O pedido foi criado e aguarda a conclusao ou confirmacao do pagamento.'
           : 'O pagamento nao foi aprovado. Seu carrinho foi preservado para uma nova tentativa.';
