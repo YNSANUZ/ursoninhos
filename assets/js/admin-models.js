@@ -23,6 +23,7 @@ const previewRight = document.getElementById('previewRight');
 const previewLeft = document.getElementById('previewLeft');
 const applyDefaultLogoBtn = document.getElementById('applyDefaultLogoBtn');
 const refreshPreviewBtn = document.getElementById('refreshPreviewBtn');
+const ADMIN_EMAILS = ['ynsanuz@gmail.com', 'obstruir#gmail.com'];
 
 const CAMERA_BY_SIDE = {
   front: 0,
@@ -41,6 +42,11 @@ const state = {
 };
 
 let viewer = null;
+
+function isAuthorizedAdmin(user) {
+  const email = String(user?.email || '').trim().toLowerCase();
+  return ADMIN_EMAILS.includes(email);
+}
 
 function wait(ms) {
   return new Promise((resolve) => setTimeout(resolve, ms));
@@ -224,9 +230,9 @@ async function publishModel(event) {
 async function init() {
   if (!adminViewerEl) return;
   await store?.refreshSession();
-  if (store?.getCurrentUser()?.role !== 'admin') {
+  if (!isAuthorizedAdmin(store?.getCurrentUser())) {
     adminPublishForm?.querySelectorAll('input, textarea, button').forEach((control) => { control.disabled = true; });
-    setNote('Acesso restrito ao administrador configurado no backend.', true);
+    setNote('Acesso restrito aos administradores autorizados.', true);
     return;
   }
   syncDefaultInputs();
@@ -327,8 +333,8 @@ async function montarTodosOsProdutos() {
 
 sheetSyncBtn?.addEventListener('click', async () => {
   await store?.refreshSession();
-  if (store?.getCurrentUser()?.role !== 'admin') {
-    setSyncNote('Entre com a conta administradora configurada no backend.', true);
+  if (!isAuthorizedAdmin(store?.getCurrentUser())) {
+    setSyncNote('Entre com uma conta administradora autorizada.', true);
     return;
   }
   const sheet = window.UrsoninhosSheet;

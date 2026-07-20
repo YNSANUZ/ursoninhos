@@ -11,6 +11,13 @@
   const profileCpfInput = document.getElementById('profileCpfInput');
   const profilePhoneInput = document.getElementById('profilePhoneInput');
   const profilePhotoInput = document.getElementById('profilePhotoInput');
+  const profileAdminAccess = document.getElementById('profileAdminAccess');
+  const ADMIN_EMAILS = ['ynsanuz@gmail.com', 'obstruir#gmail.com'];
+
+  function isAuthorizedAdmin(user) {
+    const email = String(user?.email || '').trim().toLowerCase();
+    return ADMIN_EMAILS.includes(email);
+  }
 
   function maskCpf(value) {
     return String(value).replace(/\D/g, '').slice(0, 11)
@@ -48,6 +55,7 @@
       if (profileSidebarName) profileSidebarName.textContent = 'Visitante';
       if (profileSidebarEmail) profileSidebarEmail.textContent = 'Entre pelo site principal para acessar sua conta.';
       if (profileAddressText) profileAddressText.textContent = 'Nenhum endereco cadastrado ainda.';
+      if (profileAdminAccess) profileAdminAccess.hidden = true;
       if (profileForm) profileForm.querySelectorAll('input').forEach((input) => { input.disabled = true; });
       return;
     }
@@ -63,6 +71,7 @@
     if (profilePhoneInput) profilePhoneInput.value = maskPhone(user.phone || '');
     if (profilePhotoInput) profilePhotoInput.value = user.photoUrl || '';
     if (profileAddressText) profileAddressText.textContent = formatAddress(user.address);
+    if (profileAdminAccess) profileAdminAccess.hidden = !isAuthorizedAdmin(user);
   }
 
   document.querySelectorAll('[data-profile-section]').forEach((button) => {
