@@ -47,6 +47,7 @@ const printNextBtn = document.getElementById('printNext');
 const activePrintName = document.getElementById('activePrintName');
 const heroStage = document.querySelector('.hero__stage');
 const heroPicker = document.querySelector('.hero__picker');
+const pricingStore = window.UrsoninhosStore;
 
 /* O card em destaque na lateral direita e a camisa do manequim ficam
    SEMPRE sincronizados: a estampa destacada é a mesma vestida no
@@ -223,12 +224,12 @@ const PRINT_BASE_WIDTH_PCT = 27;
 const PRINT_BASE_HEIGHT_PCT = 24;
 const PRINT_BASE_TOP_PCT = 46;
 const PRINT_SCALE_STEP = 0.1;
-const PRINT_SCALE_MIN = 0.6;
-const PRINT_SCALE_MAX = 1.6;
+const PRINT_SCALE_MIN = 0.22;
+const PRINT_SCALE_MAX = 2.35;
 const PRINT_BASE_LEFT_PCT = 50;
 const PRINT_MOVE_STEP_PCT = 2;
-const PRINT_MOVE_LIMIT_PCT = 14;
-const PRINT_MOVE_LIMIT_X_PCT = 10;
+const PRINT_MOVE_LIMIT_PCT = 24;
+const PRINT_MOVE_LIMIT_X_PCT = 22;
 
 const printSizeUpBtn = document.getElementById('printSizeUp');
 const printSizeDownBtn = document.getElementById('printSizeDown');
@@ -236,6 +237,33 @@ const printMoveUpBtn = document.getElementById('printMoveUp');
 const printMoveDownBtn = document.getElementById('printMoveDown');
 const printMoveLeftBtn = document.getElementById('printMoveLeft');
 const printMoveRightBtn = document.getElementById('printMoveRight');
+const heroPriceNote = document.getElementById('heroPriceNote');
+
+function getSelectedSides() {
+  return {
+    front: true,
+    back: sidePrintSelections.back !== null,
+    sleeveLeft: sidePrintSelections.sleeveLeft !== null,
+    sleeveRight: sidePrintSelections.sleeveRight !== null,
+  };
+}
+
+function getSelectedCoverage() {
+  const sides = getSelectedSides();
+  const label = pricingStore?.describeShirtSides
+    ? pricingStore.describeShirtSides(sides)
+    : 'Frente';
+  const price = pricingStore?.getStandardShirtPrice
+    ? pricingStore.getStandardShirtPrice(sides)
+    : 49.9;
+  return { label, price, sides };
+}
+
+function refreshHeroPriceNote() {
+  if (!heroPriceNote) return;
+  const coverage = getSelectedCoverage();
+  heroPriceNote.textContent = `${coverage.label} — ${formatBRL(coverage.price)}`;
+}
 
 function syncPrintTransform3D() {
   if (window.shirtViewer3D?.ready) {
@@ -251,6 +279,7 @@ function applyPrintScale() {
     shirtOverlay.style.height = `${(PRINT_BASE_HEIGHT_PCT * t.scale).toFixed(1)}%`;
   }
   syncPrintTransform3D();
+  refreshHeroPriceNote();
 }
 
 function applyPrintOffset() {
@@ -264,6 +293,7 @@ function applyPrintOffset() {
     }
   }
   syncPrintTransform3D();
+  refreshHeroPriceNote();
 }
 
 printSizeUpBtn?.addEventListener('click', () => {
@@ -320,6 +350,7 @@ window.addEventListener('shirt3d-print-drag', (event) => {
       shirtOverlay.style.left = left;
     }
   }
+  refreshHeroPriceNote();
 });
 
 /* --- Chave FRENTE/VERSO/MANGAS ---
@@ -348,6 +379,9 @@ function setActiveSide(side) {
   window.shirtViewer3D?.setCameraAngle?.(SIDE_CAMERA_ANGLES[side] || 0);
 
   if (side !== 'front') setAutoRotatePaused(true);
+  applyPrintScale();
+  applyPrintOffset();
+  refreshHeroPriceNote();
 }
 
 Object.entries(SIDE_BUTTONS).forEach(([side, btn]) => {
@@ -801,25 +835,6 @@ function refreshCartState() {
   cart = shopStore?.loadCart() || [];
 }
 
-function getSelectedCoverage() {
-  const hasBack = sidePrintSelections.back !== null;
-  const hasSleeves = sidePrintSelections.sleeveLeft !== null || sidePrintSelections.sleeveRight !== null;
-
-  if (!hasBack && !hasSleeves) {
-    return { label: 'Frente', price: 20 };
-  }
-
-  if (hasBack && hasSleeves) {
-    return { label: 'Frente, verso e laterais', price: 50 };
-  }
-
-  if (hasBack) {
-    return { label: 'Frente e verso', price: 40 };
-  }
-
-  return { label: 'Frente e laterais', price: 40 };
-}
-
 function normalizeHeroQty() {
   if (!heroQtyInput) return 1;
   const qty = Math.max(1, parseInt(heroQtyInput.value || '1', 10) || 1);
@@ -1046,6 +1061,7 @@ document.querySelectorAll('.product-card[data-price]').forEach((card) => {
 });
 
 renderCart();
+refreshHeroPriceNote();
 
 /* ---------------------------------------------------------
    Botão "Adicionar ao carrinho" do hero (camisa + estampa atual)
@@ -1086,12 +1102,19 @@ addToCartBtn?.addEventListener('click', async () => {
     previewImage,
     previewViews: { front: previewImage },
     metadata: {
+      pricingMode: 'standard-shirt',
+      sides: coverage.sides,
       coverage: coverage.label,
       printName: print.name,
       frontPrintUrl: print.file || '',
       frontPrintBlend: print.blend || 'screen',
-      frontTransform: { ...sideTransforms.front },
-      sides: { ...sidePrintSelections },
+      transforms: {
+        front: { ...sideTransforms.front },
+        back: { ...sideTransforms.back },
+        sleeveLeft: { ...sideTransforms.sleeveLeft },
+        sleeveRight: { ...sideTransforms.sleeveRight },
+      },
+      sideSelections: { ...sidePrintSelections },
     },
   });
 
@@ -1116,7 +1139,6 @@ addToCartBtn?.addEventListener('click', async () => {
 
 const publishModelBtn = document.getElementById('publishModelBtn');
 const publishFeedback = document.getElementById('publishFeedback');
-const PUBLIC_MODEL_DEFAULT_PRICE = 49.9; // o backend atual limita a R$ 50
 
 function setPublishFeedback(message, isError = false) {
   if (!publishFeedback) return;
@@ -1167,6 +1189,7 @@ publishModelBtn?.addEventListener('click', async () => {
   try {
     const catalogImage = await generateFrontPreview();
     const firstName = String(user.name || 'Cliente').split(' ')[0];
+    const publishCoverage = getSelectedCoverage();
 
     const product = await api.createProduct({
       title: `Camisa ${frontPrint.name}`,
@@ -1174,7 +1197,7 @@ publishModelBtn?.addEventListener('click', async () => {
         `Modelo criado pela comunidade Ursoninhos com a estampa ${frontPrint.name}.`,
         user.name
       ),
-      price: PUBLIC_MODEL_DEFAULT_PRICE,
+      price: publishCoverage.price,
       catalogImage,
       views: { front: catalogImage },
       model: buildModelFromCurrentShirt(),
@@ -1185,7 +1208,7 @@ publishModelBtn?.addEventListener('click', async () => {
     });
 
     setPublishFeedback(
-      `Modelo publicado, ${firstName}! Ele já está na vitrine com seu crédito. ` +
+      `Modelo publicado por ${formatBRL(publishCoverage.price)}, ${firstName}! Ele já está na vitrine com seu crédito. ` +
       `<a href="produto.html?id=${encodeURIComponent(product.id)}">Ver página do produto</a>`
     );
     window.UrsoninhosCatalog?.refresh();
@@ -1837,7 +1860,7 @@ continueShoppingBtn?.addEventListener('click', () => {
   const fraseId = new URLSearchParams(window.location.search).get('frase');
   if (!fraseId || !window.UrsoninhosFrases) return;
 
-  const produto = window.UrsoninhosFrases.gerarProdutosDeFrases().find((p) => p.id === fraseId);
+  const produto = window.UrsoninhosFrases.gerarProdutosDeFrases().find((p) => p.id === fraseId || p.shortId === fraseId);
   if (!produto) return;
 
   // Modal de texto pré-preenchido: o cliente pode editar a frase

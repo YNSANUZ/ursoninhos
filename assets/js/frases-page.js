@@ -122,14 +122,14 @@
 
     grid.innerHTML = produtos.map((produto) => `
       <article class="product-card frase-card" data-product-id="${produto.id}" data-tags="${escapeHtml(produto.tags.join(', '))}">
-        <a class="product-card__thumb product-card__thumb--catalog frase-card__thumb" href="produto-frase.html?id=${encodeURIComponent(produto.id)}" aria-label="Ver produto: ${escapeHtml(produto.frase)}">
+        <a class="product-card__thumb product-card__thumb--catalog frase-card__thumb" href="${produto.shortPath}" aria-label="Ver produto: ${escapeHtml(produto.frase)}">
           <span class="frase-card__loading">Gerando mockup…</span>
         </a>
         <h3 title="${escapeHtml(produto.frase)}">${escapeHtml(produto.nomePlanilha || produto.titulo)}</h3>
         <p class="product-card__price">${store.formatBRL(produto.preco)}</p>
         <p class="product-card__meta">Estilo: ${escapeHtml(produto.presetName)}</p>
         <div class="product-card__actions">
-          <a class="product-card__add" href="produto-frase.html?id=${encodeURIComponent(produto.id)}">Ver produto</a>
+          <a class="product-card__add" href="${produto.shortPath}">Ver produto</a>
           <button type="button" class="product-card__quick-add" data-action="add" aria-label="Adicionar ao carrinho" disabled>+</button>
         </div>
       </article>

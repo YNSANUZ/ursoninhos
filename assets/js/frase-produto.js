@@ -17,12 +17,18 @@
 
   const produtos = frases.gerarProdutosDeFrases();
   const params = new URLSearchParams(window.location.search);
-  const id = params.get('id') || params.get('frase') || '';
-  const produto = produtos.find((p) => p.id === id);
+  const pathMatch = window.location.pathname.match(/^\/(\d{4})\/?$/);
+  const productKey = params.get('id') || params.get('frase') || (pathMatch ? pathMatch[1] : '');
+  const produto = produtos.find((p) => p.id === productKey || p.shortId === productKey);
 
   if (!produto) {
     window.location.replace('camisas-de-frases.html');
     return;
+  }
+
+  const shareUrl = `${window.location.origin}${produto.shortPath}`;
+  if (window.location.pathname !== produto.shortPath || window.location.search) {
+    window.history.replaceState({}, '', produto.shortPath);
   }
 
   // Mesmo enquadramento dos thumbs do carrinho/vitrine.
@@ -114,7 +120,7 @@
     if (styleEl) styleEl.textContent = produto.presetName;
 
     const customizeLink = document.getElementById('pfCustomizeLink');
-    if (customizeLink) customizeLink.href = `index.html?frase=${encodeURIComponent(produto.id)}#hero`;
+    if (customizeLink) customizeLink.href = `index.html?frase=${encodeURIComponent(produto.shortId)}#hero`;
 
     const breadcrumbCurrent = document.querySelector('.pf-breadcrumb__current');
     if (breadcrumbCurrent) breadcrumbCurrent.textContent = produto.titulo;
@@ -219,6 +225,8 @@
       previewImage: mockupDataUrl,
       previewViews: { front: mockupDataUrl },
       metadata: {
+        pricingMode: 'standard-shirt',
+        sides: { front: true, back: false, sleeveLeft: false, sleeveRight: false },
         categoria: produto.categoria,
         tags: produto.tags,
         frase: produto.frase,
@@ -241,6 +249,22 @@
     });
     document.getElementById('pfCartBtn')?.addEventListener('click', () => {
       window.location.href = 'carrinho.html';
+    });
+    document.getElementById('pfShareWhatsAppBtn')?.addEventListener('click', async () => {
+      const texto = `${produto.nomePlanilha || produto.frase} por ${store.formatBRL(produto.preco)}\n${shareUrl}`;
+      if (navigator.share) {
+        try {
+          await navigator.share({
+            title: produto.nomePlanilha || produto.frase,
+            text: `${produto.nomePlanilha || produto.frase} por ${store.formatBRL(produto.preco)}`,
+            url: shareUrl,
+          });
+          return;
+        } catch (error) {
+          /* segue para o link direto do WhatsApp */
+        }
+      }
+      window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank', 'noopener');
     });
 
     const searchForm = document.getElementById('pfSearchForm');
@@ -312,7 +336,7 @@
     const relacionados = [1, 2, 3, 4].map((i) => produtos[(produtos.indexOf(produto) + i) % produtos.length]);
     grid.innerHTML = relacionados.map((p) => `
       <article class="product-card frase-card" data-product-id="${p.id}">
-        <a class="product-card__thumb product-card__thumb--catalog frase-card__thumb" href="produto-frase.html?id=${encodeURIComponent(p.id)}" aria-label="Ver produto: ${escapeHtml(p.frase)}">
+        <a class="product-card__thumb product-card__thumb--catalog frase-card__thumb" href="${p.shortPath}" aria-label="Ver produto: ${escapeHtml(p.frase)}">
           <span class="frase-card__loading">Gerando…</span>
         </a>
         <h3 title="${escapeHtml(p.frase)}">${escapeHtml(p.titulo)}</h3>

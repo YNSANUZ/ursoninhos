@@ -63,7 +63,8 @@ const FRASES_DESMOTIVACIONAIS = [
   'O que não mata, humilha.',
 ];
 
-const FRASES_PRECO_PADRAO = 20; // mesmo preço da camisa personalizada (frente)
+const FRASES_PRECO_PADRAO = 49.9; // frente simples no novo padrão da loja
+const FRASES_SHORT_ID_BASE = 8500;
 
 // Palavras-chave da categoria: usadas nos cards (data-tags), na busca do
 // site e no SEO da página, para "frases", "desmotivacionais" e
@@ -135,6 +136,8 @@ function gerarProdutosDeFrases() {
     const preset = presets[index % presets.length];
     return {
       id: `${slugDeFrase(frase)}-${index}`,
+      shortId: String(FRASES_SHORT_ID_BASE + index),
+      shortPath: `/${FRASES_SHORT_ID_BASE + index}/`,
       categoria: 'camisas-de-frases',
       tipo: 'camisa',
       frase,
@@ -151,6 +154,7 @@ function gerarProdutosDeFrases() {
 window.UrsoninhosFrases = {
   FRASES_DESMOTIVACIONAIS,
   FRASES_PRECO_PADRAO,
+  FRASES_SHORT_ID_BASE,
   FRASES_TAGS,
   gerarProdutosDeFrases,
   quebrarFraseEmLinhas,
