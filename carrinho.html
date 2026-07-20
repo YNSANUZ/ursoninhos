@@ -90,7 +90,7 @@
             <div class="checkout-items" id="checkoutItems"></div>
             <div class="checkout-nav">
               <a href="index.html#hero" class="btn btn--outline">Adicionar mais produtos</a>
-              <button type="button" class="btn btn--gold" id="goToAuthBtn">Continuar para login</button>
+              <button type="button" class="btn btn--gold" id="goToAuthBtn">Continuar</button>
             </div>
           </div>
 
@@ -133,6 +133,14 @@
                   <label class="form-field">
                     <span>E-mail</span>
                     <input type="email" name="email" required autocomplete="email">
+                  </label>
+                  <label class="form-field">
+                    <span>CPF</span>
+                    <input type="text" name="cpf" id="checkoutRegisterCpfInput" required inputmode="numeric" autocomplete="off" placeholder="000.000.000-00">
+                  </label>
+                  <label class="form-field">
+                    <span>Celular</span>
+                    <input type="text" name="phone" id="checkoutRegisterPhoneInput" required inputmode="tel" autocomplete="tel" placeholder="(00) 00000-0000">
                   </label>
                   <label class="form-field">
                     <span>Senha</span>

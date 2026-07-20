@@ -41,6 +41,8 @@
   const checkoutCityInput = document.getElementById('checkoutCityInput');
   const checkoutStateInput = document.getElementById('checkoutStateInput');
   const checkoutCepStatus = document.getElementById('checkoutCepStatus');
+  const checkoutRegisterCpfInput = document.getElementById('checkoutRegisterCpfInput');
+  const checkoutRegisterPhoneInput = document.getElementById('checkoutRegisterPhoneInput');
   const reviewItemsList = document.getElementById('reviewItemsList');
   const reviewAddressText = document.getElementById('reviewAddressText');
   const paymentChoices = document.getElementById('paymentChoices');
@@ -68,6 +70,53 @@
   const PRINT_SIZE = 0.34;
   let renderToken = 0;
   let selectedDetailView = 'front';
+
+  function isValidCpf(rawCpf) {
+    const cpf = String(rawCpf || '').replace(/\D/g, '');
+    if (cpf.length !== 11 || /^(\d)\1{10}$/.test(cpf)) return false;
+    const digit = (count) => {
+      let sum = 0;
+      for (let i = 0; i < count; i += 1) sum += Number(cpf[i]) * (count + 1 - i);
+      const rest = (sum * 10) % 11;
+      return rest === 10 ? 0 : rest;
+    };
+    return digit(9) === Number(cpf[9]) && digit(10) === Number(cpf[10]);
+  }
+
+  function maskCpf(value) {
+    return String(value).replace(/\D/g, '').slice(0, 11)
+      .replace(/(\d{3})(\d)/, '$1.$2')
+      .replace(/(\d{3})\.(\d{3})(\d)/, '$1.$2.$3')
+      .replace(/\.(\d{3})(\d{1,2})$/, '.$1-$2');
+  }
+
+  function maskPhone(value) {
+    const digits = String(value).replace(/\D/g, '').slice(0, 11);
+    if (digits.length <= 2) return digits;
+    if (digits.length <= 6) return `(${digits.slice(0, 2)}) ${digits.slice(2)}`;
+    if (digits.length <= 10) return `(${digits.slice(0, 2)}) ${digits.slice(2, 6)}-${digits.slice(6)}`;
+    return `(${digits.slice(0, 2)}) ${digits.slice(2, 7)}-${digits.slice(7)}`;
+  }
+
+  function getCheckoutMissingFields(user = getUser()) {
+    if (!user) return ['login'];
+    return store.getMissingProfileFields?.(user) || [];
+  }
+
+  function hasCheckoutProfile(user = getUser()) {
+    return Boolean(user) && getCheckoutMissingFields(user).length === 0;
+  }
+
+  function nextCheckoutStepForUser(user = getUser()) {
+    if (!user) return 'auth';
+    if (!hasCheckoutProfile(user)) return 'auth';
+    if (!user.address) return 'address';
+    return 'review';
+  }
+
+  function isAddressField(field) {
+    return String(field || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '') === 'endereco';
+  }
 
   function getCart() {
     return store.loadCart();
@@ -279,18 +328,25 @@
     const user = getUser();
     const hasAddress = Boolean(user?.address);
     const hasPayment = Boolean(selectedPayment);
+    const hasProfile = hasCheckoutProfile(user);
 
     return {
       cart: true,
       auth: cart.length > 0,
       address: cart.length > 0 && Boolean(user),
       review: cart.length > 0 && Boolean(user) && hasAddress,
-      payment: cart.length > 0 && Boolean(user) && hasAddress,
-      success: cart.length > 0 && Boolean(user) && hasAddress && hasPayment,
+      payment: cart.length > 0 && Boolean(user) && hasAddress && hasProfile,
+      success: cart.length > 0 && Boolean(user) && hasAddress && hasProfile && hasPayment,
     };
   }
 
   function goToStep(step) {
+    if (step === 'payment' && !hasCheckoutProfile(getUser())) {
+      currentStep = 'auth';
+      goToStep('auth');
+      return;
+    }
+
     const unlocked = getUnlockedSteps();
     if (step !== 'cart' && !unlocked[step]) return;
 
@@ -313,6 +369,11 @@
 
     if (step === 'review') renderReview();
     if (step === 'payment') {
+      if (!hasCheckoutProfile(getUser())) {
+        currentStep = 'auth';
+        goToStep('auth');
+        return;
+      }
       renderPaymentSelection();
       renderTransparentCheckout();
     }
@@ -460,17 +521,82 @@
     const user = getUser();
     if (loggedUserCard) {
       loggedUserCard.hidden = !user;
-      loggedUserCard.innerHTML = user
-        ? `<strong>${user.name}</strong><p>${user.email}</p><div class="checkout-nav"><button type="button" class="btn btn--outline" id="checkoutLogoutBtn">Sair</button></div>`
-        : '';
+      if (!user) {
+        loggedUserCard.innerHTML = '';
+      } else {
+        const missingFields = getCheckoutMissingFields(user);
+        const needsProfile = missingFields.length > 0;
+        loggedUserCard.innerHTML = `
+          <strong>${user.name}</strong>
+          <p>${user.email}</p>
+          ${needsProfile ? `<p>Para concluir a compra, complete: ${missingFields.join(', ')}.</p>` : '<p>Seu cadastro ja esta pronto para seguir com a compra.</p>'}
+          ${needsProfile ? `
+            <form class="checkout-form" id="checkoutProfileForm">
+              <div class="checkout-grid-2">
+                <label class="form-field">
+                  <span>CPF</span>
+                  <input type="text" name="cpf" id="checkoutProfileCpfInput" inputmode="numeric" value="${escapeHtml(maskCpf(user.cpf || ''))}" placeholder="000.000.000-00" required>
+                </label>
+                <label class="form-field">
+                  <span>Celular</span>
+                  <input type="text" name="phone" id="checkoutProfilePhoneInput" inputmode="tel" value="${escapeHtml(maskPhone(user.phone || ''))}" placeholder="(00) 00000-0000" required>
+                </label>
+              </div>
+              <p class="form-error" id="checkoutProfileError"></p>
+              <div class="checkout-nav">
+                <button type="submit" class="btn btn--gold">Salvar e continuar</button>
+              </div>
+            </form>
+          ` : ''}
+          <div class="checkout-nav"><button type="button" class="btn btn--outline" id="checkoutLogoutBtn">Sair</button></div>
+        `;
+      }
     }
 
     if (guestAuthSection) guestAuthSection.hidden = Boolean(user);
+    document.getElementById('goToAddressBtn')?.toggleAttribute('hidden', !user || !hasCheckoutProfile(user));
 
     document.getElementById('checkoutLogoutBtn')?.addEventListener('click', async () => {
       await store.logout();
       renderAll();
       goToStep('auth');
+    });
+
+    const checkoutProfileCpfInput = document.getElementById('checkoutProfileCpfInput');
+    const checkoutProfilePhoneInput = document.getElementById('checkoutProfilePhoneInput');
+    const checkoutProfileError = document.getElementById('checkoutProfileError');
+
+    checkoutProfileCpfInput?.addEventListener('input', () => {
+      checkoutProfileCpfInput.value = maskCpf(checkoutProfileCpfInput.value);
+    });
+    checkoutProfilePhoneInput?.addEventListener('input', () => {
+      checkoutProfilePhoneInput.value = maskPhone(checkoutProfilePhoneInput.value);
+    });
+
+    document.getElementById('checkoutProfileForm')?.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const cpf = String(checkoutProfileCpfInput?.value || '').replace(/\D/g, '');
+      const phone = String(checkoutProfilePhoneInput?.value || '').replace(/\D/g, '');
+
+      if (!isValidCpf(cpf)) {
+        if (checkoutProfileError) checkoutProfileError.textContent = 'CPF invalido. Confira os numeros digitados.';
+        return;
+      }
+
+      if (phone.length < 10) {
+        if (checkoutProfileError) checkoutProfileError.textContent = 'Informe um celular valido com DDD.';
+        return;
+      }
+
+      const result = await store.updateCurrentUser({ cpf, phone });
+      if (!result?.ok) {
+        if (checkoutProfileError) checkoutProfileError.textContent = result?.error || 'Nao foi possivel salvar o cadastro.';
+        return;
+      }
+
+      if (checkoutProfileError) checkoutProfileError.textContent = '';
+      renderAll();
+      goToStep(nextCheckoutStepForUser(result.user));
     });
   }
 
@@ -497,9 +623,16 @@
   }
 
   function renderPaymentSelection() {
+    const missingFields = getCheckoutMissingFields(getUser()).filter((field) => !isAddressField(field));
     paymentChoices?.querySelectorAll('.payment-choice').forEach((button) => {
       button.classList.toggle('is-active', button.dataset.method === selectedPayment);
     });
+
+    if (missingFields.length) {
+      if (paymentVisualTitle) paymentVisualTitle.textContent = 'Complete seu cadastro';
+      if (paymentVisualText) paymentVisualText.textContent = `Antes de pagar, preencha: ${missingFields.join(', ')} na etapa de login / cadastro.`;
+      return;
+    }
 
     const copy = paymentCopy[selectedPayment] || {
       title: 'Checkout transparente Mercado Pago',
@@ -543,6 +676,7 @@
     renderAuthState();
     fillAddressForm(getUser()?.address || null);
     renderPaymentSelection();
+    updateCartPrimaryButton();
 
     const cart = getCart();
     if (!cart.length && currentStep !== 'cart') {
@@ -560,7 +694,28 @@
     button.addEventListener('click', () => goToStep(button.dataset.gotoStep));
   });
 
-  document.getElementById('goToAuthBtn')?.addEventListener('click', () => goToStep('auth'));
+  function updateCartPrimaryButton() {
+    const button = document.getElementById('goToAuthBtn');
+    if (!button) return;
+    const user = getUser();
+    const missingFields = getCheckoutMissingFields(user);
+
+    if (!user) {
+      button.textContent = 'Continuar para login';
+      return;
+    }
+
+    if (missingFields.length) {
+      button.textContent = 'Completar cadastro';
+      return;
+    }
+
+    button.textContent = user.address ? 'Revisar compra' : 'Continuar para entrega';
+  }
+
+  document.getElementById('goToAuthBtn')?.addEventListener('click', () => {
+    goToStep(nextCheckoutStepForUser());
+  });
   document.getElementById('goToAddressBtn')?.addEventListener('click', () => goToStep('address'));
   document.getElementById('goToPaymentBtn')?.addEventListener('click', () => goToStep('payment'));
 
@@ -574,7 +729,7 @@
       return;
     }
     renderAll();
-    goToStep('address');
+    goToStep(nextCheckoutStepForUser(result.user));
   }
 
   function setupCheckoutGoogleSignin() {
@@ -614,6 +769,13 @@
   });
   setupCheckoutGoogleSignin();
 
+  checkoutRegisterCpfInput?.addEventListener('input', () => {
+    checkoutRegisterCpfInput.value = maskCpf(checkoutRegisterCpfInput.value);
+  });
+  checkoutRegisterPhoneInput?.addEventListener('input', () => {
+    checkoutRegisterPhoneInput.value = maskPhone(checkoutRegisterPhoneInput.value);
+  });
+
   checkoutLoginForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const formData = new FormData(checkoutLoginForm);
@@ -624,7 +786,7 @@
     }
     if (checkoutLoginError) checkoutLoginError.textContent = '';
     renderAll();
-    goToStep('address');
+    goToStep(nextCheckoutStepForUser(result.user));
   });
 
   checkoutRegisterForm?.addEventListener('submit', async (event) => {
@@ -632,14 +794,28 @@
     const formData = new FormData(checkoutRegisterForm);
     const password = String(formData.get('password') || '');
     const confirmPassword = String(formData.get('confirmPassword') || '');
+    const cpf = String(formData.get('cpf') || '').replace(/\D/g, '');
+    const phone = String(formData.get('phone') || '').replace(/\D/g, '');
     if (password !== confirmPassword) {
       if (checkoutRegisterError) checkoutRegisterError.textContent = 'As senhas nao coincidem.';
+      return;
+    }
+
+    if (!isValidCpf(cpf)) {
+      if (checkoutRegisterError) checkoutRegisterError.textContent = 'CPF invalido. Confira os numeros digitados.';
+      return;
+    }
+
+    if (phone.length < 10) {
+      if (checkoutRegisterError) checkoutRegisterError.textContent = 'Informe um celular valido com DDD.';
       return;
     }
 
     const result = await store.register({
       name: formData.get('name'),
       email: formData.get('email'),
+      cpf,
+      phone,
       password,
     });
 
@@ -650,7 +826,7 @@
 
     if (checkoutRegisterError) checkoutRegisterError.textContent = '';
     renderAll();
-    goToStep('address');
+    goToStep(nextCheckoutStepForUser(result.user));
   });
 
   checkoutCepInput?.addEventListener('input', () => {
@@ -815,13 +991,24 @@
 
   async function renderTransparentCheckout() {
     if (paymentBrickController || paymentBrickLoading || !paymentBrickContainer) return;
+    const missingFields = getCheckoutMissingFields(getUser()).filter((field) => !isAddressField(field));
+    if (missingFields.length) {
+      destroyPaymentBrick();
+      paymentBrickContainer.hidden = true;
+      if (checkoutPaymentError) checkoutPaymentError.textContent = `Complete ${missingFields.join(' e ')} na etapa de login / cadastro antes de pagar.`;
+      return;
+    }
+
     const publicKey = window.URSONINHOS_APP_CONFIG?.mercadoPagoPublicKey || '';
+    paymentBrickContainer.hidden = false;
     if (!publicKey) {
+      paymentBrickContainer.hidden = true;
       if (checkoutPaymentError) checkoutPaymentError.textContent = 'A Public Key de teste do Mercado Pago ainda nao foi configurada no site.';
       if (paymentVisualTitle) paymentVisualTitle.textContent = 'Configuracao pendente';
       return;
     }
     if (!window.MercadoPago) {
+      paymentBrickContainer.hidden = true;
       if (checkoutPaymentError) checkoutPaymentError.textContent = 'Nao foi possivel carregar o componente seguro do Mercado Pago.';
       return;
     }
@@ -876,6 +1063,7 @@
     } catch (error) {
       paymentBrickLoading = false;
       paymentBrickController = null;
+      paymentBrickContainer.hidden = true;
       if (checkoutPaymentError) checkoutPaymentError.textContent = error.message || 'Falha ao preparar o checkout transparente.';
       if (paymentVisualTitle) paymentVisualTitle.textContent = 'Checkout indisponivel';
     }
