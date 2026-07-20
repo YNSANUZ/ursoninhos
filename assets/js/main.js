@@ -414,7 +414,8 @@ const SIDE_BUTTONS = {
 };
 const SIDE_CAMERA_ANGLES = { front: 0, back: 180, sleeveLeft: 90, sleeveRight: -90 };
 
-function setActiveSide(side) {
+function setActiveSide(side, options = {}) {
+  const { syncCamera = true } = options;
   if (activeSide === side || !SIDE_BUTTONS[side]) return;
   activeSide = side;
 
@@ -422,7 +423,9 @@ function setActiveSide(side) {
     btn?.classList.toggle('is-active', key === side);
   });
 
-  window.shirtViewer3D?.setCameraAngle?.(SIDE_CAMERA_ANGLES[side] || 0);
+  if (syncCamera) {
+    window.shirtViewer3D?.setCameraAngle?.(SIDE_CAMERA_ANGLES[side] || 0);
+  }
 
   if (side !== 'front') setAutoRotatePaused(true);
   applyPrintScale();
@@ -432,6 +435,12 @@ function setActiveSide(side) {
 
 Object.entries(SIDE_BUTTONS).forEach(([side, btn]) => {
   btn?.addEventListener('click', () => setActiveSide(side));
+});
+
+window.addEventListener('shirt3d-visible-side-change', (event) => {
+  const side = event.detail?.side;
+  if (!side || !SIDE_BUTTONS[side]) return;
+  setActiveSide(side, { syncCamera: false });
 });
 
 // Centraliza o estado de pausa (usado pelo botão play/pause e pela

@@ -50,6 +50,7 @@ const SIDE_CONFIG = {
   sleeveLeft: { rotY: Math.PI / 2, baseWidth: 0.16, depth: 0.1, offsetXDir: [0, 0, -1] },
   sleeveRight: { rotY: -Math.PI / 2, baseWidth: 0.16, depth: 0.1, offsetXDir: [0, 0, 1] },
 };
+const SIDE_CAMERA_ANGLES = { front: 0, back: 180, sleeveLeft: 90, sleeveRight: -90 };
 
 const container = document.getElementById('shirtViewer3d');
 const stage = document.querySelector('.hero__stage');
@@ -72,12 +73,45 @@ let mannequinMesh = null;
 let anchors = null; // pontos do peito (frente/costas) achados por raycast
 let decals = [];
 let rebuildQueued = false;
+let lastVisibleSide = null;
 
 const textureLoader = new THREE.TextureLoader();
 textureLoader.setCrossOrigin('anonymous');
 
 function clamp(value, min, max) {
   return Math.min(max, Math.max(min, value));
+}
+
+function normalizeDegrees(value) {
+  return ((value + 180) % 360 + 360) % 360 - 180;
+}
+
+function getVisibleSideFromCamera() {
+  if (!camera || !controls) return 'front';
+  const dx = camera.position.x - controls.target.x;
+  const dz = camera.position.z - controls.target.z;
+  const angle = THREE.MathUtils.radToDeg(Math.atan2(dx, dz));
+  let bestSide = 'front';
+  let bestDistance = Infinity;
+
+  Object.entries(SIDE_CAMERA_ANGLES).forEach(([side, sideAngle]) => {
+    const distance = Math.abs(normalizeDegrees(angle - sideAngle));
+    if (distance < bestDistance) {
+      bestDistance = distance;
+      bestSide = side;
+    }
+  });
+
+  return bestSide;
+}
+
+function emitVisibleSideChange(force = false) {
+  const side = getVisibleSideFromCamera();
+  if (!force && side === lastVisibleSide) return;
+  lastVisibleSide = side;
+  window.dispatchEvent(new CustomEvent('shirt3d-visible-side-change', {
+    detail: { side },
+  }));
 }
 
 function setPrint(url, blend, side = 'front') {
@@ -569,6 +603,7 @@ function init() {
       controls.minDistance = size.y * 0.9;
       controls.maxDistance = size.y * 3.2;
       controls.update();
+      emitVisibleSideChange(true);
 
       computeAnchors(model);
 
@@ -595,6 +630,7 @@ function init() {
 
   renderer.setAnimationLoop(() => {
     controls.update();
+    emitVisibleSideChange();
     renderer.render(scene, camera);
   });
 }
@@ -610,6 +646,7 @@ function setCameraAngle(degrees) {
     controls.target.z + radius * Math.cos(rad)
   );
   controls.update();
+  emitVisibleSideChange(true);
 }
 
 window.shirtViewer3D = { ready: false, setPrint, setTransform, clearPrint, setCameraAngle };

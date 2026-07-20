@@ -919,7 +919,7 @@
        e dados das frases: precisam vir ANTES do main.js. -->
   <script src="assets/js/text-print-engine.js?v=19"></script>
   <script src="assets/js/frases-data.js?v=19"></script>
-  <script src="assets/js/main.js?v=28"></script>
+  <script src="assets/js/main.js?v=29"></script>
   <script src="assets/js/public-catalog.js?v=21"></script>
   <!-- Manequim 3D ADIADO: three.js + modelo GLB somam ~3 MB e travavam
        o celular na abertura (nota 28 no PageSpeed). Agora o 3D só
@@ -1037,7 +1037,7 @@
       started = true;
       events.forEach(([target, name]) => target.removeEventListener(name, load3d));
       showLoading();
-      import('./assets/js/viewer3d.js?v=23')
+      import('./assets/js/viewer3d.js?v=24')
         .catch((error) => {
           console.warn('Manequim 3D indisponível, mantendo o palco 2D:', error);
           finishLoading(false);
