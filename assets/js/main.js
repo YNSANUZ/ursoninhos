@@ -1192,14 +1192,6 @@ publishModelBtn?.addEventListener('click', async () => {
 
     // Registra o produto novo também na planilha Google de controle
     // (só funciona com o Web App configurado; sem ele, não faz nada).
-    window.UrsoninhosSheet?.push([{
-      id: product.id,
-      nome: product.title,
-      tipo: 'modelo-publico',
-      cor: 'Preta',
-      preco: product.price,
-      link: `https://ursoninhos.com/produto.html?id=${encodeURIComponent(product.id)}`,
-    }]).catch(() => {});
   } catch (error) {
     console.error('Não foi possível publicar o modelo:', error);
     setPublishFeedback('Não foi possível publicar agora. Tente novamente em instantes.', true);
@@ -1243,26 +1235,16 @@ function saveSession(email) {
 }
 
 function clearSession() {
-  localStorage.removeItem(SESSION_STORAGE_KEY);
+  return window.UrsoninhosStore?.logout();
 }
 
 function getCurrentUser() {
-  const email = loadSession();
-  if (!email) return null;
-  return loadUsers().find((entry) => entry.email === email) || null;
+  return window.UrsoninhosStore?.getCurrentUser() || null;
 }
 
 // Atualiza (merge raso) os dados do usuário logado, ex: updateCurrentUser({ address }).
 function updateCurrentUser(patch) {
-  const email = loadSession();
-  if (!email) return;
-
-  const users = loadUsers();
-  const index = users.findIndex((entry) => entry.email === email);
-  if (index === -1) return;
-
-  users[index] = { ...users[index], ...patch };
-  saveUsers(users);
+  return window.UrsoninhosStore?.updateCurrentUser(patch);
 }
 
 const authToggleBtn = document.getElementById('authToggleBtn');
@@ -1311,7 +1293,11 @@ let googleRealActive = false;
 
 function updateGoogleButtons(isLogin) {
   if (googleSigninContainer) googleSigninContainer.style.display = isLogin && googleRealActive ? '' : 'none';
-  if (googleLoginBtn) googleLoginBtn.hidden = !isLogin || googleRealActive;
+  if (googleLoginBtn) {
+    googleLoginBtn.hidden = !isLogin || googleRealActive;
+    googleLoginBtn.disabled = !window.URSONINHOS_APP_CONFIG?.googleClientId;
+    googleLoginBtn.title = googleLoginBtn.disabled ? 'Login com Google em configuracao' : '';
+  }
 }
 
 function switchAuthTab(tab) {
@@ -1410,7 +1396,7 @@ authBackdrop?.addEventListener('click', closeAuth);
 showRegisterBtn?.addEventListener('click', () => switchAuthTab('register'));
 showLoginBtn?.addEventListener('click', () => switchAuthTab('login'));
 
-loginForm?.addEventListener('submit', (event) => {
+loginForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
   if (!loginError) return;
 
@@ -1418,20 +1404,18 @@ loginForm?.addEventListener('submit', (event) => {
   const email = String(formData.get('email') || '').trim().toLowerCase();
   const password = String(formData.get('password') || '');
 
-  const user = loadUsers().find((entry) => entry.email === email);
-
-  if (!user || user.password !== password) {
-    loginError.textContent = 'E-mail ou senha incorretos.';
+  const result = await window.UrsoninhosStore?.login(email, password);
+  if (!result?.ok) {
+    loginError.textContent = result?.error || 'E-mail ou senha incorretos.';
     return;
   }
 
   loginError.textContent = '';
-  saveSession(user.email);
   loginForm.reset();
   finishLogin();
 });
 
-registerForm?.addEventListener('submit', (event) => {
+registerForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
   if (!registerError) return;
 
@@ -1460,7 +1444,7 @@ registerForm?.addEventListener('submit', (event) => {
     return;
   }
 
-  const result = window.UrsoninhosStore?.register({ name, email, cpf, phone, password });
+  const result = await window.UrsoninhosStore?.register({ name, email, cpf, phone, password });
   if (!result?.ok) {
     registerError.textContent = result?.error || 'Não foi possível criar a conta.';
     return;
@@ -1484,21 +1468,27 @@ function finishLogin() {
    Google substitui o de demonstração. O JWT que o Google devolve traz
    nome, e-mail e foto — o suficiente para criar a conta na hora.
    Sem client id, o botão de demonstração simula o mesmo fluxo. */
-function handleGoogleProfile(profile) {
-  const user = window.UrsoninhosStore?.loginWithGoogle(profile);
-  if (!user) return;
+async function handleGoogleProfile(credential) {
+  const result = await window.UrsoninhosStore?.loginWithGoogle(credential);
+  if (!result?.ok) {
+    if (loginError) loginError.textContent = result?.error || 'Nao foi possivel concluir o login com Google.';
+    return;
+  }
   finishLogin();
 }
 
 googleLoginBtn?.addEventListener('click', () => {
-  const user = window.UrsoninhosStore?.loginWithGoogleMock();
-  if (!user) return;
-  finishLogin();
+  if (!window.URSONINHOS_APP_CONFIG?.googleClientId && loginError) {
+    loginError.textContent = 'Login com Google ainda nao configurado. Use e-mail e senha por enquanto.';
+  }
 });
 
 function setupGoogleSignin() {
   const clientId = window.URSONINHOS_APP_CONFIG?.googleClientId;
-  if (!clientId || !googleSigninContainer) return;
+  if (!clientId || !googleSigninContainer) {
+    updateGoogleButtons(true);
+    return;
+  }
 
   const script = document.createElement('script');
   script.src = 'https://accounts.google.com/gsi/client';
@@ -1511,7 +1501,7 @@ function setupGoogleSignin() {
         try {
           // O credential é um JWT; o payload (parte do meio) tem os dados.
           const payload = JSON.parse(atob(response.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-          handleGoogleProfile({ name: payload.name, email: payload.email, photoUrl: payload.picture, provider: 'google' });
+          handleGoogleProfile(response.credential);
         } catch (error) {
           console.error('Não foi possível ler a credencial do Google:', error);
         }
@@ -1531,8 +1521,8 @@ function setupGoogleSignin() {
 }
 setupGoogleSignin();
 
-logoutBtn?.addEventListener('click', () => {
-  clearSession();
+logoutBtn?.addEventListener('click', async () => {
+  await clearSession();
   switchAuthTab('login');
   renderAuthState();
   window.UrsoninhosNotifications?.refresh();
@@ -1659,7 +1649,7 @@ cancelAddressBtn?.addEventListener('click', () => {
   if (user?.address) showAddressDisplay(user.address);
 });
 
-addressForm?.addEventListener('submit', (event) => {
+addressForm?.addEventListener('submit', async (event) => {
   event.preventDefault();
   if (!addressError) return;
 
@@ -1680,10 +1670,15 @@ addressForm?.addEventListener('submit', (event) => {
   }
 
   addressError.textContent = '';
-  updateCurrentUser({ address });
+  const result = await updateCurrentUser({ address });
+  if (!result?.ok) {
+    addressError.textContent = result?.error || 'Nao foi possivel salvar o endereco.';
+    return;
+  }
   showAddressDisplay(address);
 });
 
+window.addEventListener('ursoninhos-auth-changed', renderAuthState);
 renderAuthState();
 
 /* ---------------------------------------------------------
@@ -1817,12 +1812,6 @@ confirmOrderBtn?.addEventListener('click', () => {
 
   // Registra as vendas dos modelos públicos ANTES de esvaziar o
   // carrinho — o contador aparece no card e na página do produto.
-  (shopStore?.loadCart() || []).forEach((item) => {
-    if (item.metadata?.source === 'public-model') {
-      shopStore?.registerSale(item.metadata.productId, item.quantity);
-    }
-  });
-
   // O pedido foi "fechado": esvazia o carrinho para a próxima compra.
   shopStore?.clearCart();
   refreshCartState();

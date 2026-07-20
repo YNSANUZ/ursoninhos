@@ -77,28 +77,33 @@
     });
   });
 
-  profileForm?.addEventListener('submit', (event) => {
+  profileForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const user = store.getCurrentUser();
     if (!user) return;
 
-    store.updateCurrentUser({
+    const result = await store.updateCurrentUser({
       name: profileNameInput?.value.trim() || user.name,
       cpf: (profileCpfInput?.value || '').replace(/\D/g, ''),
       phone: (profilePhoneInput?.value || '').replace(/\D/g, ''),
       photoUrl: profilePhotoInput?.value.trim() || '',
     });
 
+    if (!result?.ok) {
+      if (profileSaveNote) profileSaveNote.textContent = result?.error || 'Nao foi possivel salvar o perfil.';
+      return;
+    }
     if (profileSaveNote) profileSaveNote.textContent = 'Perfil salvo com sucesso.';
     accountUI.renderTopbarAccounts();
     renderUser();
   });
 
-  profileLogoutBtn?.addEventListener('click', () => {
-    store.logout();
+  profileLogoutBtn?.addEventListener('click', async () => {
+    await store.logout();
     window.location.href = 'index.html';
   });
 
   accountUI.renderTopbarAccounts();
   renderUser();
+  window.addEventListener('ursoninhos-auth-changed', renderUser);
 })();

@@ -46,8 +46,8 @@
       </div>
     `;
 
-    slot.querySelector('[data-account-logout]')?.addEventListener('click', () => {
-      store.logout();
+    slot.querySelector('[data-account-logout]')?.addEventListener('click', async () => {
+      await store.logout();
       window.location.href = 'index.html';
     });
   }
@@ -63,9 +63,10 @@
   }
 
   window.addEventListener('storage', (event) => {
-    if (event.key && !['ursoninhos_users', 'ursoninhos_session'].includes(event.key)) return;
+    if (event.key && !['ursoninhos_user', 'ursoninhos_auth_token'].includes(event.key)) return;
     renderTopbarAccounts();
   });
+  window.addEventListener('ursoninhos-auth-changed', renderTopbarAccounts);
 
   window.UrsoninhosAccountUI = {
     renderTopbarAccounts,

@@ -1,7 +1,7 @@
 (function () {
   const CART_STORAGE_KEY = 'ursoninhos_cart';
-  const USERS_STORAGE_KEY = 'ursoninhos_users';
-  const SESSION_STORAGE_KEY = 'ursoninhos_session';
+  const AUTH_TOKEN_KEY = 'ursoninhos_auth_token';
+  const USER_CACHE_KEY = 'ursoninhos_user';
 
   function readJson(key, fallback) {
     try {
@@ -97,54 +97,81 @@
     return loadCart().reduce((sum, item) => sum + item.price * item.quantity, 0);
   }
 
-  function loadUsers() {
-    const users = readJson(USERS_STORAGE_KEY, []);
-    return Array.isArray(users) ? users : [];
-  }
-
-  function saveUsers(users) {
-    writeJson(USERS_STORAGE_KEY, users);
-  }
-
   function getCurrentUser() {
-    const email = localStorage.getItem(SESSION_STORAGE_KEY);
-    if (!email) return null;
-    return loadUsers().find((user) => user.email === email) || null;
+    const user = readJson(USER_CACHE_KEY, null);
+    return user && typeof user === 'object' ? user : null;
   }
 
-  function login(email, password) {
-    const normalizedEmail = String(email || '').trim().toLowerCase();
-    const user = loadUsers().find((entry) => entry.email === normalizedEmail);
-
-    if (!user || user.password !== password) {
-      return { ok: false, error: 'E-mail ou senha incorretos.' };
-    }
-
-    localStorage.setItem(SESSION_STORAGE_KEY, user.email);
-    return { ok: true, user };
+  function backendBaseUrl() {
+    return window.URSONINHOS_APP_CONFIG?.backendBaseUrl || '';
   }
 
-  function register(userInput) {
-    const users = loadUsers();
-    const user = {
-      name: String(userInput.name || '').trim(),
-      email: String(userInput.email || '').trim().toLowerCase(),
-      password: String(userInput.password || ''),
-      cpf: String(userInput.cpf || '').replace(/\D/g, ''),
-      phone: String(userInput.phone || '').replace(/\D/g, ''),
-      address: userInput.address || null,
-      provider: userInput.provider || 'local',
-      createdAt: new Date().toISOString(),
-    };
+  function getAuthHeaders() {
+    const token = localStorage.getItem(AUTH_TOKEN_KEY) || '';
+    return token ? { Authorization: `Bearer ${token}` } : {};
+  }
 
-    if (users.some((entry) => entry.email === user.email)) {
-      return { ok: false, error: 'Ja existe uma conta com esse e-mail.' };
+  function setAuthenticatedUser(user, token = '') {
+    if (token) localStorage.setItem(AUTH_TOKEN_KEY, token);
+    if (user) writeJson(USER_CACHE_KEY, user);
+    else localStorage.removeItem(USER_CACHE_KEY);
+    window.dispatchEvent(new CustomEvent('ursoninhos-auth-changed', { detail: { user: user || null } }));
+  }
+
+  async function authRequest(body = null, method = 'POST') {
+    const baseUrl = backendBaseUrl();
+    if (!baseUrl) throw new Error('Backend de contas nao configurado.');
+    const response = await fetch(`${baseUrl}/auth.php`, {
+      method,
+      headers: {
+        ...(body ? { 'Content-Type': 'application/json' } : {}),
+        ...getAuthHeaders(),
+      },
+      ...(body ? { body: JSON.stringify(body) } : {}),
+      cache: 'no-store',
+    });
+    let payload = {};
+    try { payload = await response.json(); } catch (error) { /* resposta invalida */ }
+    if (!response.ok || payload.ok === false) {
+      throw new Error(payload.error || 'Falha na comunicacao com o servidor.');
     }
+    return payload;
+  }
 
-    users.push(user);
-    saveUsers(users);
-    localStorage.setItem(SESSION_STORAGE_KEY, user.email);
-    return { ok: true, user };
+  async function refreshSession() {
+    if (!localStorage.getItem(AUTH_TOKEN_KEY)) {
+      setAuthenticatedUser(null);
+      return null;
+    }
+    try {
+      const payload = await authRequest(null, 'GET');
+      setAuthenticatedUser(payload.user);
+      return payload.user;
+    } catch (error) {
+      localStorage.removeItem(AUTH_TOKEN_KEY);
+      setAuthenticatedUser(null);
+      return null;
+    }
+  }
+
+  async function login(email, password) {
+    try {
+      const payload = await authRequest({ action: 'login', email, password });
+      setAuthenticatedUser(payload.user, payload.token);
+      return { ok: true, user: payload.user };
+    } catch (error) {
+      return { ok: false, error: error.message };
+    }
+  }
+
+  async function register(userInput) {
+    try {
+      const payload = await authRequest({ action: 'register', ...userInput });
+      setAuthenticatedUser(payload.user, payload.token);
+      return { ok: true, user: payload.user };
+    } catch (error) {
+      return { ok: false, error: error.message };
+    }
   }
 
   /* Login com Google (perfil vindo do Google Identity Services ou do
@@ -152,34 +179,14 @@
      Quem entra so com Google usa o site normalmente — CPF, celular e
      endereco ficam pendentes e viram a notificacao "Atualize seus
      dados" no sino da home. */
-  function loginWithGoogle(profile) {
-    const email = String(profile.email || '').trim().toLowerCase();
-    if (!email) return null;
-
-    const users = loadUsers();
-    let user = users.find((entry) => entry.email === email);
-
-    if (!user) {
-      user = {
-        name: String(profile.name || 'Cliente Google').trim(),
-        email,
-        password: '',
-        cpf: '',
-        phone: '',
-        photoUrl: profile.photoUrl || '',
-        provider: profile.provider || 'google',
-        address: null,
-        createdAt: new Date().toISOString(),
-      };
-      users.push(user);
-    } else {
-      user.provider = user.provider || 'google';
-      if (profile.photoUrl && !user.photoUrl) user.photoUrl = profile.photoUrl;
+  async function loginWithGoogle(credential) {
+    try {
+      const payload = await authRequest({ action: 'google', credential: String(credential || '') });
+      setAuthenticatedUser(payload.user, payload.token);
+      return { ok: true, user: payload.user };
+    } catch (error) {
+      return { ok: false, error: error.message };
     }
-
-    saveUsers(users);
-    localStorage.setItem(SESSION_STORAGE_KEY, user.email);
-    return user;
   }
 
   // Dados minimos de um perfil de marketplace: CPF, celular e endereco.
@@ -204,7 +211,7 @@
   }
 
   function getLocalSales(productId) {
-    return Number(loadSales()[productId] || 0);
+    return 0;
   }
 
   function registerSale(productId, quantity) {
@@ -216,31 +223,23 @@
     // Tenta somar tambem no backend (products.php v2). Na versao atual
     // do backend a rota nao existe — o erro e ignorado de proposito e o
     // contador local segue valendo.
-    const baseUrl = window.URSONINHOS_APP_CONFIG?.backendBaseUrl;
-    if (baseUrl) {
-      fetch(`${baseUrl}/products.php?action=sale`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: productId, quantity }),
-      }).catch(() => {});
+    // O total oficial e atualizado no servidor somente apos o webhook.
+  }
+
+  async function updateCurrentUser(patch) {
+    try {
+      const payload = await authRequest({ action: 'update', ...patch });
+      setAuthenticatedUser(payload.user);
+      return { ok: true, user: payload.user };
+    } catch (error) {
+      return { ok: false, error: error.message };
     }
   }
 
-  function updateCurrentUser(patch) {
-    const currentUser = getCurrentUser();
-    if (!currentUser) return null;
-
-    const users = loadUsers();
-    const index = users.findIndex((entry) => entry.email === currentUser.email);
-    if (index === -1) return null;
-
-    users[index] = { ...users[index], ...patch };
-    saveUsers(users);
-    return users[index];
-  }
-
-  function logout() {
-    localStorage.removeItem(SESSION_STORAGE_KEY);
+  async function logout() {
+    try { await authRequest({ action: 'logout' }); } catch (error) { /* encerra localmente */ }
+    localStorage.removeItem(AUTH_TOKEN_KEY);
+    setAuthenticatedUser(null);
   }
 
   function generateOrderNumber() {
@@ -281,19 +280,24 @@
     clearCart,
     getCartCount,
     getCartTotal,
-    loadUsers,
-    saveUsers,
     getCurrentUser,
+    getAuthHeaders,
+    refreshSession,
     login,
     register,
     loginWithGoogle,
     getMissingProfileFields,
     getLocalSales,
-    registerSale,
     embedCreator,
     parseCreator,
     updateCurrentUser,
     logout,
     generateOrderNumber,
   };
+
+  // Apaga o antigo cadastro local que continha senhas em texto simples.
+  localStorage.removeItem('ursoninhos_users');
+  localStorage.removeItem('ursoninhos_session');
+  localStorage.removeItem('ursoninhos_sales');
+  refreshSession();
 })();

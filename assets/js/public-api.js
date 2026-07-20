@@ -25,16 +25,32 @@
   async function createProduct(product) {
     const response = await fetch(`${baseUrl}/products.php`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...(window.UrsoninhosStore?.getAuthHeaders() || {}),
+      },
       body: JSON.stringify(product),
     });
     const payload = await readJson(response);
     return payload.product || null;
   }
 
+  async function syncProducts(products) {
+    const response = await fetch(`${baseUrl}/products.php?action=sync-sheet`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(window.UrsoninhosStore?.getAuthHeaders() || {}),
+      },
+      body: JSON.stringify({ products }),
+    });
+    return readJson(response);
+  }
+
   window.UrsoninhosApi = {
     listProducts,
     getProduct,
     createProduct,
+    syncProducts,
   };
 })();

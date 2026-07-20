@@ -341,8 +341,8 @@
 
     if (guestAuthSection) guestAuthSection.hidden = Boolean(user);
 
-    document.getElementById('checkoutLogoutBtn')?.addEventListener('click', () => {
-      store.logout();
+    document.getElementById('checkoutLogoutBtn')?.addEventListener('click', async () => {
+      await store.logout();
       renderAll();
       goToStep('auth');
     });
@@ -441,9 +441,12 @@
   const checkoutGoogleButton = document.getElementById('googleLoginBtn');
   const checkoutGoogleContainer = document.getElementById('googleSigninContainer');
 
-  function finishGoogleCheckout(profile) {
-    const user = store.loginWithGoogle(profile);
-    if (!user) return;
+  async function finishGoogleCheckout(credential) {
+    const result = await store.loginWithGoogle(credential);
+    if (!result?.ok) {
+      if (checkoutLoginError) checkoutLoginError.textContent = result?.error || 'Nao foi possivel concluir o login com Google.';
+      return;
+    }
     renderAll();
     goToStep('address');
   }
@@ -462,7 +465,7 @@
         callback: (response) => {
           try {
             const payload = JSON.parse(atob(response.credential.split('.')[1].replace(/-/g, '+').replace(/_/g, '/')));
-            finishGoogleCheckout({ name: payload.name, email: payload.email, photoUrl: payload.picture, provider: 'google' });
+            finishGoogleCheckout(response.credential);
           } catch (error) {
             if (checkoutLoginError) checkoutLoginError.textContent = 'Nao foi possivel concluir o login com Google.';
           }
@@ -485,10 +488,10 @@
   });
   setupCheckoutGoogleSignin();
 
-  checkoutLoginForm?.addEventListener('submit', (event) => {
+  checkoutLoginForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const formData = new FormData(checkoutLoginForm);
-    const result = store.login(formData.get('email'), formData.get('password'));
+    const result = await store.login(formData.get('email'), formData.get('password'));
     if (!result.ok) {
       if (checkoutLoginError) checkoutLoginError.textContent = result.error;
       return;
@@ -498,7 +501,7 @@
     goToStep('address');
   });
 
-  checkoutRegisterForm?.addEventListener('submit', (event) => {
+  checkoutRegisterForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const formData = new FormData(checkoutRegisterForm);
     const password = String(formData.get('password') || '');
@@ -508,7 +511,7 @@
       return;
     }
 
-    const result = store.register({
+    const result = await store.register({
       name: formData.get('name'),
       email: formData.get('email'),
       password,
@@ -530,7 +533,7 @@
     if (digits.length === 8) lookupCep(digits);
   });
 
-  checkoutAddressForm?.addEventListener('submit', (event) => {
+  checkoutAddressForm?.addEventListener('submit', async (event) => {
     event.preventDefault();
     const formData = new FormData(checkoutAddressForm);
     const address = {
@@ -548,7 +551,11 @@
       return;
     }
 
-    store.updateCurrentUser({ address });
+    const result = await store.updateCurrentUser({ address });
+    if (!result?.ok) {
+      if (checkoutAddressError) checkoutAddressError.textContent = result?.error || 'Nao foi possivel salvar o endereco.';
+      return;
+    }
     if (checkoutAddressError) checkoutAddressError.textContent = '';
     renderAll();
     goToStep('review');
@@ -601,7 +608,10 @@
 
     const response = await fetch(`${baseUrl}/create-checkout-session.php`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...store.getAuthHeaders(),
+      },
       body: JSON.stringify({
         items: cart.map(checkoutItemPayload),
         payer: {
@@ -615,6 +625,21 @@
       }),
     });
     const payload = await readApiJson(response);
+    if (Array.isArray(payload.items)) {
+      const serverPrices = new Map(payload.items.map((item) => [String(item.id), Number(item.unitPrice)]));
+      let changed = false;
+      const correctedCart = cart.map((item) => {
+        const trustedPrice = serverPrices.get(String(item.productId || item.lineId || 'produto'));
+        if (!Number.isFinite(trustedPrice) || trustedPrice === Number(item.price)) return item;
+        changed = true;
+        return { ...item, price: trustedPrice };
+      });
+      if (changed) {
+        store.saveCart(correctedCart);
+        renderSummary();
+        renderCartItems();
+      }
+    }
     paymentSession = payload.order;
     localStorage.setItem(PENDING_ORDER_STORAGE_KEY, JSON.stringify({ orderId: payload.order.id }));
     return paymentSession;
@@ -642,7 +667,10 @@
     const session = await createCheckoutSession();
     const response = await fetch(`${paymentApiBaseUrl()}/process-payment.php`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        'Content-Type': 'application/json',
+        ...store.getAuthHeaders(),
+      },
       body: JSON.stringify({
         orderId: session.id,
         formData,
@@ -815,11 +843,6 @@
     }
 
     if (approved) {
-      getCart().forEach((item) => {
-        if (item.metadata?.source === 'public-model') {
-          store.registerSale(item.metadata.productId, item.quantity);
-        }
-      });
       store.clearCart();
       localStorage.removeItem(PENDING_ORDER_STORAGE_KEY);
       renderSummary();
@@ -838,7 +861,10 @@
     if (!orderId) return;
     try {
       const query = new URLSearchParams({ order_id: orderId });
-      const response = await fetch(`${paymentApiBaseUrl()}/payment-status.php?${query.toString()}`, { cache: 'no-store' });
+      const response = await fetch(`${paymentApiBaseUrl()}/payment-status.php?${query.toString()}`, {
+        cache: 'no-store',
+        headers: store.getAuthHeaders(),
+      });
       const payload = await readApiJson(response);
       showPaymentResult(payload.order, payload.instructions || {});
     } catch (error) {
@@ -857,6 +883,7 @@
     await refreshPaymentStatus(pending.orderId);
   }
 
+  window.addEventListener('ursoninhos-auth-changed', renderAll);
   renderAll();
   restorePendingPayment();
 })();

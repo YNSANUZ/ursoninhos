@@ -2,6 +2,7 @@ import { createInteractiveViewer } from './interactive-viewer3d.js';
 
 const config = window.URSONINHOS_APP_CONFIG || {};
 const api = window.UrsoninhosApi;
+const store = window.UrsoninhosStore;
 
 const defaultLogoUrl = config.defaultLogoUrl || '';
 // Mockup da camisa preta no cabide usado na imagem de card do catálogo.
@@ -219,6 +220,12 @@ async function publishModel(event) {
 
 async function init() {
   if (!adminViewerEl) return;
+  await store?.refreshSession();
+  if (store?.getCurrentUser()?.role !== 'admin') {
+    adminPublishForm?.querySelectorAll('input, textarea, button').forEach((control) => { control.disabled = true; });
+    setNote('Acesso restrito ao administrador configurado no backend.', true);
+    return;
+  }
   syncDefaultInputs();
   viewer = await createInteractiveViewer({ container: adminViewerEl, cameraDistance: 2.2 });
   await generatePreviews();
@@ -260,6 +267,11 @@ init().catch((error) => {
 const SITE_URL = 'https://ursoninhos.com';
 const sheetSyncBtn = document.getElementById('sheetSyncBtn');
 const sheetSyncNote = document.getElementById('sheetSyncNote');
+
+if (sheetSyncBtn && !window.UrsoninhosSheet?.canWrite) {
+  sheetSyncBtn.disabled = true;
+  sheetSyncBtn.title = 'Publique e configure o Web App do Google antes de sincronizar';
+}
 
 function setSyncNote(message, isError = false) {
   if (!sheetSyncNote) return;
@@ -311,9 +323,14 @@ async function montarTodosOsProdutos() {
 }
 
 sheetSyncBtn?.addEventListener('click', async () => {
+  await store?.refreshSession();
+  if (store?.getCurrentUser()?.role !== 'admin') {
+    setSyncNote('Entre com a conta administradora configurada no backend.', true);
+    return;
+  }
   const sheet = window.UrsoninhosSheet;
   if (!sheet?.canWrite) {
-    setSyncNote('Configure a URL do Web App (sheetWebAppUrl em app-config.js) para escrever na planilha. Veja backend/google-apps-script.gs.', true);
+    setSyncNote('A sincronização segura com a planilha ainda não foi configurada no backend da Hostinger.', true);
     return;
   }
 

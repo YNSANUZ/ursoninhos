@@ -19,7 +19,8 @@
 (function () {
   const config = window.URSONINHOS_APP_CONFIG || {};
   const SHEET_ID = config.productsSheetId || '';
-  const WEB_APP_URL = config.sheetWebAppUrl || '';
+  const SHEET_NAME = 'produtos';
+  const BACKEND_URL = config.backendBaseUrl || '';
   const CACHE_KEY = 'ursoninhos_sheet_products';
   const CACHE_MS = 60 * 1000; // 1 min: mudou na planilha, site pega logo
 
@@ -36,7 +37,7 @@
   async function fetchSheet() {
     if (!SHEET_ID) return {};
 
-    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&t=${Date.now()}`;
+    const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&headers=1&sheet=${encodeURIComponent(SHEET_NAME)}&t=${Date.now()}`;
     const response = await fetch(url);
     const text = await response.text();
 
@@ -117,14 +118,31 @@
      Content-Type text/plain evita o preflight de CORS que o Apps
      Script não responde. Sem URL configurada, resolve em silêncio. */
   async function push(products) {
-    if (!WEB_APP_URL || !products?.length) return { ok: false, skipped: true };
-    const response = await fetch(WEB_APP_URL, {
+    if (!BACKEND_URL) {
+      return { ok: false, skipped: true, error: 'O backend ainda nao foi configurado.' };
+    }
+    if (!products?.length) return { ok: false, skipped: true, error: 'Nenhum produto para sincronizar.' };
+    const response = await fetch(`${BACKEND_URL}/products.php?action=sync-sheet`, {
       method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ action: 'upsert', products }),
+      headers: {
+        'Content-Type': 'application/json',
+        ...(window.UrsoninhosStore?.getAuthHeaders() || {}),
+      },
+      body: JSON.stringify({ products }),
     });
-    return response.json().catch(() => ({ ok: response.ok }));
+    const contentType = response.headers.get('content-type') || '';
+    if (!contentType.includes('application/json')) {
+      return { ok: false, error: 'O Web App nao retornou uma confirmacao valida.' };
+    }
+    const result = await response.json();
+    return response.ok ? result : { ok: false, error: result?.error || 'Falha ao gravar na planilha.' };
   }
 
-  window.UrsoninhosSheet = { load, applyOverride, push, enabled: !!SHEET_ID, canWrite: !!WEB_APP_URL };
+  window.UrsoninhosSheet = {
+    load,
+    applyOverride,
+    push,
+    enabled: !!SHEET_ID,
+    canWrite: !!BACKEND_URL,
+  };
 })();
