@@ -504,12 +504,8 @@ heroStage?.addEventListener('touchend', (event) => {
 // estampa atual na FRENTE com o tamanho/posição escolhidos. O verso
 // começa vazio, esperando o cliente escolher pela chave FRENTE/VERSO.
 window.addEventListener('shirt3d-ready', () => {
-  const print = shirtPrints[shirtPrintIndex];
-  if (print && window.shirtViewer3D?.ready) {
-    window.shirtViewer3D.setPrint(print.file, print.blend || 'screen', 'front');
-    const t = sideTransforms.front;
-    window.shirtViewer3D.setTransform({ scale: t.scale, offsetX: t.offsetX, offsetY: t.offsetY }, 'front');
-  }
+  syncAllSidePrintsToViewer();
+  consumePendingHeroEditorResume();
 });
 
 // Swipe também no próprio carrossel de miniaturas (mobile).
@@ -881,6 +877,7 @@ const heroSizeSelect = document.getElementById('heroSizeSelect');
 const heroQtyInput = document.getElementById('heroQtyInput');
 const heroQtyDecrease = document.getElementById('heroQtyDecrease');
 const heroQtyIncrease = document.getElementById('heroQtyIncrease');
+const HERO_EDITOR_RESUME_KEY = 'ursoninhos_resume_editor';
 
 function formatBRL(value) {
   return shopStore ? shopStore.formatBRL(value) : value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -905,6 +902,222 @@ function loadImage(src) {
     image.onerror = reject;
     image.src = src;
   });
+}
+
+function wait(ms) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function paintCardBackground(ctx, width, height) {
+  const gradient = ctx.createLinearGradient(0, 0, 0, height);
+  gradient.addColorStop(0, '#dcbb93');
+  gradient.addColorStop(1, '#bd9166');
+  ctx.fillStyle = gradient;
+  ctx.fillRect(0, 0, width, height);
+}
+
+async function composeWithBackground(foregroundDataUrl) {
+  if (!foregroundDataUrl) return 'assets/img/banner-estatico.jpg';
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024;
+  canvas.height = 1024;
+  const ctx = canvas.getContext('2d');
+
+  paintCardBackground(ctx, canvas.width, canvas.height);
+  const foreground = await loadImage(foregroundDataUrl);
+  ctx.drawImage(foreground, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL('image/jpeg', 0.9);
+}
+
+function getSelectedPrintForSide(side) {
+  const index = sidePrintSelections[side];
+  if (index === null || index === undefined) return null;
+  return shirtPrints[index] || null;
+}
+
+function getPrimaryEditedSide() {
+  if (sidePrintSelections.front !== null && sidePrintSelections.front !== undefined) return 'front';
+  if (sidePrintSelections.back !== null && sidePrintSelections.back !== undefined) return 'back';
+  if (sidePrintSelections.sleeveRight !== null && sidePrintSelections.sleeveRight !== undefined) return 'right';
+  if (sidePrintSelections.sleeveLeft !== null && sidePrintSelections.sleeveLeft !== undefined) return 'left';
+  return 'front';
+}
+
+function getPreferredPreviewSideForCart() {
+  if (activeSide === 'back' && sidePrintSelections.back !== null && sidePrintSelections.back !== undefined) return 'back';
+  if (activeSide === 'sleeveRight' && sidePrintSelections.sleeveRight !== null && sidePrintSelections.sleeveRight !== undefined) return 'right';
+  if (activeSide === 'sleeveLeft' && sidePrintSelections.sleeveLeft !== null && sidePrintSelections.sleeveLeft !== undefined) return 'left';
+  return getPrimaryEditedSide();
+}
+
+function buildPrintsBySide() {
+  const prints = {};
+  Object.keys(sidePrintSelections).forEach((side) => {
+    const print = getSelectedPrintForSide(side);
+    if (!print?.file) return;
+    prints[side] = {
+      name: print.name || 'Minha Arte',
+      file: print.file,
+      blend: print.blend || 'screen',
+      isCustom: Boolean(print.isCustom),
+    };
+  });
+  return prints;
+}
+
+function buildEditorState(size = '') {
+  return {
+    activeSide,
+    queuedPrintIndex,
+    shirtPrintIndex,
+    size,
+    sideSelections: { ...sidePrintSelections },
+    transforms: {
+      front: { ...sideTransforms.front },
+      back: { ...sideTransforms.back },
+      sleeveLeft: { ...sideTransforms.sleeveLeft },
+      sleeveRight: { ...sideTransforms.sleeveRight },
+    },
+    printsBySide: buildPrintsBySide(),
+  };
+}
+
+function ensurePrintAvailable(printData) {
+  if (!printData?.file) return null;
+  const existingIndex = shirtPrints.findIndex((print) =>
+    print?.file === printData.file &&
+    (print?.blend || 'screen') === (printData.blend || 'screen')
+  );
+  if (existingIndex >= 0) return existingIndex;
+
+  shirtPrints.push({
+    name: printData.name || 'Minha Arte',
+    file: printData.file,
+    blend: printData.blend || 'screen',
+    isCustom: Boolean(printData.isCustom),
+  });
+  return shirtPrints.length - 1;
+}
+
+function syncAllSidePrintsToViewer() {
+  if (!window.shirtViewer3D?.ready) return;
+
+  Object.keys(sidePrintSelections).forEach((side) => {
+    const print = getSelectedPrintForSide(side);
+    const transform = sideTransforms[side];
+    if (print?.file) {
+      window.shirtViewer3D.setPrint(print.file, print.blend || 'screen', side);
+    } else {
+      window.shirtViewer3D.clearPrint?.(side);
+    }
+    window.shirtViewer3D.setTransform(
+      { scale: transform.scale, offsetX: transform.offsetX, offsetY: transform.offsetY },
+      side
+    );
+  });
+}
+
+function syncFrontOverlayFromState() {
+  const frontPrint = getSelectedPrintForSide('front');
+  if (!shirtOverlay) return;
+
+  if (!frontPrint?.file) {
+    shirtOverlay.style.display = 'none';
+    return;
+  }
+
+  shirtOverlay.style.display = 'block';
+  shirtOverlay.style.backgroundImage = `url('${frontPrint.file}')`;
+  shirtOverlay.style.mixBlendMode = frontPrint.blend || 'screen';
+  applyPrintScale();
+  applyPrintOffset();
+}
+
+function restoreHeroEditorState(state) {
+  if (!state || typeof state !== 'object') return false;
+
+  const printsBySide = state.printsBySide && typeof state.printsBySide === 'object'
+    ? state.printsBySide
+    : {};
+
+  Object.keys(sidePrintSelections).forEach((side) => {
+    sidePrintSelections[side] = ensurePrintAvailable(printsBySide[side]);
+    const transform = state.transforms?.[side];
+    sideTransforms[side] = {
+      scale: Number(transform?.scale || 1),
+      offsetX: Number(transform?.offsetX || 0),
+      offsetY: Number(transform?.offsetY || 0),
+    };
+  });
+
+  const frontIndex = sidePrintSelections.front;
+  if (frontIndex !== null && frontIndex !== undefined) {
+    shirtPrintIndex = frontIndex;
+    queuedPrintIndex = frontIndex;
+  }
+
+  renderPrintPicker();
+  setQueuedPrint(queuedPrintIndex);
+  syncFrontOverlayFromState();
+  syncAllSidePrintsToViewer();
+  setActiveSide(state.activeSide && SIDE_BUTTONS[state.activeSide] ? state.activeSide : 'front');
+
+  if (heroSizeSelect && state.size) {
+    heroSizeSelect.value = state.size;
+  }
+
+  refreshHeroPriceNote();
+  return true;
+}
+
+function consumePendingHeroEditorResume() {
+  try {
+    const raw = localStorage.getItem(HERO_EDITOR_RESUME_KEY);
+    if (!raw) return;
+    localStorage.removeItem(HERO_EDITOR_RESUME_KEY);
+    const state = JSON.parse(raw);
+    if (!restoreHeroEditorState(state)) return;
+    document.getElementById('hero')?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (error) {
+    console.error('Nao foi possivel restaurar a camisa em edicao:', error);
+  }
+}
+
+async function generateHeroPreviewViews() {
+  const frontFallback = await generateFrontPreview();
+  const viewer = window.shirtViewer3D;
+  if (!viewer?.ready || !viewer.capturePng) {
+    return { front: frontFallback };
+  }
+
+  const previousSide = activeSide;
+  syncAllSidePrintsToViewer();
+
+  const previewViews = {};
+  const previewMap = [
+    ['front', 0],
+    ['back', 180],
+    ['right', -90],
+    ['left', 90],
+  ];
+
+  for (const [previewSide, angle] of previewMap) {
+    viewer.setCameraAngle(angle);
+    await wait(260);
+    previewViews[previewSide] = await composeWithBackground(viewer.capturePng());
+  }
+
+  viewer.setCameraAngle(SIDE_CAMERA_ANGLES[previousSide] || 0);
+  return previewViews;
+}
+
+function pickPrimaryPreviewFromViews(previewViews = {}, preferredSide = getPrimaryEditedSide()) {
+  return previewViews[preferredSide] ||
+    previewViews.front ||
+    previewViews.back ||
+    previewViews.right ||
+    previewViews.left ||
+    'assets/img/banner-estatico.jpg';
 }
 
 async function generateFrontPreview() {
@@ -1117,6 +1330,7 @@ document.querySelectorAll('.product-card[data-price]').forEach((card) => {
 
 renderCart();
 refreshHeroPriceNote();
+consumePendingHeroEditorResume();
 
 /* ---------------------------------------------------------
    Botão "Adicionar ao carrinho" do hero (camisa + estampa atual)
@@ -1145,7 +1359,10 @@ addToCartBtn?.addEventListener('click', async () => {
   const qty = normalizeHeroQty();
   const size = heroSizeSelect?.value || 'M';
   const coverage = getSelectedCoverage();
-  const previewImage = await generateFrontPreview();
+  const previewViews = await generateHeroPreviewViews();
+  const preferredPreviewSide = getPreferredPreviewSideForCart();
+  const previewImage = pickPrimaryPreviewFromViews(previewViews, preferredPreviewSide);
+  const editorState = buildEditorState(size);
 
   addToCart({
     productId: `camisa-personalizada::${coverage.label}`,
@@ -1155,14 +1372,18 @@ addToCartBtn?.addEventListener('click', async () => {
     size,
     quantity: qty,
     previewImage,
-    previewViews: { front: previewImage },
+    previewViews,
     metadata: {
+      editorSource: 'home-customizer',
+      preferredPreviewSide,
       pricingMode: 'standard-shirt',
       sides: coverage.sides,
       coverage: coverage.label,
       printName: print.name,
       frontPrintUrl: print.file || '',
       frontPrintBlend: print.blend || 'screen',
+      printsBySide: buildPrintsBySide(),
+      editorState,
       transforms: {
         front: { ...sideTransforms.front },
         back: { ...sideTransforms.back },

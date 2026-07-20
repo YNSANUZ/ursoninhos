@@ -4,6 +4,7 @@
 
   const PAYMENT_STORAGE_KEY = 'ursoninhos_checkout_payment';
   const PENDING_ORDER_STORAGE_KEY = 'ursoninhos_pending_order';
+  const HERO_EDITOR_RESUME_KEY = 'ursoninhos_resume_editor';
   const steps = ['cart', 'auth', 'address', 'review', 'payment'];
   const paymentCopy = {
     mercadopago: {
@@ -102,6 +103,41 @@
     return String(item.productId || '').startsWith('camisa-personalizada::');
   }
 
+  function isEditableCustomShirt(item) {
+    return isCustomShirt(item) && item.metadata?.editorSource === 'home-customizer' && item.metadata?.editorState;
+  }
+
+  function getPreferredPreviewSide(item) {
+    if (item.metadata?.preferredPreviewSide && item.previewViews?.[item.metadata.preferredPreviewSide]) {
+      return item.metadata.preferredPreviewSide;
+    }
+    const editorSide = item.metadata?.editorState?.activeSide;
+    if (editorSide === 'back' && item.previewViews?.back) return 'back';
+    if (editorSide === 'sleeveRight' && item.previewViews?.right) return 'right';
+    if (editorSide === 'sleeveLeft' && item.previewViews?.left) return 'left';
+    if (item.previewViews?.front) return 'front';
+    if (item.previewViews?.back) return 'back';
+    if (item.previewViews?.right) return 'right';
+    if (item.previewViews?.left) return 'left';
+
+    const sides = item.metadata?.sideSelections || {};
+    if (sides.front !== null && sides.front !== undefined) return 'front';
+    if (sides.back !== null && sides.back !== undefined) return 'back';
+    if (sides.sleeveRight !== null && sides.sleeveRight !== undefined) return 'right';
+    if (sides.sleeveLeft !== null && sides.sleeveLeft !== undefined) return 'left';
+    return 'front';
+  }
+
+  function getPreviewLabel(side) {
+    const labels = {
+      front: 'Vista salva: frente',
+      back: 'Vista salva: costas',
+      right: 'Vista salva: manga direita',
+      left: 'Vista salva: manga esquerda',
+    };
+    return labels[side] || 'Preview salvo';
+  }
+
   async function buildShirtMockup(printUrl, transform = {}, blend = 'screen') {
     const cacheKey = JSON.stringify({ printUrl, transform, blend });
     if (previewCache.has(cacheKey)) return previewCache.get(cacheKey);
@@ -140,14 +176,29 @@
   }
 
   async function resolveCartPreview(item) {
-    const frontPreview = item.previewViews?.front || item.previewImage || 'assets/img/banner-estatico.jpg';
-    if (!isCustomShirt(item)) return frontPreview;
-    if (!item.metadata?.frontPrintUrl) return frontPreview;
+    const preferredSide = getPreferredPreviewSide(item);
+    const preferredPreview = item.previewViews?.[preferredSide] ||
+      item.previewViews?.front ||
+      item.previewImage ||
+      'assets/img/banner-estatico.jpg';
+    if (!isCustomShirt(item)) return preferredPreview;
+    if (item.previewViews?.[preferredSide]) return item.previewViews[preferredSide];
+    if (!item.metadata?.frontPrintUrl) return preferredPreview;
 
     const printUrl = item.metadata.frontPrintUrl;
     const transform = item.metadata?.frontTransform || {};
     const blend = item.metadata?.frontPrintBlend || 'screen';
     return buildShirtMockup(printUrl, transform, blend);
+  }
+
+  function resumeEditing(item) {
+    if (!isEditableCustomShirt(item)) return;
+    try {
+      localStorage.setItem(HERO_EDITOR_RESUME_KEY, JSON.stringify(item.metadata.editorState));
+      window.location.href = 'index.html#hero';
+    } catch (error) {
+      console.error('Nao foi possivel retomar a edicao da camisa:', error);
+    }
   }
 
   function applyPreviewToImage(imgEl, src, item) {
@@ -232,8 +283,9 @@
     if (!item) return;
 
     selectedItemLineId = item.lineId;
+    const preferredSide = getPreferredPreviewSide(item);
     if (itemDetailImage) {
-      itemDetailImage.src = item.previewViews?.front || item.previewImage || 'assets/img/banner-estatico.jpg';
+      itemDetailImage.src = item.previewViews?.[preferredSide] || item.previewViews?.front || item.previewImage || 'assets/img/banner-estatico.jpg';
       itemDetailImage.alt = `${item.title} selecionado`;
     }
     if (itemDetailTitle) itemDetailTitle.textContent = item.title;
@@ -241,7 +293,7 @@
     if (itemDetailQuantity) itemDetailQuantity.textContent = String(item.quantity);
     if (itemDetailPrice) itemDetailPrice.textContent = store.formatBRL(item.price);
     if (itemDetailTotal) itemDetailTotal.textContent = store.formatBRL(item.price * item.quantity);
-    if (itemDetailPreview) itemDetailPreview.textContent = item.previewViews?.front ? 'Mockup frontal salvo' : 'Sem preview';
+    if (itemDetailPreview) itemDetailPreview.textContent = item.previewImage ? getPreviewLabel(preferredSide) : 'Sem preview';
   }
 
   function renderCartItems() {
@@ -266,7 +318,7 @@
       <article class="checkout-item" data-line-id="${item.lineId}">
         <button type="button" class="checkout-item__preview" data-action="detail">
           <img
-            src="${item.previewViews?.front || item.previewImage || 'assets/img/banner-estatico.jpg'}"
+            src="${item.previewViews?.[getPreferredPreviewSide(item)] || item.previewViews?.front || item.previewImage || 'assets/img/banner-estatico.jpg'}"
             alt="${escapeHtml(item.title)}"
             data-preview-line-id="${escapeHtml(item.lineId)}"
           >
@@ -280,6 +332,7 @@
           </div>
           <div class="checkout-item__actions">
             <button type="button" class="checkout-link-btn" data-action="detail">Ver detalhes</button>
+            ${isEditableCustomShirt(item) ? '<button type="button" class="checkout-link-btn" data-action="resume">Continuar edição</button>' : ''}
             <button type="button" class="checkout-link-btn" data-action="remove">Remover</button>
           </div>
         </div>
@@ -300,8 +353,13 @@
       // O card inteiro abre os detalhes; só ficam de fora os controles de
       // quantidade (+, − e o campo digitável) e o botão de remover.
       itemEl.addEventListener('click', (event) => {
-        if (event.target.closest('[data-action="increase"], [data-action="decrease"], [data-action="qty-input"], [data-action="remove"]')) return;
+        if (event.target.closest('[data-action="increase"], [data-action="decrease"], [data-action="qty-input"], [data-action="remove"], [data-action="resume"]')) return;
         renderItemDetail(lineId);
+      });
+      itemEl.querySelector('[data-action="resume"]')?.addEventListener('click', () => {
+        const cartItem = getCart().find((entry) => entry.lineId === lineId);
+        if (!cartItem) return;
+        resumeEditing(cartItem);
       });
       itemEl.querySelector('[data-action="remove"]')?.addEventListener('click', () => {
         store.removeCartItem(lineId);

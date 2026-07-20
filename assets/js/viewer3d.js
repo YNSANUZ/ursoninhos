@@ -649,7 +649,12 @@ function setCameraAngle(degrees) {
   emitVisibleSideChange(true);
 }
 
-window.shirtViewer3D = { ready: false, setPrint, setTransform, clearPrint, setCameraAngle };
+function capturePng() {
+  if (!renderer?.domElement) return '';
+  return renderer.domElement.toDataURL('image/png');
+}
+
+window.shirtViewer3D = { ready: false, setPrint, setTransform, clearPrint, setCameraAngle, capturePng };
 
 try {
   init();
