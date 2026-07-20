@@ -19,6 +19,7 @@
 const DATA_FILE = __DIR__ . '/products.json';
 const ADMIN_KEY = 'TROQUE-ESTA-CHAVE'; // usada só para DELETE
 const MAX_PRICE = 500;
+const PUBLIC_SHORT_ID_BASE = 8600;
 
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
@@ -41,7 +42,13 @@ function loadProducts()
     if (!file_exists(DATA_FILE)) return [];
     $raw = file_get_contents(DATA_FILE);
     $data = json_decode($raw, true);
-    return is_array($data) ? $data : [];
+    $products = is_array($data) ? $data : [];
+    $changed = false;
+    $products = ensureShortLinks($products, $changed);
+    if ($changed) {
+        saveProducts($products);
+    }
+    return $products;
 }
 
 function saveProducts($products)
@@ -53,6 +60,56 @@ function slugify($text)
 {
     $slug = strtolower(trim(preg_replace('/[^a-zA-Z0-9]+/', '-', iconv('UTF-8', 'ASCII//TRANSLIT', $text)), '-'));
     return $slug !== '' ? $slug : 'modelo';
+}
+
+function isValidShortId($value)
+{
+    return preg_match('/^\d{4}$/', (string) $value) === 1;
+}
+
+function buildShortPath($shortId)
+{
+    return '/' . (string) $shortId . '/';
+}
+
+function matchesProductKey($product, $key)
+{
+    $key = (string) $key;
+    return (string) ($product['id'] ?? '') === $key || (string) ($product['shortId'] ?? '') === $key;
+}
+
+function ensureShortLinks($products, &$changed = false)
+{
+    $used = [];
+    foreach ($products as $product) {
+        $shortId = (string) ($product['shortId'] ?? '');
+        if (isValidShortId($shortId)) {
+            $used[$shortId] = true;
+        }
+    }
+
+    $nextShortId = PUBLIC_SHORT_ID_BASE;
+    foreach ($products as $index => $product) {
+        $shortId = (string) ($product['shortId'] ?? '');
+        if (!isValidShortId($shortId)) {
+            while (isset($used[(string) $nextShortId])) {
+                $nextShortId++;
+            }
+            $shortId = (string) $nextShortId;
+            $used[$shortId] = true;
+            $products[$index]['shortId'] = $shortId;
+            $changed = true;
+            $nextShortId++;
+        }
+
+        $shortPath = buildShortPath($shortId);
+        if ((string) ($product['shortPath'] ?? '') !== $shortPath) {
+            $products[$index]['shortPath'] = $shortPath;
+            $changed = true;
+        }
+    }
+
+    return $products;
 }
 
 function normalizeSide($side)
@@ -78,7 +135,7 @@ if ($method === 'GET') {
 
     if ($id !== '') {
         foreach ($products as $product) {
-            if ($product['id'] === $id) respond(['ok' => true, 'product' => $product]);
+            if (matchesProductKey($product, $id)) respond(['ok' => true, 'product' => $product]);
         }
         respond(['ok' => false, 'error' => 'Produto nao encontrado.'], 404);
     }
@@ -96,7 +153,7 @@ if ($method === 'POST') {
         $quantity = max(1, (int) ($body['quantity'] ?? 1));
         $products = loadProducts();
         foreach ($products as $index => $product) {
-            if ($product['id'] === $id) {
+            if (matchesProductKey($product, $id)) {
                 $products[$index]['sales'] = (int) ($product['sales'] ?? 0) + $quantity;
                 saveProducts($products);
                 respond(['ok' => true, 'product' => $products[$index]]);
@@ -138,6 +195,9 @@ if ($method === 'POST') {
 
     $products = loadProducts();
     $products[] = $product;
+    $changed = false;
+    $products = ensureShortLinks($products, $changed);
+    $product = end($products);
     saveProducts($products);
     respond(['ok' => true, 'product' => $product]);
 }
@@ -148,7 +208,7 @@ if ($method === 'DELETE') {
     }
     $id = $_GET['id'] ?? '';
     $products = loadProducts();
-    $remaining = array_filter($products, fn($product) => $product['id'] !== $id);
+    $remaining = array_filter($products, fn($product) => !matchesProductKey($product, $id));
     if (count($remaining) === count($products)) {
         respond(['ok' => false, 'error' => 'Produto nao encontrado.'], 404);
     }

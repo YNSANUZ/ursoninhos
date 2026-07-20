@@ -22,6 +22,18 @@
     return payload.product || null;
   }
 
+  function getProductPath(productOrKey) {
+    if (productOrKey && typeof productOrKey === 'object') {
+      if (productOrKey.shortPath) return productOrKey.shortPath;
+      if (productOrKey.shortId) return `/${encodeURIComponent(productOrKey.shortId)}/`;
+      if (productOrKey.id) return `produto.html?id=${encodeURIComponent(productOrKey.id)}`;
+    }
+
+    const key = String(productOrKey || '').trim();
+    if (/^\d{4}$/.test(key)) return `/${encodeURIComponent(key)}/`;
+    return `produto.html?id=${encodeURIComponent(key)}`;
+  }
+
   async function createProduct(product) {
     const response = await fetch(`${baseUrl}/products.php`, {
       method: 'POST',
@@ -51,6 +63,7 @@
     listProducts,
     getProduct,
     createProduct,
+    getProductPath,
     syncProducts,
   };
 })();

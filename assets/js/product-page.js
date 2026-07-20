@@ -20,9 +20,18 @@ const relatedProductsGrid = document.getElementById('relatedProductsGrid');
 let viewer = null;
 let currentProduct = null;
 
-function getProductId() {
+function getProductKey() {
+  const shortPathMatch = window.location.pathname.match(/^\/(\d{4})\/?$/);
+  if (shortPathMatch) return shortPathMatch[1];
   const params = new URLSearchParams(window.location.search);
   return params.get('id') || '';
+}
+
+function syncShortUrl(product) {
+  const shortPath = product?.shortPath || (product?.shortId ? `/${product.shortId}/` : '');
+  if (!shortPath) return;
+  if (window.location.pathname === shortPath && !window.location.search) return;
+  window.history.replaceState({}, '', shortPath);
 }
 
 function updateCartCount() {
@@ -174,14 +183,16 @@ function renderRelatedProducts(products) {
     button.addEventListener('click', () => {
       const card = button.closest('[data-related-id]');
       if (!card) return;
-      window.location.href = `produto.html?id=${encodeURIComponent(card.dataset.relatedId)}`;
+      const product = others.find((entry) => entry.id === card.dataset.relatedId);
+      if (!product) return;
+      window.location.href = api.getProductPath(product);
     });
   });
 }
 
 async function init() {
-  const productId = getProductId();
-  if (!productId || !api || !store) {
+  const productKey = getProductKey();
+  if (!productKey || !api || !store) {
     if (productTitle) productTitle.textContent = 'Produto nao encontrado';
     if (productDescription) productDescription.textContent = 'Abra um produto a partir da home para ver os detalhes.';
     return;
@@ -190,7 +201,8 @@ async function init() {
   updateCartCount();
   bindControls();
 
-  currentProduct = await api.getProduct(productId);
+  currentProduct = await api.getProduct(productKey);
+  syncShortUrl(currentProduct);
 
   // Preço/nome da planilha Google valem sobre os do backend.
   try {

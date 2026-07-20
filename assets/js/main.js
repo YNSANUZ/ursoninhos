@@ -1209,7 +1209,7 @@ publishModelBtn?.addEventListener('click', async () => {
 
     setPublishFeedback(
       `Modelo publicado por ${formatBRL(publishCoverage.price)}, ${firstName}! Ele já está na vitrine com seu crédito. ` +
-      `<a href="produto.html?id=${encodeURIComponent(product.id)}">Ver página do produto</a>`
+      `<a href="${window.UrsoninhosApi?.getProductPath(product) || `produto.html?id=${encodeURIComponent(product.id)}`}">Ver página do produto</a>`
     );
     window.UrsoninhosCatalog?.refresh();
 

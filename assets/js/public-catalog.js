@@ -33,7 +33,7 @@
       if (!product) return;
 
       card.querySelector('[data-action="details"]')?.addEventListener('click', () => {
-        window.location.href = `produto.html?id=${encodeURIComponent(product.id)}`;
+        window.location.href = api.getProductPath(product);
       });
 
       card.querySelector('[data-action="add"]')?.addEventListener('click', (event) => {

@@ -211,7 +211,10 @@ async function publishModel(event) {
     };
 
     const product = await api.createProduct(payload);
-    setNote(`Modelo publicado com sucesso por ${price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}. ID: ${product.id}`);
+    setNote(
+      `Modelo publicado com sucesso por ${price.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}. ` +
+      `Link curto: ${product.shortPath || `/${product.shortId || product.id}/`}`
+    );
   } catch (error) {
     console.error('Nao foi possivel publicar o modelo:', error);
     setNote('Nao foi possivel publicar o modelo agora. Verifique o backend e tente novamente.', true);
@@ -297,7 +300,7 @@ async function montarTodosOsProdutos() {
       tipo: 'camisa-frase',
       cor: 'Preta',
       preco: produto.preco,
-      link: `${SITE_URL}/produto-frase.html?id=${encodeURIComponent(produto.id)}`,
+      link: `${SITE_URL}${produto.shortPath}`,
     });
   });
 
@@ -312,7 +315,7 @@ async function montarTodosOsProdutos() {
           tipo: 'modelo-publico',
           cor: 'Preta',
           preco: Number(produto.price || 0),
-          link: `${SITE_URL}/produto.html?id=${encodeURIComponent(produto.id)}`,
+          link: `${SITE_URL}${produto.shortPath || `/produto.html?id=${encodeURIComponent(produto.id)}`}`,
         });
       });
   } catch (error) {
