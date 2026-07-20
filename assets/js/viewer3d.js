@@ -549,10 +549,10 @@ function init() {
   const fillLight = new THREE.DirectionalLight(0xffe6c7, 0.68);
   fillLight.position.set(-0.55, 1.2, 1.05);
   scene.add(fillLight);
-  const backLight = new THREE.DirectionalLight(0xffddb7, 1.08);
-  backLight.position.set(0.12, 1.34, -1.18);
+  const backLight = new THREE.DirectionalLight(0xffe1bf, 1.26);
+  backLight.position.set(0.08, 1.4, -1.02);
   scene.add(backLight);
-  scene.add(new THREE.AmbientLight(0xc98f4d, 0.38));
+  scene.add(new THREE.AmbientLight(0xcf9551, 0.42));
 
   camera = new THREE.PerspectiveCamera(28, container.clientWidth / container.clientHeight, 0.01, 20);
 
