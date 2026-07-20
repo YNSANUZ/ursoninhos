@@ -74,6 +74,7 @@ let anchors = null; // pontos do peito (frente/costas) achados por raycast
 let decals = [];
 let rebuildQueued = false;
 let lastVisibleSide = null;
+let modelSize = null;
 
 const textureLoader = new THREE.TextureLoader();
 textureLoader.setCrossOrigin('anonymous');
@@ -542,10 +543,16 @@ function init() {
   const pmrem = new THREE.PMREMGenerator(renderer);
   scene.environment = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
-  const keyLight = new THREE.DirectionalLight(0xffe0b2, 1.4);
+  const keyLight = new THREE.DirectionalLight(0xffe0b2, 1.32);
   keyLight.position.set(0.6, 1.6, 1.2);
   scene.add(keyLight);
-  scene.add(new THREE.AmbientLight(0xc98f4d, 0.25));
+  const fillLight = new THREE.DirectionalLight(0xffe6c7, 0.68);
+  fillLight.position.set(-0.55, 1.2, 1.05);
+  scene.add(fillLight);
+  const backLight = new THREE.DirectionalLight(0xffd9b1, 0.88);
+  backLight.position.set(0.2, 1.25, -1.35);
+  scene.add(backLight);
+  scene.add(new THREE.AmbientLight(0xc98f4d, 0.34));
 
   camera = new THREE.PerspectiveCamera(28, container.clientWidth / container.clientHeight, 0.01, 20);
 
@@ -594,6 +601,7 @@ function init() {
 
       const sized = new THREE.Box3().setFromObject(model);
       const size = sized.getSize(new THREE.Vector3());
+      modelSize = size.clone();
 
       // Enquadra o manequim INTEIRO (da base ao topo da cabeça) e
       // define os limites do zoom: aproximar até o peito, afastar até
@@ -650,13 +658,57 @@ function setCameraAngle(degrees) {
   emitVisibleSideChange(true);
 }
 
+function applyPreviewCamera(side = 'front') {
+  if (!camera || !controls || !modelSize) return;
+  const targetY = modelSize.y * 0.5;
+  const cameraY = modelSize.y * 0.57;
+  const radius = modelSize.y * 2.08;
+  const angle = SIDE_CAMERA_ANGLES[side] ?? 0;
+  const rad = (angle * Math.PI) / 180;
+
+  controls.target.set(0, targetY, 0);
+  camera.position.set(
+    Math.sin(rad) * radius,
+    cameraY,
+    Math.cos(rad) * radius
+  );
+  camera.lookAt(0, targetY, 0);
+  controls.update();
+}
+
 function capturePng() {
   if (!renderer?.domElement) return '';
   renderer.render(scene, camera);
   return renderer.domElement.toDataURL('image/png');
 }
 
-window.shirtViewer3D = { ready: false, setPrint, setTransform, clearPrint, setCameraAngle, capturePng };
+function capturePreview(side = 'front') {
+  if (!renderer || !camera || !controls) return capturePng();
+
+  const previousPosition = camera.position.clone();
+  const previousTarget = controls.target.clone();
+  const previousAspect = camera.aspect;
+  const previousSize = renderer.getSize(new THREE.Vector2());
+
+  try {
+    renderer.setSize(1024, 1024, false);
+    camera.aspect = 1;
+    camera.updateProjectionMatrix();
+    applyPreviewCamera(side);
+    renderer.render(scene, camera);
+    return renderer.domElement.toDataURL('image/png');
+  } finally {
+    renderer.setSize(previousSize.x, previousSize.y, false);
+    camera.aspect = previousAspect;
+    camera.position.copy(previousPosition);
+    controls.target.copy(previousTarget);
+    camera.updateProjectionMatrix();
+    controls.update();
+    renderer.render(scene, camera);
+  }
+}
+
+window.shirtViewer3D = { ready: false, setPrint, setTransform, clearPrint, setCameraAngle, capturePng, capturePreview };
 
 try {
   init();

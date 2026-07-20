@@ -929,7 +929,12 @@ async function composeWithBackground(foregroundDataUrl) {
 
   paintCardBackground(ctx, canvas.width, canvas.height);
   const foreground = await loadImage(foregroundDataUrl);
-  ctx.drawImage(foreground, 0, 0, canvas.width, canvas.height);
+  const scale = Math.min(canvas.width / foreground.width, canvas.height / foreground.height);
+  const width = foreground.width * scale;
+  const height = foreground.height * scale;
+  const x = (canvas.width - width) / 2;
+  const y = (canvas.height - height) / 2;
+  ctx.drawImage(foreground, x, y, width, height);
   return canvas.toDataURL('image/jpeg', 0.9);
 }
 
@@ -1106,9 +1111,12 @@ async function generateHeroPreviewViews() {
   ];
 
   for (const [previewSide, angle] of previewMap) {
-    viewer.setCameraAngle(angle);
+    const rawPreview = viewer.capturePreview?.(previewSide) || (() => {
+      viewer.setCameraAngle(angle);
+      return viewer.capturePng();
+    })();
     await wait(260);
-    previewViews[previewSide] = await composeWithBackground(viewer.capturePng());
+    previewViews[previewSide] = await composeWithBackground(rawPreview);
   }
 
   viewer.setCameraAngle(SIDE_CAMERA_ANGLES[previousSide] || 0);
