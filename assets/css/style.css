@@ -766,28 +766,26 @@ ul {
   font-variant-numeric: tabular-nums;
 }
 
-/* --- Texto de apresentação (primeiros segundos) ---
-   Cartão translúcido no centro do palco: as linhas entram uma a uma
-   (classe .is-in via JS do index) e o bloco todo sai com fade quando
-   o manequim 3D assume (.is-done) — nunca captura cliques. */
+/* --- Tutorial em GIF sobre o manequim ---
+   Card central com GIF 3:4, contador e fechar. Some sozinho em 12s,
+   mas pode ser reaberto pelo botao "Tutorial" no canto do palco. */
 .stage-intro {
   position: absolute;
-  top: 44%;
+  top: 47%;
   left: 50%;
   transform: translate(-50%, -50%);
-  z-index: 4;
-  width: min(86%, 420px);
-  padding: 22px 20px;
-  border-radius: var(--radius-m);
+  z-index: 5;
+  width: min(72%, 320px);
+  padding: 10px;
+  border-radius: calc(var(--radius-m) + 2px);
   border: 1px solid var(--gold-soft);
-  background: rgba(20, 14, 9, 0.86);
-  /* Embaça a estampa/portal atrás do cartão para o texto reinar sozinho */
-  -webkit-backdrop-filter: blur(12px);
-  backdrop-filter: blur(12px);
-  text-align: center;
-  pointer-events: none;
+  background: rgba(15, 10, 6, 0.86);
+  box-shadow: 0 18px 45px rgba(7, 4, 2, 0.45);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
   opacity: 1;
-  transition: opacity 0.5s ease;
+  transition: opacity 0.25s ease, transform 0.25s ease;
 }
 
 .stage-intro[hidden] {
@@ -796,55 +794,86 @@ ul {
 
 .stage-intro.is-done {
   opacity: 0;
+  transform: translate(-50%, -48%);
 }
 
-.stage-intro__line {
-  margin: 0 0 8px;
-  font-size: 0.88rem;
-  line-height: 1.45;
-  color: var(--text-main);
-  opacity: 0;
-  transform: translateY(10px);
-  transition: opacity 0.6s ease, transform 0.6s ease;
+.stage-intro__media {
+  position: relative;
+  overflow: hidden;
+  border-radius: calc(var(--radius-m) - 2px);
+  background: #000;
+  aspect-ratio: 3 / 4;
 }
 
-.stage-intro__line:last-child {
-  margin-bottom: 0;
+.stage-intro__gif {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.stage-intro__line--title {
-  margin-bottom: 12px;
-  font-size: 1.25rem;
-  font-weight: 700;
-  letter-spacing: 0.3px;
-  color: var(--gold);
-}
-
-.stage-intro__line.is-in {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-/* "Carregando 3D…" logo abaixo do cartão embaçado: filho do cartão
-   (sai de cena junto no mesmo fade), mas posicionado fora dele. O
-   pulso é CSS puro — custo zero de JS. */
-.stage-intro__loading {
+.stage-intro__close {
   position: absolute;
-  top: calc(100% + 12px);
-  left: 0;
-  right: 0;
-  margin: 0;
-  font-size: 0.74rem;
-  font-weight: 600;
-  letter-spacing: 0.6px;
-  color: var(--gold);
-  text-shadow: 0 1px 6px rgba(13, 9, 6, 0.9);
-  animation: introLoadingPulse 1.4s ease-in-out infinite;
+  top: 8px;
+  right: 8px;
+  z-index: 2;
+  width: 34px;
+  height: 34px;
+  border: 1px solid rgba(255, 231, 199, 0.38);
+  border-radius: 999px;
+  background: rgba(17, 12, 7, 0.78);
+  color: #fff5ea;
+  font: inherit;
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: background 0.2s ease, transform 0.2s ease;
 }
 
-@keyframes introLoadingPulse {
-  0%, 100% { opacity: 0.45; }
-  50% { opacity: 1; }
+.stage-intro__close:hover {
+  background: rgba(41, 28, 18, 0.95);
+  transform: scale(1.04);
+}
+
+.stage-intro__timer {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 2;
+  margin: 0;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(17, 12, 7, 0.78);
+  color: var(--gold);
+  font-size: 0.9rem;
+  font-weight: 800;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.28);
+}
+
+.stage-tutorial-btn {
+  position: absolute;
+  right: 12px;
+  bottom: 12px;
+  z-index: 4;
+  border: 1px solid var(--gold-soft);
+  border-radius: 999px;
+  background: rgba(20, 14, 9, 0.82);
+  color: var(--gold);
+  padding: 8px 14px;
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+  cursor: pointer;
+  box-shadow: 0 10px 24px rgba(7, 4, 2, 0.24);
+  transition: transform 0.2s ease, background 0.2s ease;
+}
+
+.stage-tutorial-btn:hover {
+  background: rgba(38, 27, 18, 0.94);
+  transform: translateY(-1px);
 }
 
 /* No 3D o manequim é mais largo que a camisa da foto: o portal cresce
@@ -3695,6 +3724,21 @@ ul {
   .hero__stage {
     max-width: 380px;
     aspect-ratio: 1 / 1;
+  }
+
+  .stage-intro {
+    width: min(78%, 280px);
+    top: 46%;
+  }
+
+  .stage-intro__close {
+    width: 32px;
+    height: 32px;
+  }
+
+  .stage-intro__timer,
+  .stage-tutorial-btn {
+    font-size: 0.7rem;
   }
 
   .hero__picker {

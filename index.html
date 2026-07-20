@@ -188,19 +188,26 @@
             <span class="stage-loading__bar"><span class="stage-loading__fill" id="stageLoadingFill"></span></span>
             <span class="stage-loading__pct" id="stageLoadingPct">0%</span>
           </div>
-          <!-- Texto de apresentação dos primeiros segundos: as linhas
-               entram uma a uma (script no fim da página) enquanto o
-               manequim 3D carrega e o bloco todo sai com fade quando o
-               3D assume (ou se ele falhar). -->
-          <div class="stage-intro" id="stageIntro">
-            <p class="stage-intro__line stage-intro__line--title">Monte sua camisa em segundos.</p>
-            <p class="stage-intro__line">Envie sua arte: imagem, frase ou logo.</p>
-            <p class="stage-intro__line">Personalize frente, verso e mangas</p>
-            <p class="stage-intro__line">e com um clique, ela chega na sua casa.</p>
-            <!-- Aviso simples logo abaixo do cartão (some junto com ele).
-                 Puro CSS: pulso de opacidade, nada de JS extra. -->
-            <p class="stage-intro__loading" aria-hidden="true">Carregando 3D…</p>
+          <!-- Tutorial em GIF: entra sobre o manequim nos primeiros
+               segundos, com contador, botao de fechar e reabertura. -->
+          <div class="stage-intro" id="stageIntro" aria-live="polite">
+            <button type="button" class="stage-intro__close" id="stageIntroClose" aria-label="Fechar tutorial">×</button>
+            <div class="stage-intro__media">
+              <img
+                class="stage-intro__gif"
+                id="stageIntroGif"
+                src="assets/img/tutorial-hero.gif"
+                data-src="assets/img/tutorial-hero.gif"
+                alt="Tutorial rapido mostrando como personalizar a camisa em poucos passos"
+                width="768"
+                height="1024"
+                decoding="async">
+            </div>
+            <p class="stage-intro__timer" id="stageIntroTimer" aria-label="Tempo restante do tutorial">12</p>
           </div>
+          <button type="button" class="stage-tutorial-btn" id="stageTutorialBtn" aria-controls="stageIntro">
+            Tutorial
+          </button>
           <!-- Controles sobre a base dourada: à esquerda do play, - e +
                (tamanho da estampa); à direita, setas para descer e
                subir a estampa na camisa. Todos só o símbolo dourado. -->
@@ -963,32 +970,65 @@
     window.addEventListener('shirt3d-ready', () => finishLoading(true));
     window.addEventListener('shirt3d-error', () => finishLoading(false));
 
-    // Texto de apresentação: linhas entram uma a uma desde a abertura
-    // da página. Mesmo que o 3D fique pronto rápido (internet boa), o
-    // cartão só sai DEPOIS da última linha aparecer e ser lida — antes
-    // disso o manequim espera atrás do cartão embaçado. Se o 3D falhar,
-    // o cartão sai na hora.
+    // Tutorial em GIF: abre sozinho por 12s, pode ser fechado no X e
+    // sempre pode ser reaberto no botao "Tutorial". O GIF reinicia
+    // toda vez que o tutorial abre.
     const intro = document.getElementById('stageIntro');
     if (intro) {
-      const introLines = intro.querySelectorAll('.stage-intro__line');
-      introLines.forEach((line, index) => {
-        setTimeout(() => line.classList.add('is-in'), 300 + index * 1700);
-      });
-      // 300ms de entrada + última linha aos 3×1700ms + ~1,6s de leitura
-      const INTRO_MIN_MS = 300 + (introLines.length - 1) * 1700 + 1600;
-      const introStart = Date.now();
-      let introDismissed = false;
-      const dismissIntro = (immediate) => {
-        if (introDismissed) return;
-        introDismissed = true;
-        const wait = immediate ? 0 : Math.max(0, INTRO_MIN_MS - (Date.now() - introStart));
-        setTimeout(() => {
-          intro.classList.add('is-done');
-          setTimeout(() => { intro.hidden = true; }, 550);
-        }, wait);
+      const introClose = document.getElementById('stageIntroClose');
+      const tutorialBtn = document.getElementById('stageTutorialBtn');
+      const tutorialGif = document.getElementById('stageIntroGif');
+      const tutorialTimer = document.getElementById('stageIntroTimer');
+      const TUTORIAL_SECONDS = 12;
+      let tutorialTick = null;
+      let tutorialHide = null;
+      let tutorialFade = null;
+      let tutorialEndsAt = 0;
+
+      const updateTutorialTimer = () => {
+        if (!tutorialTimer) return;
+        const leftMs = Math.max(0, tutorialEndsAt - Date.now());
+        tutorialTimer.textContent = String(Math.max(0, Math.ceil(leftMs / 1000)));
       };
-      window.addEventListener('shirt3d-ready', () => dismissIntro(false));
-      window.addEventListener('shirt3d-error', () => dismissIntro(true));
+
+      const stopTutorialTimers = () => {
+        clearInterval(tutorialTick);
+        clearTimeout(tutorialHide);
+        clearTimeout(tutorialFade);
+        tutorialTick = null;
+        tutorialHide = null;
+        tutorialFade = null;
+      };
+
+      const hideTutorial = () => {
+        stopTutorialTimers();
+        intro.classList.add('is-done');
+        tutorialFade = setTimeout(() => { intro.hidden = true; }, 280);
+      };
+
+      const restartTutorialGif = () => {
+        if (!tutorialGif) return;
+        const baseSrc = tutorialGif.dataset.src || tutorialGif.getAttribute('src');
+        tutorialGif.src = '';
+        tutorialGif.src = baseSrc + '?play=' + Date.now();
+      };
+
+      const openTutorial = () => {
+        stopTutorialTimers();
+        intro.hidden = false;
+        intro.classList.remove('is-done');
+        restartTutorialGif();
+        tutorialEndsAt = Date.now() + (TUTORIAL_SECONDS * 1000);
+        updateTutorialTimer();
+        tutorialTick = setInterval(updateTutorialTimer, 250);
+        tutorialHide = setTimeout(hideTutorial, TUTORIAL_SECONDS * 1000);
+      };
+
+      if (introClose) introClose.addEventListener('click', hideTutorial);
+      if (tutorialBtn) tutorialBtn.addEventListener('click', openTutorial);
+
+      openTutorial();
+      window.addEventListener('beforeunload', stopTutorialTimers);
     }
 
     let started = false;
