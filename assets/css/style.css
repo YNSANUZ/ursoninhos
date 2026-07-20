@@ -3788,6 +3788,18 @@ ul {
     font-size: 0.7rem;
   }
 
+  .stage-tutorial-btn {
+    top: 12px;
+    right: 12px;
+    bottom: auto;
+    padding: 6px 10px;
+    font-size: 0.66rem;
+    letter-spacing: 0.2px;
+    border-radius: 12px;
+    background: rgba(20, 14, 9, 0.72);
+    box-shadow: 0 6px 14px rgba(7, 4, 2, 0.2);
+  }
+
   .hero__picker {
     width: 100%;
   }
