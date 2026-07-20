@@ -23,6 +23,7 @@
       metadata: {
         productId: product.id,
         source: 'public-model',
+        productPath: api.getProductPath(product),
       },
     });
   }

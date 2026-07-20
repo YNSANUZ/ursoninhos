@@ -159,6 +159,44 @@
     return isCustomShirt(item) && item.metadata?.editorSource === 'home-customizer' && item.metadata?.editorState;
   }
 
+  function isShareablePublicProduct(item) {
+    return String(item.productId || '').startsWith('publico::') || item.metadata?.source === 'public-model';
+  }
+
+  function getSharePath(item) {
+    if (!isShareablePublicProduct(item)) return '';
+    const productPath = item.metadata?.productPath || '';
+    if (productPath) return productPath;
+    const key = item.metadata?.productId || String(item.productId || '').replace(/^publico::/, '');
+    return window.UrsoninhosApi?.getProductPath?.(key) || '';
+  }
+
+  async function shareCartItem(item) {
+    const path = getSharePath(item);
+    if (!path) return;
+    const shareUrl = path.startsWith('http') ? path : `${window.location.origin}${path.startsWith('/') ? path : `/${path}`}`;
+    const text = `${item.title} por ${store.formatBRL(item.price)}\n${shareUrl}`;
+
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: item.title,
+          text: `${item.title} por ${store.formatBRL(item.price)}`,
+          url: shareUrl,
+        });
+        return;
+      }
+
+      await navigator.clipboard.writeText(text);
+      const activeItem = selectedItemLineId ? getCart().find((entry) => entry.lineId === selectedItemLineId) : null;
+      if (checkoutPaymentError && activeItem?.lineId === item.lineId) {
+        checkoutPaymentError.textContent = 'Link do produto copiado para compartilhar.';
+      }
+    } catch (error) {
+      console.error('Nao foi possivel compartilhar o produto:', error);
+    }
+  }
+
   function isShirtItem(item) {
     const productId = String(item.productId || '').toLowerCase();
     const title = String(item.title || '').toLowerCase();
@@ -452,6 +490,7 @@
           </div>
           <div class="checkout-item__actions">
             <button type="button" class="checkout-link-btn" data-action="detail">Ver detalhes</button>
+            ${isShareablePublicProduct(item) ? '<button type="button" class="checkout-link-btn" data-action="share">Compartilhar</button>' : ''}
             ${isEditableCustomShirt(item) ? '<button type="button" class="checkout-link-btn" data-action="resume">Continuar edição</button>' : ''}
             <button type="button" class="checkout-link-btn" data-action="remove">Remover</button>
           </div>
@@ -473,8 +512,13 @@
       // O card inteiro abre os detalhes; só ficam de fora os controles de
       // quantidade (+, − e o campo digitável) e o botão de remover.
       itemEl.addEventListener('click', (event) => {
-        if (event.target.closest('[data-action="increase"], [data-action="decrease"], [data-action="qty-input"], [data-action="remove"], [data-action="resume"]')) return;
+        if (event.target.closest('[data-action="increase"], [data-action="decrease"], [data-action="qty-input"], [data-action="remove"], [data-action="resume"], [data-action="share"]')) return;
         renderItemDetail(lineId);
+      });
+      itemEl.querySelector('[data-action="share"]')?.addEventListener('click', async () => {
+        const cartItem = getCart().find((entry) => entry.lineId === lineId);
+        if (!cartItem) return;
+        await shareCartItem(cartItem);
       });
       itemEl.querySelector('[data-action="resume"]')?.addEventListener('click', () => {
         const cartItem = getCart().find((entry) => entry.lineId === lineId);

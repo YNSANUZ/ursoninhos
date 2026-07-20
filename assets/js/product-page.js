@@ -123,6 +123,7 @@ function addCurrentProductToCart() {
     metadata: {
       productId: currentProduct.id,
       source: 'public-model',
+      productPath: api.getProductPath(currentProduct),
     },
   });
 
