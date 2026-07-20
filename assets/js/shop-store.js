@@ -17,6 +17,38 @@
     localStorage.setItem(key, JSON.stringify(value));
   }
 
+  let cartToastTimer = null;
+
+  function ensureCartToast() {
+    if (typeof document === 'undefined') return null;
+    let toast = document.getElementById('cartAddToast');
+    if (toast) return toast;
+
+    toast = document.createElement('div');
+    toast.id = 'cartAddToast';
+    toast.className = 'cart-add-toast';
+    toast.setAttribute('aria-live', 'polite');
+    toast.setAttribute('aria-atomic', 'true');
+    toast.textContent = 'Adicionado ao carrinho';
+    document.body.appendChild(toast);
+    return toast;
+  }
+
+  function showCartToast(message = 'Adicionado ao carrinho') {
+    const toast = ensureCartToast();
+    if (!toast) return;
+
+    toast.textContent = message;
+    toast.classList.remove('is-visible');
+    void toast.offsetWidth;
+    toast.classList.add('is-visible');
+
+    if (cartToastTimer) window.clearTimeout(cartToastTimer);
+    cartToastTimer = window.setTimeout(() => {
+      toast.classList.remove('is-visible');
+    }, 2200);
+  }
+
   function formatBRL(value) {
     return Number(value || 0).toLocaleString('pt-BR', {
       style: 'currency',
@@ -109,6 +141,7 @@
     }
 
     saveCart(cart);
+    showCartToast();
     return cart;
   }
 
@@ -339,6 +372,7 @@
     updateCurrentUser,
     logout,
     generateOrderNumber,
+    showCartToast,
   };
 
   // Apaga o antigo cadastro local que continha senhas em texto simples.
