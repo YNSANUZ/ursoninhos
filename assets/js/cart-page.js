@@ -59,12 +59,15 @@
   const itemDetailPrice = document.getElementById('itemDetailPrice');
   const itemDetailTotal = document.getElementById('itemDetailTotal');
   const itemDetailPreview = document.getElementById('itemDetailPreview');
+  const itemDetailViews = document.getElementById('itemDetailViews');
   const CARD_MOCKUP_URL = 'assets/img/camisa-modelo-card.jpg';
+  const CARD_MOCKUP_BACK_URL = 'assets/img/camisa-modelo-card-back.jpg';
   const previewCache = new Map();
   const PRINT_CENTER_X = 0.478;
   const PRINT_TOP_Y = 0.30;
   const PRINT_SIZE = 0.34;
   let renderToken = 0;
+  let selectedDetailView = 'front';
 
   function getCart() {
     return store.loadCart();
@@ -107,6 +110,12 @@
     return isCustomShirt(item) && item.metadata?.editorSource === 'home-customizer' && item.metadata?.editorState;
   }
 
+  function isShirtItem(item) {
+    const productId = String(item.productId || '').toLowerCase();
+    const title = String(item.title || '').toLowerCase();
+    return productId.includes('camisa') || title.includes('camisa');
+  }
+
   function getPreferredPreviewSide(item) {
     if (item.metadata?.preferredPreviewSide && item.previewViews?.[item.metadata.preferredPreviewSide]) {
       return item.metadata.preferredPreviewSide;
@@ -138,8 +147,24 @@
     return labels[side] || 'Preview salvo';
   }
 
-  async function buildShirtMockup(printUrl, transform = {}, blend = 'screen') {
-    const cacheKey = JSON.stringify({ printUrl, transform, blend });
+  function hasBackPrint(item) {
+    if (item.previewViews?.back) return true;
+    const backFile = item.metadata?.printsBySide?.back?.file;
+    return Boolean(backFile);
+  }
+
+  function getAvailableDetailViews(item) {
+    if (!isShirtItem(item)) return ['front'];
+    return ['front', 'back'];
+  }
+
+  function getDefaultDetailView(item) {
+    if (getPreferredPreviewSide(item) === 'back' && hasBackPrint(item)) return 'back';
+    return 'front';
+  }
+
+  async function buildShirtMockup(printUrl, transform = {}, blend = 'screen', baseUrl = CARD_MOCKUP_URL) {
+    const cacheKey = JSON.stringify({ printUrl, transform, blend, baseUrl });
     if (previewCache.has(cacheKey)) return previewCache.get(cacheKey);
 
     const promise = (async () => {
@@ -148,7 +173,7 @@
       canvas.height = 900;
       const ctx = canvas.getContext('2d');
 
-      const base = await loadImage(CARD_MOCKUP_URL);
+      const base = await loadImage(baseUrl);
       ctx.drawImage(base, 0, 0, canvas.width, canvas.height);
 
       if (printUrl) {
@@ -173,6 +198,34 @@
 
     previewCache.set(cacheKey, promise);
     return promise;
+  }
+
+  async function resolveDetailViewPreview(item, view) {
+    if (view === 'back') {
+      if (isCustomShirt(item)) {
+        const backPrintUrl = item.metadata?.printsBySide?.back?.file || '';
+        const backTransform = item.metadata?.transforms?.back || {};
+        const backBlend = item.metadata?.printsBySide?.back?.blend || 'screen';
+        return buildShirtMockup(backPrintUrl, backTransform, backBlend, CARD_MOCKUP_BACK_URL);
+      }
+      if (item.previewViews?.back) return item.previewViews.back;
+      if (isShirtItem(item)) {
+        return CARD_MOCKUP_BACK_URL;
+      }
+    }
+
+    return item.previewViews?.front || item.previewImage || 'assets/img/banner-estatico.jpg';
+  }
+
+  function syncDetailViewButtons(item) {
+    if (!itemDetailViews) return;
+    const availableViews = getAvailableDetailViews(item);
+    itemDetailViews.hidden = availableViews.length < 2;
+    itemDetailViews.querySelectorAll('[data-detail-view]').forEach((button) => {
+      const view = button.dataset.detailView;
+      button.hidden = !availableViews.includes(view);
+      button.classList.toggle('is-active', view === selectedDetailView);
+    });
   }
 
   async function resolveCartPreview(item) {
@@ -216,7 +269,7 @@
       document.querySelectorAll(selector).forEach((imgEl) => applyPreviewToImage(imgEl, src, item));
 
       if (selectedItemLineId === item.lineId) {
-        applyPreviewToImage(itemDetailImage, src, item);
+        renderItemDetail(item.lineId, { keepSelectedView: true });
       }
     }));
   }
@@ -278,14 +331,20 @@
     if (summaryTotal) summaryTotal.textContent = store.formatBRL(store.getCartTotal());
   }
 
-  function renderItemDetail(lineId) {
+  async function renderItemDetail(lineId, options = {}) {
+    const { keepSelectedView = false } = options;
     const item = getCart().find((entry) => entry.lineId === lineId) || getCart()[0];
     if (!item) return;
 
     selectedItemLineId = item.lineId;
-    const preferredSide = getPreferredPreviewSide(item);
+    if (!keepSelectedView) {
+      selectedDetailView = getDefaultDetailView(item);
+    }
+    syncDetailViewButtons(item);
+
+    const viewSrc = await resolveDetailViewPreview(item, selectedDetailView);
     if (itemDetailImage) {
-      itemDetailImage.src = item.previewViews?.[preferredSide] || item.previewViews?.front || item.previewImage || 'assets/img/banner-estatico.jpg';
+      itemDetailImage.src = viewSrc;
       itemDetailImage.alt = `${item.title} selecionado`;
     }
     if (itemDetailTitle) itemDetailTitle.textContent = item.title;
@@ -293,7 +352,7 @@
     if (itemDetailQuantity) itemDetailQuantity.textContent = String(item.quantity);
     if (itemDetailPrice) itemDetailPrice.textContent = store.formatBRL(item.price);
     if (itemDetailTotal) itemDetailTotal.textContent = store.formatBRL(item.price * item.quantity);
-    if (itemDetailPreview) itemDetailPreview.textContent = item.previewImage ? getPreviewLabel(preferredSide) : 'Sem preview';
+    if (itemDetailPreview) itemDetailPreview.textContent = item.previewImage ? getPreviewLabel(selectedDetailView) : 'Sem preview';
   }
 
   function renderCartItems() {
@@ -387,6 +446,15 @@
     renderItemDetail(selectedItemLineId || cart[0].lineId);
     hydrateCartPreviews(cart, token);
   }
+
+  itemDetailViews?.querySelectorAll('[data-detail-view]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const view = button.dataset.detailView;
+      if (!view || !selectedItemLineId) return;
+      selectedDetailView = view;
+      renderItemDetail(selectedItemLineId, { keepSelectedView: true });
+    });
+  });
 
   function renderAuthState() {
     const user = getUser();

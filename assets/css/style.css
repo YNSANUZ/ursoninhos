@@ -1755,6 +1755,31 @@ ul {
   padding: 24px;
 }
 
+.item-detail-card__views {
+  display: flex;
+  gap: 10px;
+  margin: 16px 0 0;
+}
+
+.item-detail-card__view-btn {
+  min-width: 96px;
+  border: 1px solid rgba(224, 168, 90, 0.26);
+  background: rgba(255, 255, 255, 0.02);
+  color: var(--text-muted);
+  border-radius: 999px;
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+  transition: 160ms ease;
+}
+
+.item-detail-card__view-btn.is-active {
+  background: var(--gold);
+  color: #1b130b;
+  border-color: transparent;
+}
+
 .item-detail-card__image {
   margin: 16px 0;
   border-radius: var(--radius-m);
