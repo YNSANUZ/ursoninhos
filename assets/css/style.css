@@ -1004,6 +1004,29 @@ ul {
   transform: translateY(-1px);
 }
 
+.stage-mobile-actions {
+  display: none;
+}
+
+.stage-mobile-action-btn {
+  border: 1px solid rgba(217, 167, 92, 0.28);
+  border-radius: 999px;
+  background: rgba(20, 14, 9, 0.82);
+  color: var(--text-main);
+  padding: 8px 10px;
+  font: inherit;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.2px;
+  cursor: pointer;
+}
+
+.stage-mobile-action-btn--gold {
+  background: var(--gold);
+  border-color: transparent;
+  color: #1b130b;
+}
+
 /* Símbolos de - e + puros: só o traço dourado, sem fundo, sem borda
    e sem efeito — a pedido, para não competir com a arte. */
 .stage-size-btn {
@@ -3819,6 +3842,31 @@ ul {
     width: 100%;
   }
 
+  .stage-mobile-actions {
+    position: absolute;
+    top: 12px;
+    left: 12px;
+    right: 88px;
+    z-index: 4;
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .hero__picker > #addToCartBtn,
+  .hero__picker > .stage-action-buttons {
+    display: none;
+  }
+
+  .stage-mobile-action-btn {
+    min-width: 0;
+    width: 100%;
+    padding: 8px 6px;
+    font-size: 0.62rem;
+    text-align: center;
+    white-space: nowrap;
+  }
+
   .product-config {
     max-width: 340px;
     margin: 0 auto;
@@ -3981,6 +4029,16 @@ ul {
   .hero__ctas .btn {
     width: 100%;
     justify-content: center;
+  }
+
+  .stage-mobile-actions {
+    right: 84px;
+    gap: 6px;
+  }
+
+  .stage-mobile-action-btn {
+    font-size: 0.58rem;
+    padding: 7px 4px;
   }
 
   .benefits__grid {

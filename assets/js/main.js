@@ -542,6 +542,7 @@ const IMGBB_API_KEY = 'b7150269142e0e38166f3e528598d051';
 const MAX_UPLOAD_SIZE_BYTES = 8 * 1024 * 1024; // 8MB
 
 const personalizarCamisaBtn = document.getElementById('personalizarCamisaBtn');
+const mobilePersonalizarCamisaBtn = document.getElementById('mobilePersonalizarCamisaBtn');
 const customPrintInput = document.getElementById('customPrintInput');
 const uploadFeedback = document.getElementById('uploadFeedback');
 let uploadFeedbackTimeoutId;
@@ -691,6 +692,7 @@ async function uploadCustomPrint(file, printName = 'Minha Arte', forcedBlend = n
 }
 
 personalizarCamisaBtn?.addEventListener('click', () => customPrintInput?.click());
+mobilePersonalizarCamisaBtn?.addEventListener('click', () => personalizarCamisaBtn?.click());
 
 customPrintInput?.addEventListener('change', () => {
   const file = customPrintInput.files?.[0];
@@ -713,6 +715,7 @@ customPrintInput?.addEventListener('change', () => {
    --------------------------------------------------------- */
 
 const textPrintBtn = document.getElementById('textPrintBtn');
+const mobileTextPrintBtn = document.getElementById('mobileTextPrintBtn');
 const textPrintBackdrop = document.getElementById('textPrintBackdrop');
 const textPrintModal = document.getElementById('textPrintModal');
 const textPrintCloseBtn = document.getElementById('textPrintCloseBtn');
@@ -798,6 +801,7 @@ function closeTextPrintModal() {
 }
 
 textPrintBtn?.addEventListener('click', openTextPrintModal);
+mobileTextPrintBtn?.addEventListener('click', () => textPrintBtn?.click());
 textPrintCloseBtn?.addEventListener('click', closeTextPrintModal);
 textPrintBackdrop?.addEventListener('click', closeTextPrintModal);
 
@@ -1337,6 +1341,7 @@ consumePendingHeroEditorResume();
    --------------------------------------------------------- */
 
 const addToCartBtn = document.getElementById('addToCartBtn');
+const mobileAddToCartBtn = document.getElementById('mobileAddToCartBtn');
 const cartFeedback = document.getElementById('cartFeedback');
 let feedbackTimeoutId;
 
@@ -1351,6 +1356,7 @@ heroQtyIncrease?.addEventListener('click', () => {
 });
 
 heroQtyInput?.addEventListener('change', normalizeHeroQty);
+mobileAddToCartBtn?.addEventListener('click', () => addToCartBtn?.click());
 
 addToCartBtn?.addEventListener('click', async () => {
   // Adiciona a estampa que está VESTIDA na camisa (mockup), que não é
