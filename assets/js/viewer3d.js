@@ -646,11 +646,13 @@ function setCameraAngle(degrees) {
     controls.target.z + radius * Math.cos(rad)
   );
   controls.update();
+  renderer?.render?.(scene, camera);
   emitVisibleSideChange(true);
 }
 
 function capturePng() {
   if (!renderer?.domElement) return '';
+  renderer.render(scene, camera);
   return renderer.domElement.toDataURL('image/png');
 }
 

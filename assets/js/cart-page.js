@@ -147,21 +147,6 @@
     return labels[side] || 'Preview salvo';
   }
 
-  function isComposedPreview(src) {
-    if (!src) return false;
-    const value = String(src).trim();
-    return value.startsWith('data:image/') ||
-      value.includes('assets/img/camisa-modelo-card') ||
-      value.includes('/assets/img/camisa-modelo-card');
-  }
-
-  function getStoredPreview(item, side) {
-    const candidate = item.previewViews?.[side];
-    if (isComposedPreview(candidate)) return candidate;
-    if (side === 'front' && isComposedPreview(item.previewImage)) return item.previewImage;
-    return '';
-  }
-
   function hasBackPrint(item) {
     if (item.previewViews?.back) return true;
     const backFile = item.metadata?.printsBySide?.back?.file;
@@ -208,7 +193,7 @@
       return canvas.toDataURL('image/jpeg', 0.9);
     })().catch((error) => {
       console.error('Nao foi possivel compor a miniatura da camisa:', error);
-      return baseUrl || CARD_MOCKUP_URL;
+      return printUrl || baseUrl || CARD_MOCKUP_URL;
     });
 
     previewCache.set(cacheKey, promise);
@@ -217,8 +202,7 @@
 
   async function resolveDetailViewPreview(item, view) {
     if (view === 'back') {
-      const storedBack = getStoredPreview(item, 'back');
-      if (storedBack) return storedBack;
+      if (item.previewViews?.back) return item.previewViews.back;
       if (isCustomShirt(item)) {
         const backPrintUrl = item.metadata?.printsBySide?.back?.file || '';
         const backTransform = item.metadata?.transforms?.back || {};
@@ -230,7 +214,7 @@
       }
     }
 
-    return getStoredPreview(item, 'front') || CARD_MOCKUP_URL;
+    return item.previewViews?.front || item.previewImage || 'assets/img/banner-estatico.jpg';
   }
 
   function syncDetailViewButtons(item) {
@@ -246,15 +230,16 @@
 
   async function resolveCartPreview(item) {
     const preferredSide = getPreferredPreviewSide(item);
-    const preferredPreview = getStoredPreview(item, preferredSide) ||
-      getStoredPreview(item, 'front') ||
-      (isShirtItem(item) ? CARD_MOCKUP_URL : 'assets/img/banner-estatico.jpg');
+    const preferredPreview = item.previewViews?.[preferredSide] ||
+      item.previewViews?.front ||
+      item.previewImage ||
+      'assets/img/banner-estatico.jpg';
     if (!isCustomShirt(item)) return preferredPreview;
-    if (getStoredPreview(item, preferredSide)) return getStoredPreview(item, preferredSide);
+    if (item.previewViews?.[preferredSide]) return item.previewViews[preferredSide];
     if (!item.metadata?.frontPrintUrl) return preferredPreview;
 
     const printUrl = item.metadata.frontPrintUrl;
-    const transform = item.metadata?.frontTransform || {};
+    const transform = item.metadata?.transforms?.front || item.metadata?.frontTransform || {};
     const blend = item.metadata?.frontPrintBlend || 'screen';
     return buildShirtMockup(printUrl, transform, blend);
   }
@@ -392,7 +377,7 @@
       <article class="checkout-item" data-line-id="${item.lineId}">
         <button type="button" class="checkout-item__preview" data-action="detail">
           <img
-            src="${getStoredPreview(item, getPreferredPreviewSide(item)) || getStoredPreview(item, 'front') || (isShirtItem(item) ? CARD_MOCKUP_URL : 'assets/img/banner-estatico.jpg')}"
+            src="${item.previewViews?.[getPreferredPreviewSide(item)] || item.previewViews?.front || item.previewImage || 'assets/img/banner-estatico.jpg'}"
             alt="${escapeHtml(item.title)}"
             data-preview-line-id="${escapeHtml(item.lineId)}"
           >
