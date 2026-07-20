@@ -660,19 +660,27 @@ function setCameraAngle(degrees) {
 
 function applyPreviewCamera(side = 'front') {
   if (!camera || !controls || !modelSize) return;
-  const targetY = modelSize.y * 0.5;
-  const cameraY = modelSize.y * 0.57;
-  const radius = modelSize.y * 2.08;
+  const previewConfig = {
+    front: { targetX: 0, targetY: 0.485, cameraY: 0.555, radius: 1.86 },
+    back: { targetX: -0.012, targetY: 0.485, cameraY: 0.555, radius: 1.86 },
+    sleeveLeft: { targetX: 0, targetY: 0.485, cameraY: 0.555, radius: 1.9 },
+    sleeveRight: { targetX: 0, targetY: 0.485, cameraY: 0.555, radius: 1.9 },
+  }[side] || { targetX: 0, targetY: 0.485, cameraY: 0.555, radius: 1.86 };
+
+  const targetX = modelSize.x * previewConfig.targetX;
+  const targetY = modelSize.y * previewConfig.targetY;
+  const cameraY = modelSize.y * previewConfig.cameraY;
+  const radius = modelSize.y * previewConfig.radius;
   const angle = SIDE_CAMERA_ANGLES[side] ?? 0;
   const rad = (angle * Math.PI) / 180;
 
-  controls.target.set(0, targetY, 0);
+  controls.target.set(targetX, targetY, 0);
   camera.position.set(
-    Math.sin(rad) * radius,
+    targetX + Math.sin(rad) * radius,
     cameraY,
     Math.cos(rad) * radius
   );
-  camera.lookAt(0, targetY, 0);
+  camera.lookAt(targetX, targetY, 0);
   controls.update();
 }
 
