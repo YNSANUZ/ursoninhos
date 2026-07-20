@@ -297,6 +297,44 @@ function nomeDeFrase(frase) {
 
 async function montarTodosOsProdutos() {
   const linhas = [];
+  const produtosBase = [
+    {
+      id: 'camisa-anime-personalizada',
+      nome: 'Camisa Anime Personalizada',
+      tipo: 'camisa',
+      cor: 'Preta',
+      preco: 49.9,
+      link: `${SITE_URL}/index.html#destaques`,
+    },
+    {
+      id: 'estatua-3d-colecionavel',
+      nome: 'Estátua 3D Colecionável',
+      tipo: '3d',
+      cor: '',
+      preco: 1.99,
+      link: `${SITE_URL}/index.html#destaques`,
+    },
+    {
+      id: 'suporte-gamer-tematico',
+      nome: 'Suporte Gamer Temático',
+      tipo: 'acessorio-3d',
+      cor: '',
+      preco: 89.9,
+      link: `${SITE_URL}/index.html#destaques`,
+    },
+    {
+      id: 'acessorio-geek-personalizado',
+      nome: 'Acessório Geek Personalizado',
+      tipo: 'acessorio',
+      cor: '',
+      preco: 39.9,
+      link: `${SITE_URL}/index.html#destaques`,
+    },
+  ];
+
+  produtosBase.forEach((produto) => {
+    linhas.push(produto);
+  });
 
   const frases = window.UrsoninhosFrases?.gerarProdutosDeFrases() || [];
   frases.forEach((produto) => {
@@ -318,7 +356,7 @@ async function montarTodosOsProdutos() {
         linhas.push({
           id: produto.id,
           nome: produto.title,
-          tipo: 'modelo-publico',
+          tipo: 'camisa-modelo-publico',
           cor: 'Preta',
           preco: Number(produto.price || 0),
           link: `${SITE_URL}${produto.shortPath || `/produto.html?id=${encodeURIComponent(produto.id)}`}`,
