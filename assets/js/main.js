@@ -230,6 +230,7 @@ const PRINT_BASE_LEFT_PCT = 50;
 const PRINT_MOVE_STEP_PCT = 2;
 const PRINT_MOVE_LIMIT_PCT = 24;
 const PRINT_MOVE_LIMIT_X_PCT = 22;
+const PRINT_PINCH_SCALE_FACTOR = 0.006;
 
 const printSizeUpBtn = document.getElementById('printSizeUp');
 const printSizeDownBtn = document.getElementById('printSizeDown');
@@ -282,6 +283,12 @@ function applyPrintScale() {
   refreshHeroPriceNote();
 }
 
+function updateActivePrintScale(nextScale) {
+  const t = sideTransforms[activeSide];
+  t.scale = Math.min(PRINT_SCALE_MAX, Math.max(PRINT_SCALE_MIN, +nextScale.toFixed(2)));
+  applyPrintScale();
+}
+
 function applyPrintOffset() {
   const t = sideTransforms[activeSide];
   if (activeSide === 'front') {
@@ -297,15 +304,11 @@ function applyPrintOffset() {
 }
 
 printSizeUpBtn?.addEventListener('click', () => {
-  const t = sideTransforms[activeSide];
-  t.scale = Math.min(PRINT_SCALE_MAX, +(t.scale + PRINT_SCALE_STEP).toFixed(2));
-  applyPrintScale();
+  updateActivePrintScale(sideTransforms[activeSide].scale + PRINT_SCALE_STEP);
 });
 
 printSizeDownBtn?.addEventListener('click', () => {
-  const t = sideTransforms[activeSide];
-  t.scale = Math.max(PRINT_SCALE_MIN, +(t.scale - PRINT_SCALE_STEP).toFixed(2));
-  applyPrintScale();
+  updateActivePrintScale(sideTransforms[activeSide].scale - PRINT_SCALE_STEP);
 });
 
 printMoveUpBtn?.addEventListener('click', () => {
@@ -352,6 +355,49 @@ window.addEventListener('shirt3d-print-drag', (event) => {
   }
   refreshHeroPriceNote();
 });
+
+window.addEventListener('shirt3d-print-scale', (event) => {
+  const { side, scale } = event.detail || {};
+  const t = sideTransforms[side];
+  if (!t || typeof scale !== 'number') return;
+  t.scale = scale;
+  if (side === 'front' && shirtOverlay) {
+    shirtOverlay.style.width = `${(PRINT_BASE_WIDTH_PCT * scale).toFixed(1)}%`;
+    shirtOverlay.style.height = `${(PRINT_BASE_HEIGHT_PCT * scale).toFixed(1)}%`;
+  }
+  refreshHeroPriceNote();
+});
+
+shirtOverlay?.addEventListener('wheel', (event) => {
+  if (activeSide !== 'front' || heroStage?.classList.contains('is-3d')) return;
+  event.preventDefault();
+  updateActivePrintScale(sideTransforms.front.scale + (event.deltaY < 0 ? PRINT_SCALE_STEP : -PRINT_SCALE_STEP));
+}, { passive: false });
+
+let overlayPinchStartDistance = 0;
+let overlayPinchStartScale = 1;
+
+shirtOverlay?.addEventListener('touchstart', (event) => {
+  if (activeSide !== 'front' || heroStage?.classList.contains('is-3d')) return;
+  if (event.touches.length !== 2) return;
+  const [a, b] = event.touches;
+  overlayPinchStartDistance = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY) || 1;
+  overlayPinchStartScale = sideTransforms.front.scale;
+}, { passive: true });
+
+shirtOverlay?.addEventListener('touchmove', (event) => {
+  if (activeSide !== 'front' || heroStage?.classList.contains('is-3d')) return;
+  if (event.touches.length !== 2 || !overlayPinchStartDistance) return;
+  event.preventDefault();
+  const [a, b] = event.touches;
+  const distance = Math.hypot(b.clientX - a.clientX, b.clientY - a.clientY) || overlayPinchStartDistance;
+  const delta = (distance - overlayPinchStartDistance) * PRINT_PINCH_SCALE_FACTOR;
+  updateActivePrintScale(overlayPinchStartScale + delta);
+}, { passive: false });
+
+shirtOverlay?.addEventListener('touchend', () => {
+  overlayPinchStartDistance = 0;
+}, { passive: true });
 
 /* --- Chave FRENTE/VERSO/MANGAS ---
    Alterna qual lado da camisa os controles editam: a câmera gira para

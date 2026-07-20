@@ -33,8 +33,8 @@ const CHEST_HEIGHT_FRACTION = 0.52;  // peito/costas
 const SLEEVE_HEIGHT_FRACTION = 0.63; // meio da manga
 const HEAD_HEIGHT_FRACTION = 0.9;    // cabeça (referência da linha central)
 // Conversão dos passos dos botões (em "%") para metros no tecido.
-const OFFSET_X_M_PER_PCT = 0.006;
-const OFFSET_Y_M_PER_PCT = 0.008;
+const OFFSET_X_M_PER_PCT = 0.009;
+const OFFSET_Y_M_PER_PCT = 0.011;
 
 /* Configuração de cada lado editável da camisa:
    - rotY: orientação do projetor do decal (0 projeta no peito, PI nas
@@ -45,10 +45,10 @@ const OFFSET_Y_M_PER_PCT = 0.008;
    - offsetXDir: para onde a seta -> move a arte NO MUNDO, de modo que na
      tela (com a câmera virada para esse lado) ela ande para a direita. */
 const SIDE_CONFIG = {
-  front: { rotY: 0, baseWidth: 0.26, depth: 0.15, offsetXDir: [1, 0, 0] },
-  back: { rotY: Math.PI, baseWidth: 0.26, depth: 0.15, offsetXDir: [-1, 0, 0] },
-  sleeveLeft: { rotY: Math.PI / 2, baseWidth: 0.11, depth: 0.08, offsetXDir: [0, 0, -1] },
-  sleeveRight: { rotY: -Math.PI / 2, baseWidth: 0.11, depth: 0.08, offsetXDir: [0, 0, 1] },
+  front: { rotY: 0, baseWidth: 0.3, depth: 0.16, offsetXDir: [1, 0, 0] },
+  back: { rotY: Math.PI, baseWidth: 0.3, depth: 0.16, offsetXDir: [-1, 0, 0] },
+  sleeveLeft: { rotY: Math.PI / 2, baseWidth: 0.16, depth: 0.1, offsetXDir: [0, 0, -1] },
+  sleeveRight: { rotY: -Math.PI / 2, baseWidth: 0.16, depth: 0.1, offsetXDir: [0, 0, 1] },
 };
 
 const container = document.getElementById('shirtViewer3d');
@@ -208,6 +208,7 @@ function rebuildDecals(sides = Object.keys(SIDE_CONFIG)) {
     const mesh = new THREE.Mesh(geometry, material);
     mesh.renderOrder = 2;
     mesh.userData.side = sideKey; // usado pelo arrasto para saber qual lado editar
+    mesh.userData.builtScale = sideState.scale;
     // Offsets com que a geometria foi projetada: durante o arrasto o
     // decal desliza (posição do mesh) relativo a estes valores, e a
     // reprojeção de verdade só acontece ao soltar.
@@ -293,8 +294,11 @@ function computeAnchors(model) {
    da arte gira o manequim normalmente. O movimento é relativo ao
    ponto onde o dedo pegou a arte, então ela não "pula" no clique.
    Os limites espelham os das setas no main.js. */
-const DRAG_LIMIT_X_PCT = 10;
-const DRAG_LIMIT_Y_PCT = 14;
+const DRAG_LIMIT_X_PCT = 22;
+const DRAG_LIMIT_Y_PCT = 24;
+const SCALE_WHEEL_STEP = 0.08;
+const SCALE_MIN = 0.22;
+const SCALE_MAX = 2.35;
 
 function setupDecalDrag() {
   const raycaster = new THREE.Raycaster();
@@ -306,6 +310,9 @@ function setupDecalDrag() {
   let startOffsetX = 0;
   let startOffsetY = 0;
   let worldPerPixel = 0;
+  let wheelRebuildTimer = null;
+  let pinchState = null;
+  const activePointers = new Map();
 
   const setRayFromEvent = (event) => {
     const rect = renderer.domElement.getBoundingClientRect();
@@ -319,6 +326,41 @@ function setupDecalDrag() {
     setRayFromEvent(event);
     const hit = raycaster.intersectObjects(decals, false)[0];
     return hit ? hit.object.userData.side : null;
+  };
+
+  const emitScale = (side) => {
+    window.dispatchEvent(new CustomEvent('shirt3d-print-scale', {
+      detail: { side, scale: state[side]?.scale },
+    }));
+  };
+
+  const emitDrag = () => {
+    window.dispatchEvent(new CustomEvent('shirt3d-print-drag', {
+      detail: { side: dragSide, offsetX: state[dragSide]?.offsetX, offsetY: state[dragSide]?.offsetY },
+    }));
+  };
+
+  const applyScalePreview = (side) => {
+    const decal = decals.find((mesh) => mesh.userData.side === side);
+    const sideState = state[side];
+    if (!decal || !sideState) return;
+    const builtScale = decal.userData.builtScale || 1;
+    const factor = builtScale ? sideState.scale / builtScale : 1;
+    decal.scale.setScalar(factor);
+  };
+
+  const scheduleScaleRebuild = (side) => {
+    clearTimeout(wheelRebuildTimer);
+    wheelRebuildTimer = setTimeout(() => queueRebuild(side), 120);
+  };
+
+  const applyScaleDelta = (side, delta) => {
+    const sideState = state[side];
+    if (!sideState) return;
+    sideState.scale = clamp(+(sideState.scale + delta).toFixed(2), SCALE_MIN, SCALE_MAX);
+    applyScalePreview(side);
+    emitScale(side);
+    scheduleScaleRebuild(side);
   };
 
   /* Durante o arrasto NADA de raycast nem reprojeção: o movimento do
@@ -348,14 +390,24 @@ function setupDecalDrag() {
 
     // Mantém o main.js em dia: setas, overlay 2D e preview do carrinho
     // continuam coerentes com a posição arrastada.
-    window.dispatchEvent(new CustomEvent('shirt3d-print-drag', {
-      detail: { side: dragSide, offsetX: sideState.offsetX, offsetY: sideState.offsetY },
-    }));
+    emitDrag();
   };
 
   renderer.domElement.addEventListener('pointerdown', (event) => {
+    activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY, type: event.pointerType });
     const side = decalSideAt(event);
     if (!side) return;
+
+    if (event.pointerType === 'touch' && dragSide && activePointerId !== null && activePointerId !== event.pointerId) {
+      pinchState = {
+        side: dragSide,
+        pointerIds: [activePointerId, event.pointerId],
+        startDistance: Math.hypot(event.clientX - startClientX, event.clientY - startClientY) || 1,
+        startScale: state[dragSide].scale,
+      };
+      if (controls) controls.enabled = false;
+      return;
+    }
 
     dragSide = side;
     activePointerId = event.pointerId;
@@ -377,6 +429,25 @@ function setupDecalDrag() {
   });
 
   renderer.domElement.addEventListener('pointermove', (event) => {
+    if (activePointers.has(event.pointerId)) {
+      activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY, type: event.pointerType });
+    }
+    if (pinchState && pinchState.pointerIds.includes(event.pointerId)) {
+      const [aId, bId] = pinchState.pointerIds;
+      const a = activePointers.get(aId);
+      const b = activePointers.get(bId);
+      if (a && b) {
+        const distance = Math.hypot(b.x - a.x, b.y - a.y) || pinchState.startDistance;
+        state[pinchState.side].scale = clamp(
+          +(pinchState.startScale * (distance / pinchState.startDistance)).toFixed(2),
+          SCALE_MIN,
+          SCALE_MAX
+        );
+        applyScalePreview(pinchState.side);
+        emitScale(pinchState.side);
+      }
+      return;
+    }
     if (dragSide) {
       if (event.pointerId === activePointerId) applyDragAt(event);
       return;
@@ -386,6 +457,17 @@ function setupDecalDrag() {
   });
 
   const endDrag = (event) => {
+    activePointers.delete(event.pointerId);
+    if (pinchState && pinchState.pointerIds.includes(event.pointerId)) {
+      const releasedSide = pinchState.side;
+      pinchState = null;
+      dragSide = null;
+      activePointerId = null;
+      if (controls) controls.enabled = true;
+      renderer.domElement.style.cursor = '';
+      queueRebuild(releasedSide);
+      return;
+    }
     if (!dragSide || event.pointerId !== activePointerId) return;
     const releasedSide = dragSide;
     dragSide = null;
@@ -397,6 +479,13 @@ function setupDecalDrag() {
   };
   renderer.domElement.addEventListener('pointerup', endDrag);
   renderer.domElement.addEventListener('pointercancel', endDrag);
+
+  renderer.domElement.addEventListener('wheel', (event) => {
+    const side = decalSideAt(event);
+    if (!side) return;
+    event.preventDefault();
+    applyScaleDelta(side, event.deltaY < 0 ? SCALE_WHEEL_STEP : -SCALE_WHEEL_STEP);
+  }, { passive: false });
 }
 
 function init() {
