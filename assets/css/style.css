@@ -113,17 +113,6 @@ ul {
   background: rgba(217, 167, 92, 0.08);
 }
 
-.btn--whatsapp {
-  background: var(--bg-panel);
-  color: var(--text-main);
-  border-color: var(--gold-soft);
-  padding: 10px 20px;
-}
-
-.btn--whatsapp:hover {
-  border-color: var(--gold);
-}
-
 /* ===== Topbar ===== */
 .topbar {
   background: #080503;
