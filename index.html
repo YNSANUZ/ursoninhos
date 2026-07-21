@@ -22,7 +22,7 @@
 <!-- O "?v=" força o navegador a baixar a versão nova do arquivo em vez
      de usar o cache. Sempre que CSS ou JS mudarem, aumente este número
      aqui e no <script> do final da página. -->
-<link rel="stylesheet" href="assets/css/style.css?v=31">
+<link rel="stylesheet" href="assets/css/style.css?v=32">
 <!-- three.js para o manequim 3D do hero (decal da estampa no tecido).
      O importmap precisa vir antes de qualquer script type="module". -->
 <script type="importmap">
@@ -82,6 +82,22 @@
           <span class="brand__tagline">Impressão que cria conexões</span>
         </span>
       </a>
+
+      <!-- Buscador universal: só a lupa aparece; ao clicar, o campo
+           expande. Busca frases, modelos e categorias (header-search.js). -->
+      <div class="header-search" id="headerSearch">
+        <button type="button" class="header-search__toggle" id="headerSearchToggle" aria-label="Buscar no site">
+          <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="11" cy="11" r="7"/>
+            <path d="m21 21-4.3-4.3"/>
+          </svg>
+        </button>
+        <div class="header-search__field">
+          <input type="search" id="headerSearchInput" autocomplete="off"
+                 placeholder="Buscar frase, camisa, impressão 3D..." aria-label="Buscar no site">
+          <div class="header-search__results" id="headerSearchResults" hidden></div>
+        </div>
+      </div>
 
       <nav class="nav">
         <button class="nav__toggle" id="navToggle" aria-label="Abrir menu" aria-expanded="false">
@@ -945,6 +961,7 @@
   <script src="assets/js/frases-data.js?v=19"></script>
   <script src="assets/js/main.js?v=30"></script>
   <script src="assets/js/public-catalog.js?v=21"></script>
+  <script src="assets/js/header-search.js?v=1"></script>
   <!-- Manequim 3D ADIADO: three.js + modelo GLB somam ~3 MB e travavam
        o celular na abertura (nota 28 no PageSpeed). Agora o 3D só
        carrega na primeira interação do visitante (toque, rolagem ou
