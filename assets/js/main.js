@@ -1687,12 +1687,6 @@ registerCpfInput?.addEventListener('input', () => {
 registerPhoneInput?.addEventListener('input', () => {
   registerPhoneInput.value = maskPhone(registerPhoneInput.value);
 });
-profileInlineCpfInput?.addEventListener('input', () => {
-  profileInlineCpfInput.value = maskCpf(profileInlineCpfInput.value);
-});
-profileInlinePhoneInput?.addEventListener('input', () => {
-  profileInlinePhoneInput.value = maskPhone(profileInlinePhoneInput.value);
-});
 
 function getInitials(name) {
   return name
@@ -1908,6 +1902,13 @@ const numberInput = document.getElementById('numberInput');
 const neighborhoodInput = document.getElementById('neighborhoodInput');
 const cityInput = document.getElementById('cityInput');
 const stateInput = document.getElementById('stateInput');
+
+profileInlineCpfInput?.addEventListener('input', () => {
+  profileInlineCpfInput.value = maskCpf(profileInlineCpfInput.value);
+});
+profileInlinePhoneInput?.addEventListener('input', () => {
+  profileInlinePhoneInput.value = maskPhone(profileInlinePhoneInput.value);
+});
 
 function formatAddress(address) {
   const complement = address.complement ? ` - ${address.complement}` : '';
