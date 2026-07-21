@@ -273,10 +273,147 @@ const TEXT_PRINT_PRESETS = [
     name: 'Grito',
     line: (i) => ({ font: TEXT_ANTON, mul: 1.5, lh: 1.08, upper: true, color: i % 2 ? '#ffffff' : '#e24b4a' }),
   },
+  {
+    id: 'cartaz-impacto',
+    name: 'Cartaz impacto',
+    maxLines: 11,
+    line: (i, n, text) => ({ font: TEXT_ANTON, mul: linhaDeImpacto(text) ? 1.9 : 0.82, lh: linhaDeImpacto(text) ? 0.96 : 1.12, upper: true }),
+  },
+  {
+    id: 'impacto-destaques',
+    name: 'Impacto com destaques',
+    align: 'left',
+    maxLines: 8,
+    line: (i, n, text) => ({ font: TEXT_OSWALD, weight: '500', mul: linhaDeImpacto(text) || i === n - 1 ? 1.45 : 0.86, lh: 1.08, upper: true, color: linhaDeImpacto(text) || i === n - 1 ? '#f2c230' : '#ffffff' }),
+  },
+  {
+    id: 'marcador-seco',
+    name: 'Marcador seco',
+    maxLines: 6,
+    line: () => ({ font: TEXT_MARKER, mul: 1.12, lh: 1.32, upper: true, color: '#f4f1e8' }),
+  },
+  {
+    id: 'dialogo-duplo',
+    name: 'Diálogo em duas vozes',
+    maxLines: 8,
+    line: (i) => ({ font: i % 2 ? TEXT_CAVEAT : TEXT_SANS, weight: i % 2 ? '600' : 'bold', mul: i % 2 ? 1.35 : 0.85, lh: 1.25, color: i % 2 ? '#f2c230' : '#ffffff' }),
+  },
+  {
+    id: 'comando-final',
+    name: 'Comando final',
+    maxLines: 8,
+    line: (i, n) => ({ font: TEXT_ANTON, mul: i === n - 1 ? 1.95 : 0.9, lh: i === n - 1 ? 1 : 1.18, upper: true, color: i === n - 1 ? '#f2c230' : '#ffffff' }),
+  },
+  {
+    id: 'coluna-condensada',
+    name: 'Coluna condensada',
+    maxLines: 10,
+    line: (i) => ({ font: TEXT_CONDENSED, mul: i % 3 === 1 ? 1.55 : 1.05, lh: 1.02, upper: true }),
+  },
+  {
+    id: 'manchete-amarela',
+    name: 'Manchete amarela',
+    maxLines: 7,
+    line: (i, n) => ({ font: TEXT_ANTON, mul: i === 0 ? 1.5 : 1, lh: 1.1, upper: true, color: i === 0 || i === n - 1 ? '#f2c230' : '#ffffff' }),
+  },
+  {
+    id: 'manifesto',
+    name: 'Manifesto',
+    align: 'left',
+    maxLines: 9,
+    line: (i, n, text) => ({ font: TEXT_CONDENSED, mul: linhaCurta(text) ? 1.45 : 0.92, lh: 1.08, upper: true, color: i === n - 1 ? '#f2c230' : '#ffffff' }),
+  },
+  {
+    id: 'fe-dourada',
+    name: 'Fé dourada',
+    maxLines: 8,
+    decoTop: { text: '✦', style: { font: TEXT_SERIF, mul: 0.52, lh: 1.4, color: '#d9a75c' } },
+    line: (i, n, text) => ({ font: linhaDeImpacto(text) ? TEXT_ANTON : TEXT_OSWALD, weight: '500', mul: linhaDeImpacto(text) ? 1.5 : 0.9, lh: 1.14, upper: true, color: linhaDeImpacto(text) ? '#d9a75c' : '#ffffff' }),
+  },
+  {
+    id: 'escada-tipografica',
+    name: 'Escada tipográfica',
+    maxLines: 8,
+    line: (i, n) => ({ font: TEXT_OSWALD, weight: '500', mul: 0.72 + (i / Math.max(1, n - 1)) * 0.9, lh: 1.08, upper: true }),
+  },
+  {
+    id: 'eco-alternado',
+    name: 'Eco alternado',
+    maxLines: 7,
+    line: (i) => ({ font: TEXT_ANTON, mul: i % 2 ? 0.86 : 1.35, lh: 1.08, upper: true, color: i % 2 ? '#bdbdbd' : '#ffffff' }),
+  },
+  {
+    id: 'contraste-central',
+    name: 'Contraste central',
+    maxLines: 7,
+    line: (i, n) => ({ font: TEXT_CONDENSED, mul: i === Math.floor((n - 1) / 2) ? 1.85 : 0.95, lh: 1.05, upper: true, color: i === Math.floor((n - 1) / 2) ? '#f2c230' : '#ffffff' }),
+  },
+  {
+    id: 'ritmo-branco',
+    name: 'Ritmo branco',
+    maxLines: 8,
+    line: (i) => ({ font: i % 2 ? TEXT_CONDENSED : TEXT_ANTON, mul: i % 2 ? 1.2 : 0.92, lh: 1.12, upper: true }),
+  },
+  {
+    id: 'minimal-forte',
+    name: 'Minimal forte',
+    maxLines: 5,
+    line: (i, n) => ({ font: TEXT_SANS, weight: 'bold', mul: i === n - 1 ? 1.3 : 0.9, lh: 1.45, upper: true, spacing: 0.08 }),
+  },
+  {
+    id: 'serifa-impacto',
+    name: 'Serifa de impacto',
+    maxLines: 6,
+    line: (i, n) => ({ font: TEXT_PLAYFAIR, weight: '600', italic: i === n - 1, mul: i === n - 1 ? 1.2 : 0.92, lh: 1.34, upper: true, color: i === n - 1 ? '#d9a75c' : '#ffffff' }),
+  },
+  {
+    id: 'duas-vozes',
+    name: 'Duas vozes',
+    maxLines: 8,
+    line: (i, n) => ({ font: i < Math.ceil(n / 2) ? TEXT_SANS : TEXT_CURSIVE, weight: '600', mul: i < Math.ceil(n / 2) ? 0.86 : 1.35, lh: 1.24, color: i < Math.ceil(n / 2) ? '#ffffff' : '#f2c230' }),
+  },
+  {
+    id: 'palavra-chave',
+    name: 'Palavra-chave',
+    maxLines: 8,
+    line: (i, n, text) => ({ font: TEXT_ANTON, mul: linhaDeImpacto(text) ? 1.7 : 0.82, lh: 1.08, upper: true, mode: linhaDeImpacto(text) ? 'fill' : 'stroke', color: '#ffffff' }),
+  },
+  {
+    id: 'pulso-amarelo',
+    name: 'Pulso amarelo',
+    maxLines: 7,
+    line: (i) => ({ font: TEXT_OSWALD, weight: '500', mul: i % 3 === 0 ? 1.35 : 0.92, lh: 1.15, upper: true, color: i % 3 === 0 ? '#f2c230' : '#ffffff' }),
+  },
+  {
+    id: 'bloco-branco',
+    name: 'Bloco branco',
+    align: 'left',
+    maxLines: 9,
+    line: (i, n, text) => ({ font: TEXT_ANTON, mul: linhaCurta(text) ? 1.32 : 0.88, lh: 1.08, upper: true }),
+  },
+  {
+    id: 'fecho-forte',
+    name: 'Fecho forte',
+    maxLines: 8,
+    line: (i, n) => (i === n - 1
+      ? { font: TEXT_MARKER, mul: 1.45, lh: 1.2, upper: true, color: '#f2c230', underline: '#f2c230' }
+      : { font: TEXT_CONDENSED, mul: 0.98, lh: 1.12, upper: true }),
+  },
 ];
 
 const TEXT_PRINT_MAX_LINES = 6;
 const TEXT_PRINT_SAMPLE = ['Toda vez que eu', 'olho pros meus pais,', 'vejo um milhão', 'de motivos'];
+
+const TEXT_PRINT_STOPWORDS = new Set(['a', 'as', 'ao', 'aos', 'com', 'da', 'das', 'de', 'do', 'dos', 'e', 'em', 'eu', 'me', 'meu', 'minha', 'na', 'nas', 'no', 'nos', 'o', 'os', 'ou', 'para', 'por', 'pra', 'que', 'se', 'seu', 'sua', 'um', 'uma']);
+
+function linhaCurta(text) {
+  return String(text || '').replace(/[^\p{L}\p{N}\s]/gu, '').trim().length <= 12;
+}
+
+function linhaDeImpacto(text) {
+  const palavras = String(text || '').toLowerCase().match(/[\p{L}\p{N}]+/gu) || [];
+  return linhaCurta(text) && palavras.some((palavra) => palavra.length >= 4 && !TEXT_PRINT_STOPWORDS.has(palavra));
+}
 
 // Garante que as fontes do Google estejam prontas antes de desenhar no
 // canvas (senão o navegador desenha com a fonte fallback).
@@ -342,7 +479,7 @@ function drawTextPrint(canvas, preset, lines) {
   const specs = [];
   if (preset.decoTop) specs.push(makeSpec(preset.decoTop.text, preset.decoTop.style));
   lines.forEach((line, i) => {
-    const style = preset.line(i, n);
+    const style = preset.line(i, n, line, lines);
     specs.push(makeSpec(textForLine(line, style), style));
   });
   if (preset.decoBottom) specs.push(makeSpec(preset.decoBottom.text, preset.decoBottom.style));
@@ -370,7 +507,9 @@ function drawTextPrint(canvas, preset, lines) {
   }
 
   let y = (canvas.height - totalHeight * scale) / 2;
-  ctx.textAlign = 'center';
+  const alignment = preset.align || 'center';
+  const blockLeft = (canvas.width - maxWidth * scale) / 2;
+  ctx.textAlign = alignment;
   ctx.textBaseline = 'alphabetic';
 
   specs.forEach((spec) => {
@@ -378,7 +517,8 @@ function drawTextPrint(canvas, preset, lines) {
     const size = BASE * style.mul * scale;
     const textWidth = (spec.width - (style.bg ? BASE * style.mul * 0.7 : 0)) * scale;
     const baseline = y + size * 0.82;
-    const cx = canvas.width / 2;
+    const cx = alignment === 'left' ? blockLeft : alignment === 'right' ? canvas.width - blockLeft : canvas.width / 2;
+    const textLeft = alignment === 'left' ? cx : alignment === 'right' ? cx - textWidth : cx - textWidth / 2;
 
     ctx.save();
 
@@ -397,7 +537,7 @@ function drawTextPrint(canvas, preset, lines) {
     if (style.bg) {
       const padH = size * 0.35;
       ctx.fillStyle = style.bg;
-      ctx.fillRect(cx - textWidth / 2 - padH, baseline - size * 0.86, textWidth + padH * 2, size * 1.14);
+      ctx.fillRect(textLeft - padH, baseline - size * 0.86, textWidth + padH * 2, size * 1.14);
     }
 
     // Brilho neon: sombra colorida + segunda passada do texto.
@@ -422,8 +562,8 @@ function drawTextPrint(canvas, preset, lines) {
       ctx.strokeStyle = style.strike;
       ctx.lineWidth = Math.max(2, size * 0.09);
       ctx.beginPath();
-      ctx.moveTo(cx - textWidth / 2 - size * 0.1, baseline - size * 0.28);
-      ctx.lineTo(cx + textWidth / 2 + size * 0.1, baseline - size * 0.28);
+      ctx.moveTo(textLeft - size * 0.1, baseline - size * 0.28);
+      ctx.lineTo(textLeft + textWidth + size * 0.1, baseline - size * 0.28);
       ctx.stroke();
     }
 
@@ -431,8 +571,8 @@ function drawTextPrint(canvas, preset, lines) {
       ctx.strokeStyle = style.underline;
       ctx.lineWidth = Math.max(2, size * 0.07);
       ctx.beginPath();
-      ctx.moveTo(cx - textWidth / 2, baseline + size * 0.14);
-      ctx.lineTo(cx + textWidth / 2, baseline + size * 0.14);
+      ctx.moveTo(textLeft, baseline + size * 0.14);
+      ctx.lineTo(textLeft + textWidth, baseline + size * 0.14);
       ctx.stroke();
     }
 
