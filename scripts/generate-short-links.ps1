@@ -1,3 +1,7 @@
+param(
+  [switch]$OnlyMissing
+)
+
 $ErrorActionPreference = 'Stop'
 
 $root = Split-Path -Parent $PSScriptRoot
@@ -25,18 +29,33 @@ $metaBlock = @"
 "@
 $template = $template -replace '<link rel="icon" type="image/webp" href="https://i\.ibb\.co/[^"]+">', "`$0`r`n$metaBlock"
 
-$frasesFile = Get-Content -LiteralPath (Join-Path $root 'assets\js\frases-data.js')
-$frases = foreach ($line in $frasesFile) {
+$frasesPath = Join-Path $root 'assets\js\frases-data.js'
+$frasesFile = Get-Content -LiteralPath $frasesPath
+$frasesRaw = Get-Content -LiteralPath $frasesPath -Raw
+$frasesLegadas = foreach ($line in $frasesFile) {
   if ($line -match "^\s*'(.+)'\,?\s*$") { $matches[1] }
+}
+
+$entradas = @()
+for ($i = 0; $i -lt $frasesLegadas.Count; $i++) {
+  $entradas += [pscustomobject]@{ shortId = 8500 + $i; phrase = $frasesLegadas[$i] }
+}
+
+$novas = [regex]::Matches($frasesRaw, "\{\s*shortId:\s*'(?<id>\d+)',\s*frase:\s*'(?<phrase>(?:\\'|[^'])*)'")
+foreach ($match in $novas) {
+  $entradas += [pscustomobject]@{
+    shortId = [int]$match.Groups['id'].Value
+    phrase = $match.Groups['phrase'].Value.Replace("\'", "'")
+  }
 }
 
 function Escape-Html([string]$text) {
   return $text.Replace('&', '&amp;').Replace('<', '&lt;').Replace('>', '&gt;').Replace('"', '&quot;')
 }
 
-for ($i = 0; $i -lt $frases.Count; $i++) {
-  $phrase = $frases[$i]
-  $shortId = 8500 + $i
+foreach ($entrada in $entradas) {
+  $phrase = $entrada.phrase
+  $shortId = $entrada.shortId
   $shortPath = "/$shortId/"
   $title = "Camisa Preta - `"$phrase`" | Ursoninhos"
   $description = "Camisa preta com a frase `"$phrase`" por R$ 49,90. Veja a foto do produto, escolha o tamanho e compartilhe pelo WhatsApp."
@@ -44,7 +63,9 @@ for ($i = 0; $i -lt $frases.Count; $i++) {
   $canonical = "https://ursoninhos.com$shortPath"
   $html = $template.Replace('{{TITLE}}', (Escape-Html $title)).Replace('{{DESCRIPTION}}', (Escape-Html $description)).Replace('{{IMAGE}}', $imageUrl).Replace('{{CANONICAL}}', $canonical)
   $dir = Join-Path $root ([string]$shortId)
+  $indexPath = Join-Path $dir 'index.html'
+  if ($OnlyMissing -and (Test-Path -LiteralPath $indexPath)) { continue }
   New-Item -ItemType Directory -Force -Path $dir | Out-Null
-  Set-Content -LiteralPath (Join-Path $dir 'index.html') -Value $html -Encoding UTF8
+  Set-Content -LiteralPath $indexPath -Value $html -Encoding UTF8
 }
-Write-Host "Gerados $($frases.Count) links curtos e imagens de compartilhamento."
+Write-Host "Processados $($entradas.Count) links curtos de produtos."
