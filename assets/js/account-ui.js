@@ -33,7 +33,7 @@
         slot.innerHTML = '';
         return;
       }
-      slot.innerHTML = '<a href="index.html" class="topbar__simple-link">Entrar / Cadastrar</a>';
+      slot.innerHTML = '<a href="/" class="topbar__simple-link">Entrar / Cadastrar</a>';
       return;
     }
 
@@ -54,7 +54,7 @@
 
     slot.querySelector('[data-account-logout]')?.addEventListener('click', async () => {
       await store.logout();
-      window.location.href = 'index.html';
+      window.location.href = '/';
     });
   }
 

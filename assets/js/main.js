@@ -4,6 +4,15 @@
    camisa no hero (sem backend, sem checkout real).
    ========================================================= */
 
+// URL limpa na home: se a página foi aberta como /index.html, reescreve
+// para "/" na barra de endereços (apenas cosmético, sem recarregar nem
+// navegar). O GitHub Pages já serve o index.html na raiz, então "/" é
+// equivalente e mais bonito.
+if (window.location.pathname.endsWith('/index.html')) {
+  const cleanPath = window.location.pathname.replace(/index\.html$/, '');
+  window.history.replaceState(null, '', cleanPath + window.location.search + window.location.hash);
+}
+
 // Menu mobile
 const navToggle = document.getElementById('navToggle');
 const navList = document.getElementById('navList');
