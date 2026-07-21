@@ -253,12 +253,21 @@ export async function createInteractiveViewer({ container, cameraDistance = 2.3 
         model.position.y -= box.min.y;
         model.rotation.y = -Math.PI / 2;
         model.updateMatrixWorld(true);
+
+        // Recentraliza DEPOIS do giro (corrige o desvio em espelho entre
+        // frente e costas causado pela rotação de -90°).
+        const rotatedBox = new THREE.Box3().setFromObject(model);
+        const rotatedCenter = rotatedBox.getCenter(new THREE.Vector3());
+        model.position.x -= rotatedCenter.x;
+        model.position.z -= rotatedCenter.z;
+        model.updateMatrixWorld(true);
         scene.add(model);
 
         anchors = computeAnchors(mannequinMesh, model);
         const size = anchors.boxSize || new THREE.Vector3(1, 1, 1);
-        camera.position.set(0, size.y * 0.55, size.y * cameraDistance);
-        controls.target.set(0, size.y * 0.5, 0);
+        // Mira mais alta: cabeça inteira no quadro, corte extra no pedestal.
+        camera.position.set(0, size.y * 0.62, size.y * cameraDistance);
+        controls.target.set(0, size.y * 0.57, 0);
         controls.minDistance = size.y * 0.9;
         controls.maxDistance = size.y * 3.2;
         controls.update();

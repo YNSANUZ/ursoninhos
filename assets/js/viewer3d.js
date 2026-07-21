@@ -597,17 +597,26 @@ function init() {
       model.rotation.y = -Math.PI / 2;
       model.updateMatrixWorld(true);
 
+      // Recentraliza DEPOIS do giro: a rotação de -90° desloca o eixo
+      // visual do manequim, deixando a frente levemente para um lado e as
+      // costas para o lado oposto (o desvio em espelho que aparecia nos
+      // previews). Recentralizar aqui corrige frente E costas de uma vez.
+      const rotatedBox = new THREE.Box3().setFromObject(model);
+      const rotatedCenter = rotatedBox.getCenter(new THREE.Vector3());
+      model.position.x -= rotatedCenter.x;
+      model.position.z -= rotatedCenter.z;
+      model.updateMatrixWorld(true);
+
       scene.add(model);
 
       const sized = new THREE.Box3().setFromObject(model);
       const size = sized.getSize(new THREE.Vector3());
       modelSize = size.clone();
 
-      // Enquadra o manequim INTEIRO (da base ao topo da cabeça) e
-      // define os limites do zoom: aproximar até o peito, afastar até
-      // ver a estátua com folga.
-      camera.position.set(0, size.y * 0.55, size.y * 2.3);
-      controls.target.set(0, size.y * 0.5, 0);
+      // Enquadra o manequim INTEIRO com folga acima da cabeça: a mira fica
+      // mais alta e o corte extra acontece no pedestal, nunca na cabeça.
+      camera.position.set(0, size.y * 0.62, size.y * 2.3);
+      controls.target.set(0, size.y * 0.57, 0);
       controls.minDistance = size.y * 0.9;
       controls.maxDistance = size.y * 3.2;
       controls.update();
@@ -661,11 +670,11 @@ function setCameraAngle(degrees) {
 function applyPreviewCamera(side = 'front') {
   if (!camera || !controls || !modelSize) return;
   const previewConfig = {
-    front: { targetX: 0, targetY: 0.485, cameraY: 0.555, radius: 1.86 },
-    back: { targetX: -0.012, targetY: 0.485, cameraY: 0.555, radius: 1.86 },
-    sleeveLeft: { targetX: 0, targetY: 0.485, cameraY: 0.555, radius: 1.9 },
-    sleeveRight: { targetX: 0, targetY: 0.485, cameraY: 0.555, radius: 1.9 },
-  }[side] || { targetX: 0, targetY: 0.485, cameraY: 0.555, radius: 1.86 };
+    front: { targetX: 0, targetY: 0.55, cameraY: 0.62, radius: 1.86 },
+    back: { targetX: 0, targetY: 0.55, cameraY: 0.62, radius: 1.86 },
+    sleeveLeft: { targetX: 0, targetY: 0.55, cameraY: 0.62, radius: 1.9 },
+    sleeveRight: { targetX: 0, targetY: 0.55, cameraY: 0.62, radius: 1.9 },
+  }[side] || { targetX: 0, targetY: 0.55, cameraY: 0.62, radius: 1.86 };
 
   const targetX = modelSize.x * previewConfig.targetX;
   const targetY = modelSize.y * previewConfig.targetY;
