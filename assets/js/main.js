@@ -1293,6 +1293,10 @@ cartToggleBtn?.addEventListener('click', () => {
 });
 cartCloseBtn?.addEventListener('click', closeCart);
 cartBackdrop?.addEventListener('click', closeCart);
+window.addEventListener('ursoninhos-cart-changed', () => {
+  refreshCartState();
+  renderCart();
+});
 
 document.addEventListener('keydown', (event) => {
   if (event.key !== 'Escape') return;
@@ -1504,6 +1508,7 @@ publishModelBtn?.addEventListener('click', async () => {
       // products.php) passa a persisti-lo. O marcador na descrição
       // garante o crédito nos dois casos.
       creator: user.name,
+      creatorPhoto: user.photoUrl || '',
     });
 
     setPublishFeedback(

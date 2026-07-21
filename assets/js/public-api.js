@@ -47,6 +47,29 @@
     return payload.product || null;
   }
 
+  async function updateProduct(id, product) {
+    const response = await fetch(`${baseUrl}/products.php?action=update&id=${encodeURIComponent(id)}`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(window.UrsoninhosStore?.getAuthHeaders() || {}),
+      },
+      body: JSON.stringify(product),
+    });
+    const payload = await readJson(response);
+    return payload.product || null;
+  }
+
+  async function deleteProduct(id) {
+    const response = await fetch(`${baseUrl}/products.php?id=${encodeURIComponent(id)}`, {
+      method: 'DELETE',
+      headers: {
+        ...(window.UrsoninhosStore?.getAuthHeaders() || {}),
+      },
+    });
+    return readJson(response);
+  }
+
   async function syncProducts(products) {
     const response = await fetch(`${baseUrl}/products.php?action=sync-sheet`, {
       method: 'POST',
@@ -63,6 +86,8 @@
     listProducts,
     getProduct,
     createProduct,
+    updateProduct,
+    deleteProduct,
     getProductPath,
     syncProducts,
   };

@@ -2749,6 +2749,16 @@ ul {
     grid-template-columns: 1fr;
   }
 
+  .public-product-title-row,
+  .public-product-creator,
+  .public-product-editor__grid {
+    grid-template-columns: 1fr;
+  }
+
+  .public-product-title-row {
+    display: grid;
+  }
+
   .pf-header {
     flex-wrap: wrap;
   }
@@ -2765,6 +2775,10 @@ ul {
 
   .pf-checklist {
     grid-template-columns: 1fr;
+  }
+
+  .public-product-admin-actions {
+    justify-content: flex-start;
   }
 }
 
@@ -4394,4 +4408,211 @@ ul {
 
 .product-credits strong {
   color: var(--gold);
+}
+
+.public-product-layout {
+  gap: 34px;
+}
+
+.public-product-gallery,
+.public-product-info {
+  min-width: 0;
+}
+
+.public-product-stage {
+  border-radius: var(--radius-l);
+  border: 1px solid rgba(217, 167, 92, 0.14);
+  background: rgba(13, 9, 6, 0.45);
+  padding: 18px;
+}
+
+.public-product-viewer-shell {
+  border-radius: var(--radius-m);
+  overflow: hidden;
+}
+
+.public-product-thumbs {
+  margin-top: 14px;
+}
+
+.public-product-cameras {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
+}
+
+.public-product-title-row {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.public-product-title-row .pf-title {
+  flex: 1;
+}
+
+.public-product-admin-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.public-product-admin-btn {
+  width: 38px;
+  height: 38px;
+  border-radius: 999px;
+  border: 1px solid rgba(217, 167, 92, 0.24);
+  background: rgba(13, 9, 6, 0.4);
+  color: var(--gold);
+  font: inherit;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: border-color 0.2s ease, transform 0.2s ease, background 0.2s ease;
+}
+
+.public-product-admin-btn:hover {
+  border-color: var(--gold);
+  background: rgba(217, 167, 92, 0.1);
+  transform: translateY(-1px);
+}
+
+.public-product-admin-btn--danger:hover {
+  border-color: #e08a7a;
+  color: #e08a7a;
+}
+
+.public-product-price {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-top: 14px;
+}
+
+.public-product-price strong {
+  font-size: 2rem;
+  color: var(--gold);
+}
+
+.public-product-price__note {
+  margin: 0;
+  color: var(--text-muted);
+  font-size: 0.85rem;
+}
+
+.public-product-creator {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+}
+
+.public-product-creator__identity {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.public-product-creator__avatar {
+  display: inline-flex;
+}
+
+.public-product-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 999px;
+  overflow: hidden;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(180deg, #e0ac67, var(--caramel));
+  color: #1a1108;
+  font-weight: 800;
+  border: 1px solid rgba(217, 167, 92, 0.35);
+  box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
+}
+
+.public-product-avatar__fallback {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.9rem;
+  letter-spacing: 0.3px;
+}
+
+.public-product-avatar__image {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.public-product-creator__copy {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.public-product-creator__label {
+  font-size: 0.74rem;
+  color: var(--text-dim);
+}
+
+.public-product-creator__copy strong {
+  color: var(--gold);
+  font-size: 0.95rem;
+}
+
+.public-product-field {
+  min-width: 220px;
+  flex: 1;
+}
+
+.public-product-actions .btn {
+  min-width: 180px;
+}
+
+.public-product-grid {
+  margin-top: 16px;
+}
+
+.public-product-checklist {
+  margin-top: 18px;
+}
+
+.public-product-editor {
+  margin-top: 18px;
+  padding: 16px;
+  border-radius: var(--radius-m);
+  border: 1px solid rgba(217, 167, 92, 0.16);
+  background: rgba(13, 9, 6, 0.42);
+}
+
+.public-product-editor__grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.public-product-editor__wide {
+  grid-column: 1 / -1;
+}
+
+.public-product-editor textarea,
+.public-product-editor input,
+.public-product-editor select {
+  width: 100%;
+}
+
+.public-product-editor__actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  margin-top: 14px;
 }

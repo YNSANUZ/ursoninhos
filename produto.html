@@ -6,7 +6,7 @@
 <title>Ursoninhos | Produto</title>
 <meta name="description" content="Detalhes do produto da Ursoninhos com visualizacao 3D.">
 <link rel="icon" type="image/webp" href="https://i.ibb.co/wrPpWWsf/ea990759-29d9-4e67-98ce-bb22e69f8e9e-Sem-T-tulo-1.webp">
-<link rel="stylesheet" href="assets/css/style.css?v=30">
+<link rel="stylesheet" href="assets/css/style.css?v=31">
 <script type="importmap">
 {
   "imports": {
@@ -58,24 +58,38 @@
 
   <main class="checkout-shell">
     <div class="container">
-      <div class="product-page-layout">
-        <section class="checkout-panel">
-          <div class="checkout-stage__head">
-            <div>
-              <h1 id="productTitle">Carregando produto...</h1>
-              <p id="productDescription">Preparando os detalhes do produto.</p>
-              <!-- Créditos de quem criou o modelo + vendas (oculto com 0) -->
-              <p class="product-credits" id="productCredits" hidden>
-                <span>Criado por <strong id="productCreator"></strong></span>
-                <span class="product-card__sales" id="productSales" hidden></span>
-              </p>
-            </div>
-            <div class="checkout-pill" id="productPricePill">R$ 0,00</div>
-          </div>
+      <nav class="pf-breadcrumb" aria-label="Você está em">
+        <a href="index.html">Início</a>
+        <span>/</span>
+        <a href="index.html#destaques">Produtos públicos</a>
+        <span>/</span>
+        <span class="pf-breadcrumb__current">Detalhes do Produto</span>
+      </nav>
 
-          <div class="product-viewer-shell">
-            <div class="product-viewer" id="productViewer"></div>
-            <div class="admin-viewer-actions">
+      <div class="pf-layout public-product-layout">
+        <section class="public-product-gallery">
+          <div class="public-product-stage">
+            <div class="pf-media" id="publicProductMediaPhoto">
+              <img id="publicProductImage" alt="" hidden>
+              <span class="pf-media__loading" id="publicProductImageLoading">Carregando imagem do produto…</span>
+            </div>
+            <div class="pf-media pf-media--viewer" id="publicProductMediaViewer" hidden>
+              <div class="pf-viewer3d" id="productViewer"></div>
+              <span class="pf-media__loading" id="publicProductViewerLoading">Carregando visualização 3D…</span>
+              <span class="pf-viewer-hint" id="publicProductViewerHint" hidden>Arraste para girar • frente e verso</span>
+            </div>
+            <div class="pf-thumbs public-product-thumbs" role="group" aria-label="Mídias do produto">
+              <button type="button" class="pf-thumb is-active" id="publicProductThumbPhoto" aria-label="Ver foto principal">
+                <span class="pf-thumb__loading" id="publicProductThumbPhotoLoading">…</span>
+              </button>
+              <button type="button" class="pf-thumb" id="publicProductThumb3d" aria-label="Ver modelo 3D">
+                <span class="pf-thumb__badge3d">
+                  <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2 3 7v10l9 5 9-5V7l-9-5z"/><path d="M3 7l9 5 9-5M12 12v10"/></svg>
+                  <small>Girar 3D</small>
+                </span>
+              </button>
+            </div>
+            <div class="public-product-cameras" id="publicProductCameras" role="group" aria-label="Ângulos do produto" hidden>
               <button type="button" class="btn btn--outline" data-product-camera="0">Frente</button>
               <button type="button" class="btn btn--outline" data-product-camera="180">Verso</button>
               <button type="button" class="btn btn--outline" data-product-camera="-90">Manga dir.</button>
@@ -83,23 +97,88 @@
             </div>
           </div>
 
-          <div class="product-page-grid">
+          <div class="product-page-grid public-product-grid">
             <div class="review-card">
-              <strong>O que voce pode fazer aqui</strong>
-              <span>Girar, aproximar e ver o modelo 3D já estampado antes de comprar.</span>
+              <strong>Visualização 3D</strong>
+              <span>Gire, aproxime e veja o modelo estampado de todos os lados antes de comprar.</span>
             </div>
             <div class="review-card">
-              <strong>Visual do produto</strong>
-              <span>O viewer gira devagar automaticamente e voce pode assumir o controle com o mouse ou toque.</span>
+              <strong>Criação da comunidade</strong>
+              <span>Modelos publicados por clientes da Ursoninhos com acabamento pronto para compra.</span>
             </div>
           </div>
         </section>
 
-        <aside class="checkout-summary">
-          <h3>Comprar este produto</h3>
-          <p>Escolha o tamanho, ajuste a quantidade e siga para o carrinho.</p>
-          <div class="checkout-form">
-            <label class="form-field">
+        <section class="pf-info public-product-info">
+          <span class="pf-badge">Modelo da Comunidade</span>
+          <div class="public-product-title-row">
+            <h1 class="pf-title" id="productTitle">Carregando produto...</h1>
+            <div class="public-product-admin-actions" id="productAdminActions" hidden>
+              <button type="button" class="public-product-admin-btn" id="productEditToggleBtn" aria-label="Editar produto">
+                ✎
+              </button>
+              <button type="button" class="public-product-admin-btn public-product-admin-btn--danger" id="productDeleteBtn" aria-label="Apagar produto">
+                🗑
+              </button>
+            </div>
+          </div>
+
+          <div class="public-product-price">
+            <strong id="productPricePill">R$ 0,00</strong>
+            <p class="public-product-price__note">Camisa pronta para compra com visual 3D e produção sob demanda.</p>
+          </div>
+
+          <p class="pf-lead" id="productDescription">Preparando os detalhes do produto.</p>
+
+          <div class="public-product-creator" id="productCredits" hidden>
+            <div class="public-product-creator__identity">
+              <span class="public-product-creator__avatar" id="productCreatorAvatar" aria-hidden="true"></span>
+              <div class="public-product-creator__copy">
+                <span class="public-product-creator__label">Criado por</span>
+                <strong id="productCreator"></strong>
+              </div>
+            </div>
+            <span class="product-card__sales" id="productSales" hidden></span>
+          </div>
+
+          <form class="public-product-editor" id="productEditorForm" hidden>
+            <div class="public-product-editor__grid">
+              <label class="form-field">
+                <span>Nome do produto</span>
+                <input type="text" id="productEditorTitle" maxlength="120">
+              </label>
+              <label class="form-field">
+                <span>Preço</span>
+                <input type="number" id="productEditorPrice" min="1" step="0.01">
+              </label>
+              <label class="form-field">
+                <span>Criador</span>
+                <input type="text" id="productEditorCreator" maxlength="80">
+              </label>
+              <label class="form-field">
+                <span>Foto do criador</span>
+                <input type="url" id="productEditorCreatorPhoto" placeholder="https://...">
+              </label>
+              <label class="form-field public-product-editor__wide">
+                <span>Imagem principal</span>
+                <input type="url" id="productEditorCatalogImage" placeholder="https://... ou data:image/...">
+              </label>
+              <label class="form-field public-product-editor__wide">
+                <span>Descrição</span>
+                <textarea id="productEditorDescription" rows="4" maxlength="600"></textarea>
+              </label>
+            </div>
+            <div class="public-product-editor__actions">
+              <button type="submit" class="btn btn--gold">Salvar alterações</button>
+              <button type="button" class="btn btn--outline" id="productEditorCancelBtn">Cancelar</button>
+            </div>
+            <p class="cart-drawer__note" id="productEditorNote"></p>
+          </form>
+
+          <hr class="pf-divider">
+
+          <div class="pf-options">
+            <label class="form-field public-product-field">
               <span>Tamanho</span>
               <select id="productSizeSelect">
                 <option value="P">P</option>
@@ -109,23 +188,47 @@
               </select>
             </label>
 
-            <label class="form-field">
-              <span>Quantidade</span>
+            <div class="pf-qty">
+              <span class="pf-option-head">Quantidade</span>
               <div class="qty-stepper">
                 <button type="button" id="productQtyDecrease">−</button>
                 <input type="number" id="productQtyInput" min="1" value="1">
                 <button type="button" id="productQtyIncrease">+</button>
               </div>
-            </label>
-
-            <div class="checkout-nav product-page-actions">
-              <button type="button" class="btn btn--gold" id="productAddToCartBtn">Adicionar ao carrinho</button>
-              <a href="index.html#destaques" class="btn btn--outline">Continuar comprando</a>
-              <a href="carrinho.html" class="btn btn--outline">Pagar agora</a>
             </div>
-            <p class="cart-drawer__note" id="productActionNote"></p>
           </div>
-        </aside>
+
+          <div class="pf-actions public-product-actions">
+            <button type="button" class="btn btn--gold pf-add-btn" id="productAddToCartBtn">Adicionar ao carrinho</button>
+            <a href="carrinho.html" class="btn btn--outline pf-buy-btn">Pagar agora</a>
+            <button type="button" class="btn btn--outline pf-buy-btn" id="productShareBtn">Compartilhar</button>
+          </div>
+          <p class="cart-drawer__note" id="productActionNote"></p>
+
+          <a class="pf-customize-link" id="productCustomizeLink" href="index.html">Quer criar o seu do zero? Voltar ao manequim 3D →</a>
+
+          <div class="pf-benefits">
+            <div class="pf-benefit">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 16V6a1 1 0 0 1 1-1h11v11H4a1 1 0 0 1-1-1z"/><path d="M15 10h4l3 3v3h-7z"/><circle cx="7.5" cy="18.5" r="1.5"/><circle cx="17.5" cy="18.5" r="1.5"/></svg>
+              <div><strong>Envio para todo o Brasil</strong><span>Receba com segurança</span></div>
+            </div>
+            <div class="pf-benefit">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2 3 7v6c0 5 4 8 9 9 5-1 9-4 9-9V7l-9-5z"/></svg>
+              <div><strong>Modelo revisado em 3D</strong><span>Veja frente, verso e mangas</span></div>
+            </div>
+            <div class="pf-benefit">
+              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="4"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3"/></svg>
+              <div><strong>Produção Ursoninhos</strong><span>Acabamento pronto para vender</span></div>
+            </div>
+          </div>
+
+          <ul class="pf-checklist public-product-checklist">
+            <li>Camisa pronta para compra com estampa já aplicada</li>
+            <li>Visualização 3D interativa antes de finalizar</li>
+            <li>Tamanhos P, M, G e GG</li>
+            <li>Ideal para compartilhar o link nas redes</li>
+          </ul>
+        </section>
       </div>
 
       <section class="section section--related">
@@ -146,7 +249,7 @@
   <script src="assets/js/sheet-products.js?v=3"></script>
   <script src="assets/js/shop-store.js?v=23"></script>
   <script src="assets/js/account-ui.js?v=22"></script>
-  <script src="assets/js/public-api.js?v=21"></script>
-  <script type="module" src="assets/js/product-page.js?v=22"></script>
+  <script src="assets/js/public-api.js?v=22"></script>
+  <script type="module" src="assets/js/product-page.js?v=23"></script>
 </body>
 </html>
