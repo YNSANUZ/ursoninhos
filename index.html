@@ -891,13 +891,12 @@
             </div>
           </div>
           <form class="profile-inline-form" id="profileDetailsForm" hidden>
+            <p class="profile-inline-form__intro">Complete seus dados uma vez para não repetir essa etapa depois.</p>
             <label class="profile-inline-form__field">
-              <span>CPF</span>
-              <input type="text" name="cpf" id="profileInlineCpfInput" inputmode="numeric" maxlength="14" placeholder="000.000.000-00">
+              <input type="text" name="cpf" id="profileInlineCpfInput" inputmode="numeric" maxlength="14" placeholder="CPF — 000.000.000-00" aria-label="CPF">
             </label>
             <label class="profile-inline-form__field">
-              <span>Celular</span>
-              <input type="text" name="phone" id="profileInlinePhoneInput" inputmode="tel" maxlength="15" placeholder="(00) 00000-0000">
+              <input type="text" name="phone" id="profileInlinePhoneInput" inputmode="tel" maxlength="15" placeholder="Celular — (00) 00000-0000" aria-label="Celular">
             </label>
             <p class="cart-drawer__note" id="profileDetailsNote"></p>
             <div class="profile-inline-form__actions">
@@ -959,7 +958,7 @@
        e dados das frases: precisam vir ANTES do main.js. -->
   <script src="assets/js/text-print-engine.js?v=19"></script>
   <script src="assets/js/frases-data.js?v=19"></script>
-  <script src="assets/js/main.js?v=31"></script>
+  <script src="assets/js/main.js?v=32"></script>
   <script src="assets/js/public-catalog.js?v=21"></script>
   <script src="assets/js/header-search.js?v=1"></script>
   <!-- Manequim 3D ADIADO: three.js + modelo GLB somam ~3 MB e travavam

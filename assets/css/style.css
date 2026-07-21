@@ -3910,6 +3910,13 @@ ul {
   gap: 12px;
 }
 
+.profile-inline-form__intro {
+  margin: 0;
+  color: var(--text-dim);
+  font-size: 0.84rem;
+  line-height: 1.45;
+}
+
 .profile-inline-form__field {
   display: grid;
   gap: 6px;
@@ -3928,6 +3935,10 @@ ul {
   color: var(--text-main);
   padding: 11px 14px;
   min-height: 44px;
+}
+
+.profile-inline-form__field input::placeholder {
+  color: rgba(244, 232, 214, 0.62);
 }
 
 .profile-inline-form__field input:focus {

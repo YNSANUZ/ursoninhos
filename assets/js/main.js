@@ -1963,7 +1963,7 @@ function showProfileDetailsForm(user) {
   if (editProfileDetailsBtn) editProfileDetailsBtn.hidden = true;
   if (profileInlineCpfInput) profileInlineCpfInput.value = maskCpf(user?.cpf || '');
   if (profileInlinePhoneInput) profileInlinePhoneInput.value = maskPhone(user?.phone || '');
-  if (profileDetailsNote) profileDetailsNote.textContent = 'Preencha só se quiser completar ou atualizar agora.';
+  if (profileDetailsNote) profileDetailsNote.textContent = 'Salve aqui uma vez e o site reaproveita esses dados nas próximas etapas.';
 }
 
 function showProfileDetailsSummary() {
