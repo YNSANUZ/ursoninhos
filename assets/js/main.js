@@ -1891,6 +1891,8 @@ const profileInlineCpf = document.getElementById('profileInlineCpf');
 const profileInlinePhone = document.getElementById('profileInlinePhone');
 const editProfileDetailsBtn = document.getElementById('editProfileDetailsBtn');
 const profileDetailsForm = document.getElementById('profileDetailsForm');
+const profileInlineCpfField = document.getElementById('profileInlineCpfField');
+const profileInlinePhoneField = document.getElementById('profileInlinePhoneField');
 const profileInlineCpfInput = document.getElementById('profileInlineCpfInput');
 const profileInlinePhoneInput = document.getElementById('profileInlinePhoneInput');
 const profileDetailsNote = document.getElementById('profileDetailsNote');
@@ -1957,10 +1959,19 @@ function renderAddressSection(user) {
   }
 }
 
-function showProfileDetailsForm(user) {
+function syncProfileDetailsFieldVisibility(user, forceShowAll = false) {
+  const hasCpf = String(user?.cpf || '').replace(/\D/g, '').length === 11;
+  const hasPhone = String(user?.phone || '').replace(/\D/g, '').length >= 10;
+
+  if (profileInlineCpfField) profileInlineCpfField.hidden = !forceShowAll && hasCpf;
+  if (profileInlinePhoneField) profileInlinePhoneField.hidden = !forceShowAll && hasPhone;
+}
+
+function showProfileDetailsForm(user, forceShowAll = false) {
   if (profileDetailsSummary) profileDetailsSummary.hidden = true;
   if (profileDetailsForm) profileDetailsForm.hidden = false;
   if (editProfileDetailsBtn) editProfileDetailsBtn.hidden = true;
+  syncProfileDetailsFieldVisibility(user, forceShowAll);
   if (profileInlineCpfInput) profileInlineCpfInput.value = maskCpf(user?.cpf || '');
   if (profileInlinePhoneInput) profileInlinePhoneInput.value = maskPhone(user?.phone || '');
   if (profileDetailsNote) profileDetailsNote.textContent = 'Salve aqui uma vez e o site reaproveita esses dados nas próximas etapas.';
@@ -1969,6 +1980,8 @@ function showProfileDetailsForm(user) {
 function showProfileDetailsSummary() {
   if (profileDetailsSummary) profileDetailsSummary.hidden = false;
   if (profileDetailsForm) profileDetailsForm.hidden = true;
+  if (profileInlineCpfField) profileInlineCpfField.hidden = false;
+  if (profileInlinePhoneField) profileInlinePhoneField.hidden = false;
 }
 
 function renderProfileDetailsSection(user) {
@@ -2044,7 +2057,7 @@ cancelAddressBtn?.addEventListener('click', () => {
 });
 
 editProfileDetailsBtn?.addEventListener('click', () => {
-  showProfileDetailsForm(getCurrentUser());
+  showProfileDetailsForm(getCurrentUser(), true);
 });
 
 cancelProfileDetailsBtn?.addEventListener('click', () => {
