@@ -119,6 +119,9 @@ ul {
   border-bottom: 1px solid rgba(217, 167, 92, 0.12);
   font-size: 0.78rem;
   color: var(--text-dim);
+  position: sticky;
+  top: 0;
+  z-index: 51;
 }
 
 .topbar__inner {
@@ -126,6 +129,11 @@ ul {
   align-items: center;
   justify-content: space-between;
   height: 38px;
+}
+
+/* Faixa superior sem os "perks": só as ações ficam, alinhadas à direita. */
+.topbar__inner--compact {
+  justify-content: flex-end;
 }
 
 .topbar__perks {
@@ -449,7 +457,9 @@ ul {
   background: rgba(13, 9, 6, 0.95);
   border-bottom: 1px solid rgba(217, 167, 92, 0.1);
   position: sticky;
-  top: 0;
+  /* Fica logo abaixo da .topbar fixa (38px), empilhando as duas faixas
+     coladas no topo enquanto a página rola. */
+  top: 38px;
   z-index: 50;
   backdrop-filter: blur(6px);
 }
