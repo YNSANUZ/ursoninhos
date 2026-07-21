@@ -106,6 +106,38 @@ async function composeWithBackground(foregroundDataUrl) {
   return canvas.toDataURL('image/jpeg', 0.9);
 }
 
+// Remove o fundo preto chapado de uma arte, transformando-o em
+// transparência. O alpha de cada pixel acompanha o brilho (o maior entre
+// R, G e B): preto vira transparente, cores ficam opacas, com uma rampa
+// suave nas bordas. Assim a estampa entra no mockup sem o quadrado preto
+// do desenho normal e sem o aspecto "vazado" da mesclagem screen — o
+// traço preto interno da arte continua visível sobre a camisa preta.
+// Se a arte for de outro domínio sem CORS, o canvas fica "tainted" e o
+// getImageData falha: nesse caso devolvemos a imagem original (fallback).
+function keyOutBlackBackground(image) {
+  const width = image.naturalWidth || image.width;
+  const height = image.naturalHeight || image.height;
+  const off = document.createElement('canvas');
+  off.width = width;
+  off.height = height;
+  const octx = off.getContext('2d');
+  octx.drawImage(image, 0, 0, width, height);
+  try {
+    const imageData = octx.getImageData(0, 0, width, height);
+    const px = imageData.data;
+    for (let i = 0; i < px.length; i += 4) {
+      const max = Math.max(px[i], px[i + 1], px[i + 2]);
+      const alpha = Math.max(0, Math.min(1, (max - 10) / 60));
+      px[i + 3] = Math.round(px[i + 3] * alpha);
+    }
+    octx.putImageData(imageData, 0, 0);
+    return off;
+  } catch (error) {
+    console.warn('Nao foi possivel remover o fundo da arte (CORS?); usando imagem original.', error);
+    return image;
+  }
+}
+
 // Imagem do card do catálogo: estampa frontal aplicada no peito do mockup
 // da camisa no cabide (mesmo visual dos thumbs do carrinho).
 async function composeCardImage(printUrl) {
@@ -122,7 +154,10 @@ async function composeCardImage(printUrl) {
     const printSize = canvas.width * 0.3;
     const x = canvas.width * 0.478 - printSize / 2;
     const y = canvas.height * 0.32;
-    ctx.drawImage(printImage, x, y, printSize, printSize);
+    // Tira o fundo preto da arte antes de aplicar: estampa nítida e opaca,
+    // sem o quadrado preto sobre a camisa.
+    const keyedPrint = keyOutBlackBackground(printImage);
+    ctx.drawImage(keyedPrint, x, y, printSize, printSize);
   }
 
   return canvas.toDataURL('image/jpeg', 0.9);

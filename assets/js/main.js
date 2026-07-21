@@ -1704,14 +1704,19 @@ function renderAuthState() {
     }
     if (profileName) profileName.textContent = user.name;
     if (profileEmail) profileEmail.textContent = user.email;
-    if (authToggleBtn) authToggleBtn.textContent = `Olá, ${user.name.split(' ')[0]}`;
+    // Logado: some com o botão "Entrar" — o nome e a foto já aparecem no
+    // chip de conta ao lado, evitando duplicar "Olá, fulano".
+    if (authToggleBtn) authToggleBtn.hidden = true;
     renderAddressSection(user);
     renderProfileDetailsSection(user);
   } else {
     if (authGuestView) authGuestView.hidden = false;
     if (authProfileView) authProfileView.hidden = true;
     if (authDrawerTitle) authDrawerTitle.textContent = 'Entrar';
-    if (authToggleBtn) authToggleBtn.textContent = 'Entrar / Cadastrar';
+    if (authToggleBtn) {
+      authToggleBtn.hidden = false;
+      authToggleBtn.textContent = 'Entrar';
+    }
   }
 
   window.UrsoninhosAccountUI?.renderTopbarAccounts();
