@@ -3883,6 +3883,11 @@ ul {
   gap: 10px;
 }
 
+.profile-inline-summary[hidden],
+.profile-inline-form[hidden] {
+  display: none;
+}
+
 .profile-inline-row {
   display: flex;
   align-items: center;
