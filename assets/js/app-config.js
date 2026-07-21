@@ -5,9 +5,9 @@
   window.URSONINHOS_APP_CONFIG = {
     backendBaseUrl: `${backendOrigin}/_ursoninhos_backend/api`,
     paymentsBaseUrl: `${backendOrigin}/_ursoninhos_backend/api`,
-    // Chave PUBLICA de teste do Checkout Transparente / Payment Brick.
+    // Chave PUBLICA de PRODUCAO do Checkout Transparente / Payment Brick.
     // O Access Token privado nunca deve ser colocado neste arquivo.
-    mercadoPagoPublicKey: 'APP_USR-684d5e66-929b-41a4-b9a8-0c4eb60312d3',
+    mercadoPagoPublicKey: 'APP_USR-68053913-290d-4ec4-9333-62b33a49f099',
     defaultLogoUrl: 'https://i.ibb.co/6qrP8SY/ursoninhos-logo-fundo-transparente.png',
     // Login com Google de verdade: crie um "OAuth Client ID" (tipo Web)
     // em console.cloud.google.com > APIs e servicos > Credenciais, com
