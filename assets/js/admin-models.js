@@ -1,4 +1,4 @@
-import { createInteractiveViewer } from './interactive-viewer3d.js?v=5';
+import { createInteractiveViewer } from './interactive-viewer3d.js?v=6';
 
 const config = window.URSONINHOS_APP_CONFIG || {};
 const api = window.UrsoninhosApi;
@@ -178,12 +178,14 @@ async function composeCardImage(printUrl) {
   if (printUrl) {
     const printImage = await loadImage(printUrl);
     const printSize = canvas.width * 0.3;
+    const sourceAspect = (printImage.naturalHeight || printImage.height) / (printImage.naturalWidth || printImage.width) || 1;
+    const printHeight = printSize * sourceAspect;
     const x = canvas.width * 0.478 - printSize / 2;
-    const y = canvas.height * 0.32;
+    const y = canvas.height * (sourceAspect > 1.2 ? 0.25 : 0.32);
     // Tira o fundo preto da arte antes de aplicar: estampa nítida e opaca,
     // sem o quadrado preto sobre a camisa.
     const keyedPrint = keyOutBlackBackground(printImage);
-    ctx.drawImage(keyedPrint, x, y, printSize, printSize);
+    ctx.drawImage(keyedPrint, x, y, printSize, printHeight);
   }
 
   return canvas.toDataURL('image/jpeg', 0.9);
@@ -435,7 +437,7 @@ async function previewEditingProduct() {
       viewer.clearPrint?.(side);
       continue;
     }
-    const composite = await layerEngine.composeLayers(layers);
+    const composite = await layerEngine.composeLayers(layers, { side });
     await viewer.setPrint(side, composite, 'normal');
     viewer.setTransform(side, { scale: 1, offsetX: 0, offsetY: 0 });
   }
@@ -515,7 +517,7 @@ async function saveEditingProduct() {
     setLayerEditorNote('Salvando produto e camadas...');
     const model = await prepareEditingModel();
     const frontLayers = layerEngine.normalizeSide(model.front);
-    const frontComposite = frontLayers.length ? await layerEngine.composeLayers(frontLayers) : '';
+    const frontComposite = frontLayers.length ? await layerEngine.composeLayers(frontLayers, { side: 'front' }) : '';
     const catalogImage = frontComposite ? await composeCardImage(frontComposite) : editingProduct.catalogImage;
     const payload = {
       title: adminEditTitle.value.trim(),

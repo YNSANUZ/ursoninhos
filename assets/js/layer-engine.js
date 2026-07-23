@@ -154,11 +154,19 @@
     if (!normalized.length) return '';
 
     const size = Math.max(256, Number(options.size || 1024));
+    const isBodySide = options.side === 'front' || options.side === 'back';
+    // Frente e costas usam a área real aproximada da prensa: um campo
+    // vertical que vai de perto da gola até a região acima da barra.
+    // Mangas continuam quadradas.
+    const width = Math.max(256, Number(options.width || size));
+    const height = Math.max(256, Number(options.height || (isBodySide ? Math.round(width * 1.45) : size)));
     const canvas = document.createElement('canvas');
-    canvas.width = size;
-    canvas.height = size;
+    canvas.width = width;
+    canvas.height = height;
     const ctx = canvas.getContext('2d');
-    const baseRatio = Number(options.baseRatio || 1);
+    const baseRatio = Number(options.baseRatio ?? (isBodySide ? 0.68 : 1));
+    const offsetXReach = isBodySide ? 1.55 : 1;
+    const offsetYReach = isBodySide ? 1.45 : 1;
 
     for (const layer of normalized) {
       const image = await loadImage(layer.url);
@@ -166,25 +174,25 @@
         ? keyOutBlackBackground(image, layer.url)
         : image;
       const transform = layer.transform;
-      const box = size * baseRatio * transform.scale;
+      const box = width * baseRatio * transform.scale;
       const ratio = (drawable.naturalWidth || drawable.width) / (drawable.naturalHeight || drawable.height) || 1;
-      let width = box;
-      let height = box;
-      if (ratio > 1) height = box / ratio;
-      else width = box * ratio;
+      let drawWidth = box;
+      let drawHeight = box;
+      if (ratio > 1) drawHeight = box / ratio;
+      else drawWidth = box * ratio;
 
-      const centerX = size * (0.5 + transform.offsetX / 100);
-      const centerY = size * (0.5 + transform.offsetY / 100);
+      const centerX = width * (0.5 + (transform.offsetX / 100) * offsetXReach);
+      const centerY = height * (0.5 + (transform.offsetY / 100) * offsetYReach);
       ctx.globalCompositeOperation = 'source-over';
       if (transform.rotation) {
         // Gira em torno do CENTRO da estampa, sem mover a posição.
         ctx.save();
         ctx.translate(centerX, centerY);
         ctx.rotate((transform.rotation * Math.PI) / 180);
-        ctx.drawImage(drawable, -width / 2, -height / 2, width, height);
+        ctx.drawImage(drawable, -drawWidth / 2, -drawHeight / 2, drawWidth, drawHeight);
         ctx.restore();
       } else {
-        ctx.drawImage(drawable, centerX - width / 2, centerY - height / 2, width, height);
+        ctx.drawImage(drawable, centerX - drawWidth / 2, centerY - drawHeight / 2, drawWidth, drawHeight);
       }
     }
 

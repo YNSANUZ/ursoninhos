@@ -217,7 +217,7 @@ async function syncSideCompositeToViewer(side, options = {}) {
 
   try {
     const composite = layerEngine
-      ? await layerEngine.composeLayers(layers)
+      ? await layerEngine.composeLayers(layers, { side })
       : layers[0].url;
     if (token !== sideCompositeTokens[side]) return '';
 
@@ -1937,13 +1937,14 @@ async function generateFrontPreview() {
 
     if (frontLayers.length) {
       const compositeUrl = layerEngine
-        ? await layerEngine.composeLayers(frontLayers)
+        ? await layerEngine.composeLayers(frontLayers, { side: 'front' })
         : frontLayers[0].url;
       const printImage = await loadImage(compositeUrl);
       const printWidth = canvas.width * PRINT_SIZE;
-      const printHeight = canvas.height * PRINT_SIZE;
+      const sourceAspect = (printImage.naturalHeight || printImage.height) / (printImage.naturalWidth || printImage.width) || 1;
+      const printHeight = printWidth * sourceAspect;
       const x = canvas.width * PRINT_CENTER_X - printWidth / 2;
-      const y = canvas.height * PRINT_TOP_Y;
+      const y = canvas.height * (sourceAspect > 1.2 ? 0.24 : PRINT_TOP_Y);
       ctx.globalCompositeOperation = 'source-over';
       ctx.drawImage(printImage, x, y, printWidth, printHeight);
       ctx.globalCompositeOperation = 'source-over';

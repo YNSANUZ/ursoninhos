@@ -42,7 +42,9 @@ const SHIRT_COLORS = { black: 0x181818, white: 0xf2f2f2 };
 // INTERNA da nuca (como numa camisa de verdade). É um decal projetado
 // na superfície de dentro das costas, logo abaixo da gola.
 const NECK_LABEL_URL = 'assets/3d/rotulo-gola.png';
-const NECK_LABEL_HEIGHT_FRACTION = 0.86; // centro do rótulo (nuca)
+// O centro precisa ficar dentro da abertura da gola. Em 0,86 o rótulo
+// era projetado abaixo da borda frontal e ficava escondido pelo tecido.
+const NECK_LABEL_HEIGHT_FRACTION = 0.935;
 const NECK_LABEL_WIDTH = 0.085;          // ~8,5 cm de largura no tecido
 // A arte do rótulo é clara (feita para tecido escuro); na camisa
 // branca ela é escurecida para continuar legível.
@@ -66,8 +68,8 @@ const EDITOR_CAMERA_MAX_DISTANCE = 4.2;
    - offsetXDir: para onde a seta -> move a arte NO MUNDO, de modo que na
      tela (com a câmera virada para esse lado) ela ande para a direita. */
 const SIDE_CONFIG = {
-  front: { rotY: 0, baseWidth: 0.3, depth: 0.16, offsetXDir: [1, 0, 0] },
-  back: { rotY: Math.PI, baseWidth: 0.3, depth: 0.16, offsetXDir: [-1, 0, 0] },
+  front: { rotY: 0, baseWidth: 0.3, portraitHeight: 0.58, depth: 0.16, offsetXDir: [1, 0, 0] },
+  back: { rotY: Math.PI, baseWidth: 0.3, portraitHeight: 0.58, depth: 0.16, offsetXDir: [-1, 0, 0] },
   sleeveLeft: { rotY: Math.PI / 2, baseWidth: 0.16, depth: 0.1, offsetXDir: [0, 0, -1] },
   sleeveRight: { rotY: -Math.PI / 2, baseWidth: 0.16, depth: 0.1, offsetXDir: [0, 0, 1] },
 };
@@ -313,7 +315,13 @@ function rebuildDecals(sides = Object.keys(SIDE_CONFIG)) {
     // Caixa "contain": a imagem cabe num quadrado do tamanho escolhido
     // mantendo a proporção original — imagem alta fica estreita, imagem
     // larga fica baixa; nunca amassa nem estica.
-    const boxSide = config.baseWidth * sideState.scale;
+    // As composições novas de frente/costas são verticais, seguindo a
+    // área útil da prensa. Imagens quadradas antigas mantêm a escala
+    // anterior para preservar produtos já publicados.
+    const baseBox = config.portraitHeight && sideState.aspect > 1.2
+      ? config.portraitHeight
+      : config.baseWidth;
+    const boxSide = baseBox * sideState.scale;
     let width = boxSide;
     let height = boxSide * sideState.aspect;
     if (sideState.aspect > 1) {

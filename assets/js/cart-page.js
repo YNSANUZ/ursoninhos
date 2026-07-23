@@ -253,7 +253,7 @@
   async function buildLayeredShirtMockup(item, side) {
     const layers = getItemSideLayers(item, side);
     if (!layers.length) return '';
-    const composite = await layerEngine.composeLayers(layers);
+    const composite = await layerEngine.composeLayers(layers, { side });
     const baseUrl = side === 'back' ? CARD_MOCKUP_BACK_URL : CARD_MOCKUP_URL;
     return buildShirtMockup(composite, {}, 'normal', baseUrl);
   }
@@ -287,9 +287,10 @@
         const offsetX = Number(transform.offsetX || 0);
         const offsetY = Number(transform.offsetY || 0);
         const printWidth = canvas.width * PRINT_SIZE * scale;
-        const printHeight = canvas.height * PRINT_SIZE * scale;
+        const sourceAspect = (printImage.naturalHeight || printImage.height) / (printImage.naturalWidth || printImage.width) || 1;
+        const printHeight = printWidth * sourceAspect;
         const x = canvas.width * PRINT_CENTER_X - printWidth / 2 + offsetX * 10;
-        const y = canvas.height * PRINT_TOP_Y + offsetY * 10;
+        const y = canvas.height * (sourceAspect > 1.2 ? 0.24 : PRINT_TOP_Y) + offsetY * 10;
         ctx.globalCompositeOperation = blend === 'screen' ? 'screen' : 'source-over';
         ctx.drawImage(printImage, x, y, printWidth, printHeight);
         ctx.globalCompositeOperation = 'source-over';

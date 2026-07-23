@@ -16,7 +16,7 @@ const SHIRT_COLORS = { black: 0x181818, white: 0xf2f2f2 };
 // Etiqueta da marca estampada por padrão na parte interna da nuca
 // (mesma lógica do viewer3d.js da home).
 const NECK_LABEL_URL = 'assets/3d/rotulo-gola.png';
-const NECK_LABEL_HEIGHT_FRACTION = 0.86;
+const NECK_LABEL_HEIGHT_FRACTION = 0.935;
 const NECK_LABEL_WIDTH = 0.085;
 const NECK_LABEL_TINT = { black: 0xffffff, white: 0x555555 };
 const OFFSET_X_M_PER_PCT = 0.006;
@@ -27,8 +27,8 @@ const EDITOR_CAMERA_DISTANCE = 2.9;
 const EDITOR_CAMERA_MAX_DISTANCE = 4.2;
 
 const SIDE_CONFIG = {
-  front: { rotY: 0, baseWidth: 0.26, depth: 0.15, offsetXDir: [1, 0, 0] },
-  back: { rotY: Math.PI, baseWidth: 0.26, depth: 0.15, offsetXDir: [-1, 0, 0] },
+  front: { rotY: 0, baseWidth: 0.26, portraitHeight: 0.58, depth: 0.15, offsetXDir: [1, 0, 0] },
+  back: { rotY: Math.PI, baseWidth: 0.26, portraitHeight: 0.58, depth: 0.15, offsetXDir: [-1, 0, 0] },
   sleeveLeft: { rotY: Math.PI / 2, baseWidth: 0.11, depth: 0.08, offsetXDir: [0, 0, -1] },
   sleeveRight: { rotY: -Math.PI / 2, baseWidth: 0.11, depth: 0.08, offsetXDir: [0, 0, 1] },
 };
@@ -184,7 +184,10 @@ export async function createInteractiveViewer({ container, cameraDistance = EDIT
       const point = anchors[sideKey];
       if (!sideState.texture || !point) return;
 
-      const boxSide = config.baseWidth * sideState.scale;
+      const baseBox = config.portraitHeight && sideState.aspect > 1.2
+        ? config.portraitHeight
+        : config.baseWidth;
+      const boxSide = baseBox * sideState.scale;
       let width = boxSide;
       let height = boxSide * sideState.aspect;
       if (sideState.aspect > 1) {

@@ -1,4 +1,4 @@
-import { createInteractiveViewer } from './interactive-viewer3d.js?v=5';
+import { createInteractiveViewer } from './interactive-viewer3d.js?v=6';
 
 const api = window.UrsoninhosApi;
 const store = window.UrsoninhosStore;
@@ -195,9 +195,10 @@ async function buildFlatMockup(printUrl, transform = {}, blend = 'screen') {
     const offsetX = Number(transform.offsetX || 0);
     const offsetY = Number(transform.offsetY || 0);
     const printWidth = canvas.width * PREVIEW_PRINT_SIZE * scale;
-    const printHeight = canvas.height * PREVIEW_PRINT_SIZE * scale;
+    const sourceAspect = (printImage.naturalHeight || printImage.height) / (printImage.naturalWidth || printImage.width) || 1;
+    const printHeight = printWidth * sourceAspect;
     const x = canvas.width * PREVIEW_PRINT_CENTER_X - printWidth / 2 + offsetX * 10;
-    const y = canvas.height * PREVIEW_PRINT_TOP_Y + offsetY * 10;
+    const y = canvas.height * (sourceAspect > 1.2 ? 0.24 : PREVIEW_PRINT_TOP_Y) + offsetY * 10;
 
     ctx.globalCompositeOperation = blend === 'screen' ? 'screen' : 'source-over';
     ctx.drawImage(printImage, x, y, printWidth, printHeight);
@@ -214,7 +215,7 @@ async function resolvePrimaryPhoto(product) {
   const frontModel = product?.model?.front;
   const frontLayers = layerEngine?.normalizeSide(frontModel) || [];
   if (frontLayers.length) {
-    const composite = await layerEngine.composeLayers(frontLayers);
+    const composite = await layerEngine.composeLayers(frontLayers, { side: 'front' });
     const mockup = await buildFlatMockup(composite, {}, 'normal');
     if (mockup) return mockup;
   }
@@ -245,7 +246,7 @@ async function ensureViewer(product) {
   for (const [sideKey, sideState] of sides) {
     const layers = layerEngine?.normalizeSide(sideState) || [];
     if (layers.length) {
-      const composite = await layerEngine.composeLayers(layers);
+      const composite = await layerEngine.composeLayers(layers, { side: sideKey });
       await viewer.setPrint(sideKey, composite, 'normal');
       viewer.setTransform(sideKey, { scale: 1, offsetX: 0, offsetY: 0 });
       continue;
