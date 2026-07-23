@@ -289,7 +289,6 @@
 
   async function resolveDetailViewPreview(item, view) {
     if (view === 'back') {
-      if (item.previewViews?.back) return item.previewViews.back;
       if (isCustomShirt(item)) {
         const backPrintUrl = item.metadata?.printsBySide?.back?.file || '';
         const backTransform = item.metadata?.transforms?.back || {};
@@ -301,7 +300,12 @@
       }
     }
 
-    return item.previewViews?.front || item.previewImage || 'assets/img/banner-estatico.jpg';
+    if (isCustomShirt(item) && item.metadata?.frontPrintUrl) {
+      const frontTransform = item.metadata?.transforms?.front || item.metadata?.frontTransform || {};
+      const frontBlend = item.metadata?.frontPrintBlend || 'screen';
+      return buildShirtMockup(item.metadata.frontPrintUrl, frontTransform, frontBlend);
+    }
+    return item.previewImage || item.previewViews?.front || 'assets/img/banner-estatico.jpg';
   }
 
   function syncDetailViewButtons(item) {
@@ -322,8 +326,7 @@
       item.previewImage ||
       'assets/img/banner-estatico.jpg';
     if (!isCustomShirt(item)) return preferredPreview;
-    if (item.previewViews?.[preferredSide]) return item.previewViews[preferredSide];
-    if (!item.metadata?.frontPrintUrl) return preferredPreview;
+    if (!item.metadata?.frontPrintUrl) return item.previewImage || preferredPreview;
 
     const printUrl = item.metadata.frontPrintUrl;
     const transform = item.metadata?.transforms?.front || item.metadata?.frontTransform || {};
@@ -476,7 +479,7 @@
       <article class="checkout-item" data-line-id="${item.lineId}">
         <button type="button" class="checkout-item__preview" data-action="detail">
           <img
-            src="${item.previewViews?.[getPreferredPreviewSide(item)] || item.previewViews?.front || item.previewImage || 'assets/img/banner-estatico.jpg'}"
+            src="${item.previewImage || item.previewViews?.front || 'assets/img/banner-estatico.jpg'}"
             alt="${escapeHtml(item.title)}"
             data-preview-line-id="${escapeHtml(item.lineId)}"
           >

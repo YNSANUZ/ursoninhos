@@ -632,6 +632,63 @@ function detectDarkBackground(file) {
   });
 }
 
+/* Cria uma cópia PNG da arte com fundo preto suavemente transparente.
+   O arquivo escolhido pelo cliente nunca é alterado: somente a cópia
+   processada é enviada. A opacidade acompanha o canal mais claro, como
+   numa separação de tinta para tecido preto: preto puro desaparece,
+   meios-tons ganham uma borda suave e cores/luzes permanecem nítidas. */
+function removeBlackBackground(file) {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    const objectUrl = URL.createObjectURL(file);
+
+    img.onload = () => {
+      URL.revokeObjectURL(objectUrl);
+      try {
+        const MAX_SIDE = 2400;
+        const reduction = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.naturalWidth * reduction));
+        canvas.height = Math.max(1, Math.round(img.naturalHeight * reduction));
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        const pixels = imageData.data;
+        const TRANSPARENT_AT = 10;
+        const OPAQUE_AT = 72;
+
+        for (let i = 0; i < pixels.length; i += 4) {
+          const brightness = Math.max(pixels[i], pixels[i + 1], pixels[i + 2]);
+          const matte = Math.max(
+            0,
+            Math.min(1, (brightness - TRANSPARENT_AT) / (OPAQUE_AT - TRANSPARENT_AT))
+          );
+          pixels[i + 3] = Math.round(pixels[i + 3] * matte);
+        }
+
+        ctx.putImageData(imageData, 0, 0);
+        canvas.toBlob((blob) => {
+          if (!blob) {
+            reject(new Error('Não foi possível preparar a transparência da imagem.'));
+            return;
+          }
+          resolve(blob);
+        }, 'image/png');
+      } catch (error) {
+        reject(error);
+      }
+    };
+
+    img.onerror = () => {
+      URL.revokeObjectURL(objectUrl);
+      reject(new Error('Não foi possível ler a imagem selecionada.'));
+    };
+
+    img.src = objectUrl;
+  });
+}
+
 async function uploadCustomPrint(file, printName = 'Minha Arte', forcedBlend = null) {
   if (!file.type.startsWith('image/')) {
     showUploadFeedback('Escolha um arquivo de imagem (JPG, PNG, etc).', true);
@@ -651,13 +708,19 @@ async function uploadCustomPrint(file, printName = 'Minha Arte', forcedBlend = n
   }
 
   try {
-    // Decide a mesclagem antes do upload: fundo preto chapado -> screen
-    // (some na camisa); foto/transparência -> normal. A estampa de texto
-    // força "normal" para os balões escuros não desaparecerem.
-    const blend = forcedBlend || ((await detectDarkBackground(file)) ? 'screen' : 'normal');
+    // Fundo preto é convertido numa cópia PNG transparente antes do envio.
+    // Assim 2D, 3D, cabide e carrinho recebem exatamente a mesma arte, sem
+    // depender de modos de mesclagem diferentes em cada navegador.
+    const hasDarkBackground = !forcedBlend && await detectDarkBackground(file);
+    const uploadFile = hasDarkBackground ? await removeBlackBackground(file) : file;
+    const blend = forcedBlend || 'normal';
 
     const formData = new FormData();
-    formData.append('image', file);
+    formData.append(
+      'image',
+      uploadFile,
+      hasDarkBackground ? `${file.name.replace(/\.[^.]+$/, '') || 'arte'}-sem-fundo.png` : file.name
+    );
 
     const response = await fetch(
       `https://api.imgbb.com/1/upload?key=${encodeURIComponent(IMGBB_API_KEY)}`,
@@ -673,7 +736,13 @@ async function uploadCustomPrint(file, printName = 'Minha Arte', forcedBlend = n
     // Reaproveita o mesmo slot "Minha Arte" em envios seguintes, em vez
     // de acumular um card novo para cada foto enviada.
     const existingCustomIndex = shirtPrints.findIndex((print) => print.isCustom);
-    const customPrint = { name: printName, file: url, isCustom: true, blend };
+    const customPrint = {
+      name: printName,
+      file: url,
+      isCustom: true,
+      blend,
+      blackBackgroundRemoved: hasDarkBackground,
+    };
 
     // A arte enviada entra em destaque na lateral e já veste a camisa
     // na hora (lateral e mockup sempre mostram a mesma estampa).
@@ -1132,15 +1201,6 @@ async function generateHeroPreviewViews() {
   return previewViews;
 }
 
-function pickPrimaryPreviewFromViews(previewViews = {}, preferredSide = getPrimaryEditedSide()) {
-  return previewViews[preferredSide] ||
-    previewViews.front ||
-    previewViews.back ||
-    previewViews.right ||
-    previewViews.left ||
-    'assets/img/banner-estatico.jpg';
-}
-
 async function generateFrontPreview() {
   const frontPrint = shirtPrints[sidePrintSelections.front ?? shirtPrintIndex];
   const canvas = document.createElement('canvas');
@@ -1386,9 +1446,9 @@ addToCartBtn?.addEventListener('click', async () => {
   const qty = normalizeHeroQty();
   const size = heroSizeSelect?.value || 'M';
   const coverage = getSelectedCoverage();
+  const previewImage = await generateFrontPreview();
   const previewViews = await generateHeroPreviewViews();
   const preferredPreviewSide = getPreferredPreviewSideForCart();
-  const previewImage = pickPrimaryPreviewFromViews(previewViews, preferredPreviewSide);
   const editorState = buildEditorState(size);
 
   addToCart({
