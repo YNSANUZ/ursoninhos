@@ -1,4 +1,4 @@
-import { createInteractiveViewer } from './interactive-viewer3d.js';
+import { createInteractiveViewer } from './interactive-viewer3d.js?v=2';
 
 const config = window.URSONINHOS_APP_CONFIG || {};
 const api = window.UrsoninhosApi;

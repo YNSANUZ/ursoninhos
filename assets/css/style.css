@@ -3,7 +3,22 @@
    Paleta: marrom escuro, preto, caramelo, dourado discreto
    ========================================================= */
 
-:root {
+:root,
+html[data-theme="dark"] {
+  color-scheme: dark;
+  --bg-page: #0d0906;
+  --bg-header: #161009;
+  --bg-card: #1e150d;
+  --bg-elevated: #241a10;
+  --text-primary: #f3e6d3;
+  --text-secondary: #b9a893;
+  --border-color: rgba(217, 167, 92, 0.35);
+  --accent: #d9a75c;
+  --button-primary-bg: #c98f4d;
+  --button-primary-text: #1a1108;
+  --input-bg: #1e150d;
+  --shadow-color: rgba(0, 0, 0, 0.45);
+
   --bg-black: #0d0906;
   --bg-dark: #161009;
   --bg-panel: #1e150d;
@@ -23,6 +38,35 @@
   --container: 1500px;
 
   --font-base: "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  --bg-page: #f5efe7;
+  --bg-header: #fffaf3;
+  --bg-card: #fffdf9;
+  --bg-elevated: #eee3d6;
+  --text-primary: #21170f;
+  --text-secondary: #625244;
+  --border-color: rgba(112, 74, 39, 0.24);
+  --accent: #91581f;
+  --button-primary-bg: #2b1c12;
+  --button-primary-text: #fffaf3;
+  --input-bg: #fffdf9;
+  --shadow-color: rgba(67, 43, 24, 0.16);
+
+  --bg-black: var(--bg-page);
+  --bg-dark: var(--bg-header);
+  --bg-panel: var(--bg-card);
+  --bg-panel-2: var(--bg-elevated);
+  --brown-dark: #e4d6c7;
+  --brown-mid: #c8ad91;
+  --caramel: #91581f;
+  --gold: var(--accent);
+  --gold-soft: var(--border-color);
+  --text-main: var(--text-primary);
+  --text-muted: var(--text-secondary);
+  --text-dim: #7b6959;
 }
 
 * {
@@ -679,6 +723,17 @@ ul {
   height: 2px;
   background: var(--text-main);
   border-radius: 2px;
+}
+
+/* Ícones, cabeçalho, X e divisor da gaveta só existem no modo celular
+   (≤860px). No desktop a barra é horizontal e nada disso aparece. */
+.nav__icon,
+.nav__drawer-head,
+.nav__close,
+.nav__sep,
+.nav__backdrop,
+.nav__item--drawer {
+  display: none;
 }
 
 /* ===== Hero =====
@@ -4345,27 +4400,33 @@ ul {
     width: 100%;
   }
 
+  /* "Editar estampa" fica no RODAPÉ do palco (a trilha de lados ocupa o
+     topo-esquerdo, como na referência). */
   .stage-mobile-actions {
     position: absolute;
-    top: 12px;
-    left: 12px;
-    right: 88px;
+    bottom: 12px;
+    left: 50%;
+    transform: translateX(-50%);
     z-index: 4;
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    display: flex;
     gap: 8px;
   }
 
-  .hero__picker > #addToCartBtn,
+  /* "Adicionar ao carrinho" agora é o botão principal DENTRO do cartão
+     (como na referência), então o botão "Carrinho" da barra do palco
+     fica redundante — some, deixando só "Editar estampa". */
+  #mobileAddToCartBtn {
+    display: none;
+  }
+
   .hero__picker > .stage-action-buttons {
     display: none;
   }
 
   .stage-mobile-action-btn {
     min-width: 0;
-    width: 100%;
-    padding: 8px 6px;
-    font-size: 0.62rem;
+    padding: 9px 18px;
+    font-size: 0.68rem;
     text-align: center;
     white-space: nowrap;
   }
@@ -4433,36 +4494,121 @@ ul {
 }
 
 @media (max-width: 860px) {
+  /* O header tem backdrop-filter (blur), o que criaria um "containing
+     block" e prenderia a gaveta fixed dentro do header (altura ~68px).
+     O fundo do header já é 95% opaco, então remover o blur no celular
+     não muda nada visualmente e devolve a gaveta à viewport inteira. */
+  .header {
+    backdrop-filter: none;
+  }
+
+  /* Gaveta lateral: desliza da esquerda, cobre ~82% da tela, com
+     cabeçalho (logo + X) e itens com ícone. Fora dela, um backdrop
+     escurece o resto e fecha ao toque. */
   .nav {
-    position: absolute;
-    top: 100%;
+    position: fixed;
+    top: 0;
     left: 0;
-    right: 0;
+    bottom: 0;
+    width: min(82vw, 340px);
     background: var(--bg-dark);
-    border-bottom: 1px solid rgba(217, 167, 92, 0.12);
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease;
+    border-right: 1px solid rgba(217, 167, 92, 0.14);
+    z-index: 70;
+    transform: translateX(-100%);
+    transition: transform 0.28s ease;
+    overflow-y: auto;
+    flex-direction: column;
+    justify-content: flex-start;
   }
 
   .nav.is-open {
-    max-height: 400px;
+    transform: translateX(0);
+  }
+
+  .nav__drawer-head {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 20px 22px 14px;
+    border-bottom: 1px solid rgba(217, 167, 92, 0.12);
+  }
+
+  .nav__drawer-head .brand__name {
+    font-size: 1.2rem;
+    color: var(--gold);
+  }
+
+  .nav__close {
+    display: block;
+    background: none;
+    border: none;
+    color: var(--text-main);
+    font-size: 1.8rem;
+    line-height: 1;
+    cursor: pointer;
+    padding: 0 6px;
   }
 
   .nav__list {
     flex-direction: column;
     gap: 0;
-    padding: 12px 24px 20px;
+    padding: 10px 0 24px;
+    width: 100%;
   }
 
   .nav__list a {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    padding: 14px 24px;
+    border-bottom: none;
+    border-left: 3px solid transparent;
+  }
+
+  .nav__list a.is-active {
+    border-bottom: none;
+    border-left-color: var(--gold);
+    background: rgba(217, 167, 92, 0.08);
+  }
+
+  .nav__icon {
+    display: inline-flex;
+    align-items: center;
+    color: var(--gold);
+    flex-shrink: 0;
+  }
+
+  .nav__sep {
     display: block;
-    padding: 12px 0;
-    border-bottom: 1px solid rgba(217, 167, 92, 0.08);
+    height: 1px;
+    margin: 8px 24px;
+    background: rgba(217, 167, 92, 0.14);
+  }
+
+  .nav__item--drawer {
+    display: block;
   }
 
   .nav__toggle {
     display: flex;
+  }
+
+  /* Backdrop: escurece o resto da tela quando a gaveta abre. */
+  .nav__backdrop {
+    display: block;
+    position: fixed;
+    inset: 0;
+    z-index: 69;
+    background: rgba(0, 0, 0, 0.55);
+    border: none;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.28s ease;
+  }
+
+  .nav__backdrop.is-open {
+    opacity: 1;
+    pointer-events: auto;
   }
 
   .btn--whatsapp span {
@@ -4786,4 +4932,963 @@ ul {
 
 .product-credits strong {
   color: var(--gold);
+}
+
+
+/* --- Cor da camisa (preta/branca) ---
+   Dois círculos de tecido no canto do palco; trocam a cor do modelo
+   3D num clique. Só aparecem quando o 3D assume (is-3d): a foto 2D
+   do fallback não tem como ser recolorida. */
+.shirt-color-toggle {
+  position: absolute;
+  top: 16%;
+  right: 5%;
+  z-index: 3;
+  display: none;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.hero__stage.is-3d .shirt-color-toggle {
+  display: flex;
+}
+
+.shirt-color-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  padding: 0;
+  cursor: pointer;
+  border: 1px solid rgba(217, 167, 92, 0.45);
+  transition: transform 0.2s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.shirt-color-btn--black {
+  background: #181818;
+}
+
+.shirt-color-btn--white {
+  background: #f2f2f2;
+}
+
+.shirt-color-btn:hover {
+  transform: scale(1.12);
+}
+
+.shirt-color-btn.is-active {
+  border-color: var(--gold);
+  box-shadow: 0 0 0 2px rgba(217, 167, 92, 0.55), 0 0 14px rgba(217, 167, 92, 0.45);
+}
+
+/* --- Bolinhas de cor do estilo de texto ---
+   Uma bolinha por cor do modelo ativo; o <input type="color"> fica
+   invisível dentro do label — clicar na bolinha abre o seletor nativo
+   do navegador (paleta colorida + código hex). */
+.text-color-dots {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.text-color-dot {
+  position: relative;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 2px solid rgba(217, 167, 92, 0.5);
+  cursor: pointer;
+  box-shadow: inset 0 0 0 2px rgba(0, 0, 0, 0.35);
+  transition: transform 0.15s ease, border-color 0.15s ease;
+}
+
+.text-color-dot:hover {
+  transform: scale(1.15);
+  border-color: var(--gold);
+}
+
+.text-color-dot input[type='color'] {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  border: none;
+  padding: 0;
+}
+
+.text-color-reset {
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(217, 167, 92, 0.35);
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.72rem;
+  cursor: pointer;
+}
+
+.text-color-reset:hover {
+  color: var(--gold);
+  border-color: var(--gold);
+}
+
+
+/* ============================================================
+   Painel unificado "Editar estampa"
+   Agrupa em abas (Ajustar / Imagem / Texto / Camadas) todos os
+   controles de criação que antes ficavam espalhados pelo palco.
+   PC: cartão fixo na coluna direita. Celular (<=900px): folha
+   deslizante aberta pelo botão "Editar estampa" do palco.
+   ============================================================ */
+.edit-panel {
+  border: 1px solid rgba(217, 167, 92, 0.28);
+  background: rgba(20, 14, 9, 0.82);
+  border-radius: 16px;
+  padding: 14px;
+  margin-bottom: 14px;
+}
+
+.edit-panel__head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+  color: var(--gold);
+  font-size: 0.9rem;
+  letter-spacing: 0.3px;
+}
+
+.edit-panel__close {
+  display: none; /* só existe na folha do celular */
+  background: none;
+  border: none;
+  color: var(--text-muted);
+  font-size: 1.4rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 8px;
+}
+
+.edit-panel__tabs {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.edit-panel__tab {
+  flex: 1;
+  padding: 7px 4px;
+  border-radius: 999px;
+  border: 1px solid rgba(217, 167, 92, 0.25);
+  background: none;
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+}
+
+.edit-panel__tab:hover {
+  color: var(--gold);
+  border-color: rgba(217, 167, 92, 0.5);
+}
+
+.edit-panel__tab.is-active {
+  background: linear-gradient(180deg, #e8b878, var(--caramel));
+  border-color: transparent;
+  color: #2a1c11;
+}
+
+.edit-panel__section {
+  display: none;
+}
+
+.edit-panel__section.is-active {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+/* Os controles que vieram do palco perdem o posicionamento absoluto
+   e viram uma linha normal dentro do painel. */
+.edit-panel .stage-controls {
+  position: static;
+  left: auto;
+  bottom: auto;
+  transform: none;
+  justify-content: center;
+  gap: 12px;
+}
+
+.edit-panel .stage-side-toggle {
+  justify-content: center;
+}
+
+.edit-panel__color-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+/* Dentro do painel a cor da camisa é uma linha (não flutua no palco)
+   e fica sempre visível — sem 3D o clique simplesmente não faz nada. */
+.edit-panel .shirt-color-toggle {
+  position: static;
+  display: flex;
+  flex-direction: row;
+  gap: 10px;
+}
+
+.edit-panel .stage-action-btn {
+  align-self: center;
+  min-width: 60%;
+}
+
+.edit-panel .print-picker__active-name,
+.edit-panel .print-picker__hint {
+  text-align: center;
+}
+
+/* --- Celular: o painel vira folha deslizante --- */
+@media (max-width: 900px) {
+  .edit-panel {
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 60;
+    margin: 0;
+    border-radius: 18px 18px 0 0;
+    border-bottom: none;
+    background: rgba(16, 11, 7, 0.97);
+    max-height: 72vh;
+    overflow-y: auto;
+    transform: translateY(110%);
+    transition: transform 0.28s ease;
+    box-shadow: 0 -12px 34px rgba(0, 0, 0, 0.55);
+  }
+
+  .edit-panel.is-open {
+    transform: translateY(0);
+  }
+
+  .edit-panel__close {
+    display: block;
+  }
+}
+
+
+/* ============================================================
+   Cartão de produto (referência mobile)
+   Botões de tamanho, cabeçalho (título/preço/meta) e selos de
+   confiança. O cabeçalho e os selos são mobile-only; no PC a
+   coluna direita segue enxuta (Fase 1).
+   ============================================================ */
+.product-config__field--sizes {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.product-config__field--sizes > span {
+  font-size: 0.8rem;
+  color: var(--text-muted);
+}
+
+.size-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.size-buttons button {
+  min-width: 46px;
+  padding: 9px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(217, 167, 92, 0.3);
+  background: rgba(20, 14, 9, 0.6);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, background 0.15s ease, color 0.15s ease;
+}
+
+.size-buttons button:hover {
+  border-color: var(--gold);
+}
+
+.size-buttons button.is-active {
+  background: linear-gradient(180deg, #e8b878, var(--caramel));
+  border-color: transparent;
+  color: #2a1c11;
+}
+
+/* Cabeçalho e selos: escondidos no PC, aparecem só no celular. */
+.hero-card-head,
+.hero-card-perks,
+.hero-card-secure {
+  display: none;
+}
+
+@media (max-width: 900px) {
+  .hero-card-head {
+    display: block;
+    margin-bottom: 4px;
+  }
+
+  .hero-card-head__top {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 12px;
+  }
+
+  .hero-card-head__title {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--text-main);
+  }
+
+  .hero-card-head__price {
+    font-size: 1.15rem;
+    font-weight: 700;
+    color: var(--gold);
+    white-space: nowrap;
+  }
+
+  .hero-card-head__meta {
+    margin-top: 4px;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+
+  /* Tamanho e quantidade compactos: preserva todos os mesmos campos,
+     valores e IDs, ocupando menos altura no cartão mobile. */
+  .product-config {
+    grid-template-columns: minmax(0, 1.35fr) minmax(108px, 0.8fr);
+    gap: 8px;
+  }
+
+  .product-config__field {
+    gap: 4px;
+    font-size: 0.7rem;
+  }
+
+  .size-buttons {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(32px, 1fr));
+    gap: 5px;
+  }
+
+  .size-buttons button {
+    min-width: 0;
+    min-height: 32px;
+    padding: 6px 4px;
+    border-radius: 8px;
+    font-size: 0.72rem;
+  }
+
+  .qty-stepper {
+    grid-template-columns: 32px 48px 32px;
+    justify-content: start;
+    gap: 5px;
+  }
+
+  .qty-stepper button {
+    width: 32px;
+    height: 32px;
+    font-size: 0.92rem;
+  }
+
+  .qty-stepper input {
+    width: 48px;
+    height: 32px;
+    padding: 6px 3px;
+  }
+
+  .hero-card-perks {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 18px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(217, 167, 92, 0.14);
+  }
+
+  .hero-card-perk {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    color: var(--text-muted);
+    font-size: 0.8rem;
+  }
+
+  .hero-card-perk svg {
+    color: var(--gold);
+    flex-shrink: 0;
+  }
+
+  .hero-card-perk strong {
+    display: block;
+    color: var(--text-main);
+    font-size: 0.86rem;
+    font-weight: 600;
+    margin-bottom: 1px;
+  }
+
+  .hero-card-secure {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+    margin-top: 16px;
+    padding-top: 14px;
+    border-top: 1px solid rgba(217, 167, 92, 0.14);
+    font-size: 0.82rem;
+    color: var(--text-muted);
+  }
+
+  .hero-card-secure svg {
+    color: var(--gold);
+  }
+}
+
+
+/* ============================================================
+   Fase 2 — trilha de lados, puxador da folha e grupos do Ajustar
+   ============================================================ */
+
+/* Trilha de lados na LATERAL do palco (Frente/Costas/Esq/Dir). */
+.stage-side-toggle--rail {
+  position: absolute;
+  top: 14px;
+  left: 14px;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  align-self: auto;
+}
+
+.stage-side-toggle--rail .stage-side-btn {
+  min-width: 58px;
+  text-align: center;
+  background: rgba(20, 14, 9, 0.78);
+  border: 1px solid rgba(217, 167, 92, 0.3);
+  color: var(--text-main);
+  font-size: 0.62rem;
+  padding: 8px 10px;
+  backdrop-filter: blur(2px);
+}
+
+.stage-side-toggle--rail .stage-side-btn.is-active {
+  background: linear-gradient(180deg, #e8b878, var(--caramel));
+  border-color: transparent;
+  color: #2a1c11;
+}
+
+/* Puxador da folha (bottom-sheet) — só no celular. */
+.edit-panel__handle {
+  display: none;
+}
+
+/* Rodapé do carrossel (play + dica) na aba Imagem. */
+.print-picker__foot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+}
+
+.print-picker__foot .stage-play-toggle {
+  width: 34px;
+  height: 34px;
+  flex-shrink: 0;
+}
+
+/* --- Grupos do Ajustar: Mover / Tamanho / Girar --- */
+.adjust-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 10px;
+  align-items: start;
+}
+
+.adjust-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.adjust-group__label {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+}
+
+/* Cruzeta de mover: 3 colunas x 3 linhas, setas nas bordas. */
+.move-pad {
+  display: grid;
+  grid-template-columns: repeat(3, 26px);
+  grid-template-rows: repeat(3, 26px);
+  gap: 2px;
+}
+
+.move-pad__btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(20, 14, 9, 0.6);
+  border: 1px solid rgba(217, 167, 92, 0.28);
+  border-radius: 8px;
+  color: var(--gold);
+  cursor: pointer;
+  padding: 0;
+  transition: border-color 0.15s ease, background 0.15s ease;
+}
+
+.move-pad__btn:hover {
+  border-color: var(--gold);
+  background: rgba(201, 143, 77, 0.14);
+}
+
+.move-pad__btn--up { grid-column: 2; grid-row: 1; }
+.move-pad__btn--left { grid-column: 1; grid-row: 2; }
+.move-pad__btn--right { grid-column: 3; grid-row: 2; }
+.move-pad__btn--down { grid-column: 2; grid-row: 3; }
+
+/* Tamanho: − 100% + */
+.size-adjust {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.size-adjust .stage-size-btn {
+  border: 1px solid rgba(217, 167, 92, 0.28);
+  border-radius: 8px;
+  padding: 5px;
+  color: var(--gold);
+  background: rgba(20, 14, 9, 0.6);
+  cursor: pointer;
+}
+
+.size-adjust .stage-size-btn:hover {
+  border-color: var(--gold);
+}
+
+.size-adjust__value {
+  min-width: 46px;
+  text-align: center;
+  font-size: 0.82rem;
+  font-weight: 600;
+  color: var(--text-main);
+}
+
+/* Girar: mostrador circular com ponteiro. */
+.rotate-dial {
+  position: relative;
+  width: 66px;
+  height: 66px;
+  border-radius: 50%;
+  border: 2px solid rgba(217, 167, 92, 0.35);
+  background: radial-gradient(circle at 50% 40%, rgba(201, 143, 77, 0.14), rgba(20, 14, 9, 0.6));
+  cursor: grab;
+  touch-action: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.rotate-dial:active {
+  cursor: grabbing;
+}
+
+.rotate-dial__knob {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  pointer-events: none;
+}
+
+/* O ponteiro é um traço que sai do centro para o topo do círculo. */
+.rotate-dial__knob::before {
+  content: '';
+  position: absolute;
+  top: 6px;
+  left: 50%;
+  width: 3px;
+  height: 26px;
+  margin-left: -1.5px;
+  border-radius: 3px;
+  background: var(--gold);
+  transform-origin: bottom center;
+}
+
+.rotate-dial__value {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--text-main);
+  pointer-events: none;
+}
+
+.adjust-center-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  align-self: center;
+  padding: 8px 16px;
+  border-radius: 999px;
+  border: 1px solid rgba(217, 167, 92, 0.3);
+  background: rgba(20, 14, 9, 0.6);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.74rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: border-color 0.15s ease, color 0.15s ease;
+}
+
+.adjust-center-btn:hover {
+  border-color: var(--gold);
+  color: var(--gold);
+}
+
+.adjust-center-btn svg {
+  color: var(--gold);
+}
+
+/* Celular: puxador visível no topo da folha. */
+@media (max-width: 900px) {
+  .edit-panel__handle {
+    display: block;
+    width: 42px;
+    height: 4px;
+    border-radius: 999px;
+    background: rgba(217, 167, 92, 0.5);
+    margin: 2px auto 12px;
+  }
+}
+
+
+/* ============================================================
+   Fase 3 — botão "Instalar app" (PWA)
+   Os gatilhos ([data-pwa-install-wrap]) ficam escondidos até o
+   navegador permitir instalar (pwa-install.js liga body.pwa-installable).
+   ============================================================ */
+[data-pwa-install-wrap] {
+  display: none;
+}
+
+body.pwa-installable .topbar__install {
+  display: inline-flex;
+  align-items: center;
+}
+
+body.pwa-installable .footer__install {
+  display: list-item;
+}
+
+.topbar-install-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 12px;
+  border-radius: 999px;
+  border: 1px solid var(--gold);
+  background: rgba(217, 167, 92, 0.14);
+  color: var(--gold);
+  font: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.topbar-install-btn:hover {
+  background: var(--gold);
+  color: #2a1c11;
+}
+
+.topbar-install-btn svg {
+  flex-shrink: 0;
+}
+
+@media (max-width: 620px) {
+  /* No celular a barra é apertada: mostra só o ícone. */
+  .topbar-install-btn {
+    padding: 4px 8px;
+    font-size: 0;
+  }
+  .topbar-install-btn svg {
+    width: 17px;
+    height: 17px;
+  }
+}
+
+/* =========================================================
+   Tema claro/escuro
+   O modo escuro acima permanece como a fonte visual original.
+   As regras abaixo só sobrescrevem superfícies de interface.
+   ========================================================= */
+.theme-toggle-desktop-item,
+.theme-toggle-mobile-item {
+  display: flex;
+  align-items: center;
+}
+
+.theme-toggle {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  padding: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--gold-soft);
+  border-radius: 8px;
+  background: rgba(217, 167, 92, 0.07);
+  color: var(--text-main);
+  cursor: pointer;
+  transition: color 0.18s ease, border-color 0.18s ease,
+    background 0.18s ease, transform 0.18s ease;
+}
+
+.theme-toggle:hover {
+  color: var(--gold);
+  border-color: var(--gold);
+  background: rgba(217, 167, 92, 0.13);
+  transform: translateY(-1px);
+}
+
+.theme-toggle:focus-visible {
+  outline: 3px solid rgba(217, 167, 92, 0.38);
+  outline-offset: 3px;
+}
+
+.theme-toggle svg {
+  width: 17px;
+  height: 17px;
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 1.8;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.theme-toggle-mobile-item {
+  display: none;
+}
+
+@media (max-width: 860px) {
+  html.has-mobile-theme-menu .theme-toggle-desktop-item {
+    display: none;
+  }
+
+  .theme-toggle-mobile-item {
+    display: flex;
+    justify-content: flex-start;
+    padding: 12px 24px 2px;
+  }
+
+  .theme-toggle--mobile {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+    border-radius: 11px;
+  }
+
+  .theme-toggle--mobile svg {
+    width: 20px;
+    height: 20px;
+  }
+
+}
+
+html[data-theme="light"] body {
+  background: var(--bg-page);
+  color: var(--text-primary);
+}
+
+html[data-theme="light"] .topbar {
+  background: #2a1b12;
+  border-bottom-color: rgba(255, 250, 243, 0.1);
+  color: #d9c7b4;
+}
+
+html[data-theme="light"] .topbar .topbar__simple-link,
+html[data-theme="light"] .topbar .account-chip__trigger,
+html[data-theme="light"] .topbar .topbar__actions button {
+  color: #f7ecdf;
+}
+
+html[data-theme="light"] .header,
+html[data-theme="light"] .nav,
+html[data-theme="light"] .benefits,
+html[data-theme="light"] .footer {
+  background: var(--bg-header);
+  border-color: var(--border-color);
+}
+
+html[data-theme="light"] .hero,
+html[data-theme="light"] .checkout-page {
+  background:
+    radial-gradient(circle at 72% 16%, rgba(183, 122, 50, 0.12), transparent 30%),
+    linear-gradient(180deg, #fffaf3, var(--bg-page) 74%);
+}
+
+html[data-theme="light"] .section--dark,
+html[data-theme="light"] .section--panel,
+html[data-theme="light"] .why,
+html[data-theme="light"] .instagram {
+  background: var(--bg-page);
+}
+
+html[data-theme="light"] .account-menu,
+html[data-theme="light"] .header-search__field,
+html[data-theme="light"] .header-search__results,
+html[data-theme="light"] .notif-panel,
+html[data-theme="light"] .cart-drawer,
+html[data-theme="light"] .auth-modal,
+html[data-theme="light"] .text-print-modal,
+html[data-theme="light"] .product-card,
+html[data-theme="light"] .phrase-card,
+html[data-theme="light"] .checkout-panel,
+html[data-theme="light"] .checkout-summary,
+html[data-theme="light"] .item-detail-card,
+html[data-theme="light"] .profile-sidebar,
+html[data-theme="light"] .profile-card-panel,
+html[data-theme="light"] .admin-viewer-wrap,
+html[data-theme="light"] .product-viewer-shell,
+html[data-theme="light"] .admin-artwork-card,
+html[data-theme="light"] .admin-product-library-card,
+html[data-theme="light"] .admin-layer-side,
+html[data-theme="light"] .admin-preview-card,
+html[data-theme="light"] .product-info-card,
+html[data-theme="light"] .product-detail-card,
+html[data-theme="light"] .benefit-card,
+html[data-theme="light"] .why__item,
+html[data-theme="light"] .footer__about {
+  background: var(--bg-card);
+  border-color: var(--border-color);
+  box-shadow: 0 14px 34px var(--shadow-color);
+}
+
+html[data-theme="light"] .checkout-step,
+html[data-theme="light"] .checkout-item,
+html[data-theme="light"] .checkout-empty,
+html[data-theme="light"] .checkout-info,
+html[data-theme="light"] .payment-card,
+html[data-theme="light"] .review-card,
+html[data-theme="light"] .payment-choice,
+html[data-theme="light"] .item-detail-card__view-btn,
+html[data-theme="light"] .profile-nav__item,
+html[data-theme="light"] .admin-layer-nudges button,
+html[data-theme="light"] .cart-drawer__item,
+html[data-theme="light"] .cart-drawer__summary {
+  background: var(--bg-elevated);
+  border-color: var(--border-color);
+}
+
+html[data-theme="light"] input,
+html[data-theme="light"] select,
+html[data-theme="light"] textarea,
+html[data-theme="light"] .qty-stepper,
+html[data-theme="light"] .product-config__field select,
+html[data-theme="light"] .header-search__field input {
+  background-color: var(--input-bg);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+html[data-theme="light"] input::placeholder,
+html[data-theme="light"] textarea::placeholder {
+  color: #8b7968;
+}
+
+html[data-theme="light"] .btn--gold,
+html[data-theme="light"] .product-card__add,
+html[data-theme="light"] .notif-item__action {
+  background: var(--button-primary-bg);
+  color: var(--button-primary-text);
+  box-shadow: 0 8px 20px var(--shadow-color);
+}
+
+html[data-theme="light"] .btn--gold:hover,
+html[data-theme="light"] .product-card__add:hover {
+  background: #3a271a;
+}
+
+html[data-theme="light"] .btn--outline,
+html[data-theme="light"] .product-card__quick-add,
+html[data-theme="light"] .admin-product-library-card button,
+html[data-theme="light"] .admin-layer-side__head button,
+html[data-theme="light"] .admin-layer-row__remove {
+  background: transparent;
+  color: var(--text-primary);
+  border-color: var(--border-color);
+}
+
+html[data-theme="light"] .btn--outline:hover,
+html[data-theme="light"] .product-card__quick-add:hover {
+  background: rgba(169, 111, 50, 0.1);
+  border-color: var(--accent);
+}
+
+html[data-theme="light"] .theme-toggle {
+  background: rgba(255, 250, 243, 0.1);
+  border-color: rgba(255, 250, 243, 0.24);
+  color: #fff7ed;
+}
+
+html[data-theme="light"] .nav .theme-toggle {
+  background: var(--bg-elevated);
+  border-color: var(--border-color);
+  color: var(--text-primary);
+}
+
+html[data-theme="light"] .drawer-backdrop {
+  background: rgba(54, 35, 22, 0.38);
+}
+
+html[data-theme="light"] .cart-add-toast {
+  background: rgba(43, 28, 18, 0.94);
+  color: #fffaf3;
+  box-shadow: 0 18px 40px var(--shadow-color);
+}
+
+html[data-theme="light"] .checkout-panel,
+html[data-theme="light"] .checkout-summary,
+html[data-theme="light"] .item-detail-card {
+  box-shadow: 0 18px 42px var(--shadow-color);
+}
+
+html[data-theme="light"] .footer__bottom {
+  background: #2a1b12;
+  border-top-color: rgba(255, 250, 243, 0.1);
+  color: #d9c7b4;
+}
+
+html[data-theme="light"] #paymentBrick_container {
+  background: #fff;
+  color: #222;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .theme-toggle {
+    transition: none;
+  }
 }

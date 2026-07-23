@@ -5,11 +5,20 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { DecalGeometry } from 'three/addons/geometries/DecalGeometry.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 
-const MODEL_URL = 'assets/3d/manequim-web.glb';
+const MODEL_URL = 'assets/3d/camisa-flutuante-web.glb?v=1';
 const DRACO_DECODER_URL = 'https://unpkg.com/three@0.160.0/examples/jsm/libs/draco/gltf/';
-const CHEST_HEIGHT_FRACTION = 0.52;
-const SLEEVE_HEIGHT_FRACTION = 0.63;
-const HEAD_HEIGHT_FRACTION = 0.9;
+// Camisa flutuante: barra em 0, ombro/gola em 1 (sem cabeça/pedestal).
+const CHEST_HEIGHT_FRACTION = 0.6;
+const SLEEVE_HEIGHT_FRACTION = 0.8;
+// Cores do tecido — a textura original é um cinza uniforme gerado por
+// IA, então o material usa cor sólida + normal map (dobras do tecido).
+const SHIRT_COLORS = { black: 0x181818, white: 0xf2f2f2 };
+// Etiqueta da marca estampada por padrão na parte interna da nuca
+// (mesma lógica do viewer3d.js da home).
+const NECK_LABEL_URL = 'assets/3d/rotulo-gola.png';
+const NECK_LABEL_HEIGHT_FRACTION = 0.86;
+const NECK_LABEL_WIDTH = 0.085;
+const NECK_LABEL_TINT = { black: 0xffffff, white: 0x555555 };
 const OFFSET_X_M_PER_PCT = 0.006;
 const OFFSET_Y_M_PER_PCT = 0.008;
 
@@ -42,15 +51,11 @@ function computeAnchors(mannequinMesh, model) {
   const size = box.getSize(new THREE.Vector3());
   const chestY = box.min.y + size.y * CHEST_HEIGHT_FRACTION;
   const sleeveY = box.min.y + size.y * SLEEVE_HEIGHT_FRACTION;
-  const headY = box.min.y + size.y * HEAD_HEIGHT_FRACTION;
 
   const raycaster = new THREE.Raycaster();
-  const headXs = [];
-  for (let x = -0.15; x <= 0.15; x += 0.005) {
-    raycaster.set(new THREE.Vector3(x, headY, box.max.z + 1), new THREE.Vector3(0, 0, -1));
-    if (raycaster.intersectObject(mannequinMesh, true)[0]) headXs.push(x);
-  }
-  const centerX = headXs.length ? (Math.min(...headXs) + Math.max(...headXs)) / 2 : 0;
+  // Camisa simétrica e recentralizada na origem: linha central em x=0
+  // (o manequim antigo precisava medi-la pela cabeça por causa da base).
+  const centerX = 0;
 
   const hitAt = (origin, dir) => {
     raycaster.set(origin, dir);
@@ -87,7 +92,7 @@ function computeAnchors(mannequinMesh, model) {
   };
 }
 
-export async function createInteractiveViewer({ container, cameraDistance = 2.3 }) {
+export async function createInteractiveViewer({ container, cameraDistance = 2.3, shirtColor = 'black' }) {
   const state = {
     front: makeSideState(),
     back: makeSideState(),
@@ -125,6 +130,8 @@ export async function createInteractiveViewer({ container, cameraDistance = 2.3 
   gltfLoader.setDRACOLoader(dracoLoader);
 
   let mannequinMesh = null;
+  let shirtMaterial = null;
+  let neckLabelMesh = null;
   let model = null;
   let anchors = null;
   let decals = [];
@@ -240,6 +247,49 @@ export async function createInteractiveViewer({ container, cameraDistance = 2.3 
 
   const capturePng = () => renderer.domElement.toDataURL('image/png');
 
+  // Troca a cor do tecido (preta/branca) sem trocar de modelo.
+  const setShirtColor = (color) => {
+    if (!SHIRT_COLORS[color]) return;
+    shirtColor = color;
+    if (shirtMaterial) shirtMaterial.color.setHex(SHIRT_COLORS[color]);
+    if (neckLabelMesh) neckLabelMesh.material.color.setHex(NECK_LABEL_TINT[color]);
+  };
+
+  // Etiqueta da nuca: decal na superfície INTERNA das costas, abaixo da
+  // gola. side: BackSide faz o rótulo aparecer só para quem olha por
+  // dentro da abertura do pescoço (a malha é uma casca sem espessura).
+  const buildNeckLabel = () => {
+    if (!mannequinMesh) return;
+    textureLoader.load(NECK_LABEL_URL, (texture) => {
+      texture.colorSpace = THREE.SRGBColorSpace;
+      texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+
+      const box = new THREE.Box3().setFromObject(mannequinMesh);
+      const labelY = box.min.y + (box.max.y - box.min.y) * NECK_LABEL_HEIGHT_FRACTION;
+      const raycaster = new THREE.Raycaster();
+      raycaster.set(new THREE.Vector3(0, labelY, 0), new THREE.Vector3(0, 0, -1));
+      const hit = raycaster.intersectObject(mannequinMesh, true)[0];
+      if (!hit) return;
+
+      const material = new THREE.MeshStandardMaterial({
+        map: texture,
+        color: NECK_LABEL_TINT[shirtColor] || NECK_LABEL_TINT.black,
+        transparent: true,
+        depthWrite: false,
+        polygonOffset: true,
+        polygonOffsetFactor: -4,
+        roughness: 0.85,
+        metalness: 0,
+        side: THREE.BackSide,
+      });
+      const size = new THREE.Vector3(NECK_LABEL_WIDTH, NECK_LABEL_WIDTH, 0.04);
+      const geometry = new DecalGeometry(mannequinMesh, hit.point, new THREE.Euler(0, 0, 0), size);
+      neckLabelMesh = new THREE.Mesh(geometry, material);
+      neckLabelMesh.renderOrder = 1;
+      scene.add(neckLabelMesh);
+    });
+  };
+
   await new Promise((resolve, reject) => {
     gltfLoader.load(
       MODEL_URL,
@@ -253,28 +303,37 @@ export async function createInteractiveViewer({ container, cameraDistance = 2.3 
           return;
         }
 
+        // Material próprio: cor sólida do tecido + normal map original
+        // (a textura de cor que veio no arquivo é um cinza uniforme).
+        const originalMaterial = mannequinMesh.material;
+        shirtMaterial = new THREE.MeshStandardMaterial({
+          color: SHIRT_COLORS[shirtColor] || SHIRT_COLORS.black,
+          normalMap: originalMaterial?.normalMap || null,
+          roughness: 0.88,
+          metalness: 0,
+        });
+        mannequinMesh.material = shirtMaterial;
+        if (originalMaterial) {
+          originalMaterial.map?.dispose();
+          originalMaterial.roughnessMap?.dispose();
+          originalMaterial.metalnessMap?.dispose();
+        }
+
+        // O peito desta camisa já aponta para +Z (a câmera) — sem giro.
         const box = new THREE.Box3().setFromObject(model);
         const center = box.getCenter(new THREE.Vector3());
         model.position.x -= center.x;
         model.position.z -= center.z;
         model.position.y -= box.min.y;
-        model.rotation.y = -Math.PI / 2;
-        model.updateMatrixWorld(true);
-
-        // Recentraliza DEPOIS do giro (corrige o desvio em espelho entre
-        // frente e costas causado pela rotação de -90°).
-        const rotatedBox = new THREE.Box3().setFromObject(model);
-        const rotatedCenter = rotatedBox.getCenter(new THREE.Vector3());
-        model.position.x -= rotatedCenter.x;
-        model.position.z -= rotatedCenter.z;
         model.updateMatrixWorld(true);
         scene.add(model);
 
         anchors = computeAnchors(mannequinMesh, model);
+        buildNeckLabel();
         const size = anchors.boxSize || new THREE.Vector3(1, 1, 1);
-        // Mira mais alta: cabeça inteira no quadro, corte extra no pedestal.
-        camera.position.set(0, size.y * 0.62, size.y * cameraDistance);
-        controls.target.set(0, size.y * 0.57, 0);
+        // Mira no centro da camisa (não há mais cabeça nem pedestal).
+        camera.position.set(0, size.y * 0.52, size.y * cameraDistance);
+        controls.target.set(0, size.y * 0.5, 0);
         controls.minDistance = size.y * 0.9;
         controls.maxDistance = size.y * 3.2;
         controls.update();
@@ -303,6 +362,7 @@ export async function createInteractiveViewer({ container, cameraDistance = 2.3 
     clearPrint,
     setTransform,
     setCameraAngle,
+    setShirtColor,
     capturePng,
     state,
     controls,

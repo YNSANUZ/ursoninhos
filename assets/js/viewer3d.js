@@ -25,13 +25,28 @@ import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
 // do carrossel (o giro automático reaplica a arte o tempo todo).
 THREE.Cache.enabled = true;
 
-const MODEL_URL = 'assets/3d/manequim-web.glb?v=2';
+const MODEL_URL = 'assets/3d/camisa-flutuante-web.glb?v=1';
 const DRACO_DECODER_URL = 'https://unpkg.com/three@0.160.0/examples/jsm/libs/draco/gltf/';
 
-// Alturas como fração da altura total do modelo (busto com base).
-const CHEST_HEIGHT_FRACTION = 0.52;  // peito/costas
-const SLEEVE_HEIGHT_FRACTION = 0.63; // meio da manga
-const HEAD_HEIGHT_FRACTION = 0.9;    // cabeça (referência da linha central)
+// Alturas como fração da altura total do modelo (camisa flutuante:
+// barra em 0, ombro/gola em 1 — não há mais cabeça nem pedestal).
+const CHEST_HEIGHT_FRACTION = 0.6;   // peito/costas
+const SLEEVE_HEIGHT_FRACTION = 0.8;  // meio da manga
+
+// Cores do tecido (troca num clique). A textura de cor original do
+// modelo é um cinza uniforme gerado por IA, então usamos cor sólida
+// no material e mantemos só o normal map (dobras do tecido).
+const SHIRT_COLORS = { black: 0x181818, white: 0xf2f2f2 };
+
+// Rótulo da gola: etiqueta da marca estampada por padrão na parte
+// INTERNA da nuca (como numa camisa de verdade). É um decal projetado
+// na superfície de dentro das costas, logo abaixo da gola.
+const NECK_LABEL_URL = 'assets/3d/rotulo-gola.png';
+const NECK_LABEL_HEIGHT_FRACTION = 0.86; // centro do rótulo (nuca)
+const NECK_LABEL_WIDTH = 0.085;          // ~8,5 cm de largura no tecido
+// A arte do rótulo é clara (feita para tecido escuro); na camisa
+// branca ela é escurecida para continuar legível.
+const NECK_LABEL_TINT = { black: 0xffffff, white: 0x555555 };
 // Conversão dos passos dos botões (em "%") para metros no tecido.
 const OFFSET_X_M_PER_PCT = 0.009;
 const OFFSET_Y_M_PER_PCT = 0.011;
@@ -70,6 +85,10 @@ let interactionSurface = null;
 let scene = null;
 let camera = null;
 let controls = null;
+let shirtColor = 'black';    // cor atual do tecido (padrão do site)
+let shirtMaterial = null;    // material da camisa, trocado num clique
+let neckLabelMesh = null;    // etiqueta da nuca (decal fixo, não editável)
+let neckLabelTexture = null;
 let mannequinMesh = null;
 let anchors = null; // pontos do peito (frente/costas) achados por raycast
 let decals = [];
@@ -150,6 +169,62 @@ function setTransform({ scale, offsetX, offsetY }, side = 'front') {
   queueRebuild(side);
 }
 
+// Troca a cor do tecido (camisa preta <-> branca) num clique, sem
+// trocar de modelo nem baixar nada: só a cor do material muda.
+function setShirtColor(color) {
+  if (!SHIRT_COLORS[color] || color === shirtColor) return;
+  shirtColor = color;
+  if (shirtMaterial) shirtMaterial.color.setHex(SHIRT_COLORS[color]);
+  if (neckLabelMesh) neckLabelMesh.material.color.setHex(NECK_LABEL_TINT[color]);
+  // As artes "screen" mudam de desenho conforme a cor do tecido
+  // (ver makeDecal) — reprojeta todos os lados.
+  queueRebuild();
+}
+
+/* Etiqueta da nuca: projeta o rótulo na superfície INTERNA das costas.
+   O raio parte do eixo central, dentro da camisa, e anda para trás até
+   acertar o tecido das costas por dentro. O decal usa side: BackSide —
+   a malha da camisa é uma casca sem espessura, então os triângulos das
+   costas "olham" para fora; renderizar só o verso deles faz o rótulo
+   aparecer APENAS para quem olha por dentro da gola, nunca no lado de
+   fora da camisa. */
+function buildNeckLabel() {
+  if (!mannequinMesh || !neckLabelTexture) return;
+
+  if (neckLabelMesh) {
+    neckLabelMesh.geometry.dispose();
+    neckLabelMesh.material.dispose();
+    scene.remove(neckLabelMesh);
+    neckLabelMesh = null;
+  }
+
+  const box = new THREE.Box3().setFromObject(mannequinMesh);
+  const labelY = box.min.y + (box.max.y - box.min.y) * NECK_LABEL_HEIGHT_FRACTION;
+  const raycaster = new THREE.Raycaster();
+  raycaster.set(new THREE.Vector3(0, labelY, 0), new THREE.Vector3(0, 0, -1));
+  const hit = raycaster.intersectObject(mannequinMesh, true)[0];
+  if (!hit) return;
+
+  const material = new THREE.MeshStandardMaterial({
+    map: neckLabelTexture,
+    color: NECK_LABEL_TINT[shirtColor],
+    transparent: true,
+    depthWrite: false,
+    polygonOffset: true,
+    polygonOffsetFactor: -4,
+    roughness: 0.85,
+    metalness: 0,
+    side: THREE.BackSide,
+  });
+
+  const size = new THREE.Vector3(NECK_LABEL_WIDTH, NECK_LABEL_WIDTH, 0.04);
+  const geometry = new DecalGeometry(mannequinMesh, hit.point, new THREE.Euler(0, 0, 0), size);
+  neckLabelMesh = new THREE.Mesh(geometry, material);
+  neckLabelMesh.renderOrder = 1; // abaixo das estampas editáveis
+  // Fica FORA do array decals: o arrasto de estampas não pode pegá-la.
+  scene.add(neckLabelMesh);
+}
+
 // Remove a arte de um lado (ex.: verso ainda sem estampa escolhida).
 function clearPrint(side) {
   const sideState = state[side];
@@ -211,7 +286,11 @@ function rebuildDecals(sides = Object.keys(SIDE_CONFIG)) {
     // mix-blend-mode do manequim 2D. Com material iluminado, o reflexo
     // do ambiente criaria um retângulo acinzentado ao redor da arte.
     // "normal" (fotos e frases): material iluminado, integrado ao tecido.
-    const material = sideState.blend === 'screen'
+    // Na camisa BRANCA o blend aditivo apagaria a arte (somar cor sobre
+    // branco não muda nada), então ela vira "normal": o fundo preto da
+    // arte aparece — como numa estampa real impressa em tecido claro.
+    const useScreen = sideState.blend === 'screen' && shirtColor !== 'white';
+    const material = useScreen
       ? new THREE.MeshBasicMaterial({
           map: sideState.texture,
           transparent: true,
@@ -258,9 +337,9 @@ function rebuildDecals(sides = Object.keys(SIDE_CONFIG)) {
 }
 
 /* Acha os pontos de ancoragem das estampas por raycast:
-   1. A linha central REAL do manequim é medida varrendo a CABEÇA (a
-      forma mais simétrica e limpa do modelo) — braços e base puxam a
-      caixa envolvente para o lado e enganavam a centralização antiga.
+   1. A camisa flutuante é simétrica e o modelo é recentralizado na
+      origem após carregar, então a linha central é simplesmente x=0
+      (o manequim antigo precisava medir a cabeça por causa da base).
    2. Peito e costas são ancorados exatamente nessa linha central.
    3. Cada manga é varrida de fora para dentro e ancorada no meio do
       braço (eixo Z). */
@@ -269,17 +348,11 @@ function computeAnchors(model) {
   const size = box.getSize(new THREE.Vector3());
   const chestY = box.min.y + size.y * CHEST_HEIGHT_FRACTION;
   const sleeveY = box.min.y + size.y * SLEEVE_HEIGHT_FRACTION;
-  const headY = box.min.y + size.y * HEAD_HEIGHT_FRACTION;
 
   const raycaster = new THREE.Raycaster();
 
-  // 1) Linha central pela cabeça
-  const headXs = [];
-  for (let x = -0.15; x <= 0.15; x += 0.005) {
-    raycaster.set(new THREE.Vector3(x, headY, box.max.z + 1), new THREE.Vector3(0, 0, -1));
-    if (raycaster.intersectObject(mannequinMesh, true)[0]) headXs.push(x);
-  }
-  const centerX = headXs.length ? (Math.min(...headXs) + Math.max(...headXs)) / 2 : 0;
+  // 1) Linha central: centro do modelo (já recentralizado na origem)
+  const centerX = 0;
 
   // 2) Peito e costas na linha central
   const hitAt = (origin, dir) => {
@@ -597,25 +670,33 @@ function init() {
       });
       if (!mannequinMesh) return;
 
+      // Material próprio no lugar do que veio no arquivo: a textura de
+      // cor original é um cinza uniforme (gerado por IA) com um brilho
+      // especular exagerado. Cor sólida (preta/branca, trocável num
+      // clique) + normal map original (dobras do tecido) ficam fiéis
+      // e deixam o setShirtColor instantâneo.
+      const originalMaterial = mannequinMesh.material;
+      shirtMaterial = new THREE.MeshStandardMaterial({
+        color: SHIRT_COLORS[shirtColor],
+        normalMap: originalMaterial?.normalMap || null,
+        roughness: 0.88,
+        metalness: 0,
+      });
+      mannequinMesh.material = shirtMaterial;
+      // Libera da memória as texturas que não usamos (cor e rugosidade).
+      if (originalMaterial) {
+        originalMaterial.map?.dispose();
+        originalMaterial.roughnessMap?.dispose();
+        originalMaterial.metalnessMap?.dispose();
+      }
+
       // Centraliza o modelo no chão da cena (x/z no zero, base em y=0).
+      // O peito desta camisa já aponta para +Z (a câmera) — sem giro.
       const box = new THREE.Box3().setFromObject(model);
       const center = box.getCenter(new THREE.Vector3());
       model.position.x -= center.x;
       model.position.z -= center.z;
       model.position.y -= box.min.y;
-      // A frente deste modelo aponta para +X (verificado por raycast e
-      // câmera); -90° em Y faz o peito encarar a câmera (+Z).
-      model.rotation.y = -Math.PI / 2;
-      model.updateMatrixWorld(true);
-
-      // Recentraliza DEPOIS do giro: a rotação de -90° desloca o eixo
-      // visual do manequim, deixando a frente levemente para um lado e as
-      // costas para o lado oposto (o desvio em espelho que aparecia nos
-      // previews). Recentralizar aqui corrige frente E costas de uma vez.
-      const rotatedBox = new THREE.Box3().setFromObject(model);
-      const rotatedCenter = rotatedBox.getCenter(new THREE.Vector3());
-      model.position.x -= rotatedCenter.x;
-      model.position.z -= rotatedCenter.z;
       model.updateMatrixWorld(true);
 
       scene.add(model);
@@ -624,16 +705,24 @@ function init() {
       const size = sized.getSize(new THREE.Vector3());
       modelSize = size.clone();
 
-      // Enquadra o manequim INTEIRO com folga acima da cabeça: a mira fica
-      // mais alta e o corte extra acontece no pedestal, nunca na cabeça.
-      camera.position.set(0, size.y * 0.62, size.y * 2.3);
-      controls.target.set(0, size.y * 0.57, 0);
+      // Enquadra a camisa inteira, mirando no centro dela (sem cabeça
+      // nem pedestal, o meio do modelo é o meio da própria camisa).
+      camera.position.set(0, size.y * 0.52, size.y * 2.3);
+      controls.target.set(0, size.y * 0.5, 0);
       controls.minDistance = size.y * 0.9;
       controls.maxDistance = size.y * 3.2;
       controls.update();
       emitVisibleSideChange(true);
 
       computeAnchors(model);
+
+      // Etiqueta da marca na nuca (interior da gola), sempre presente.
+      textureLoader.load(NECK_LABEL_URL, (texture) => {
+        texture.colorSpace = THREE.SRGBColorSpace;
+        texture.anisotropy = renderer.capabilities.getMaxAnisotropy();
+        neckLabelTexture = texture;
+        buildNeckLabel();
+      });
 
       stage.classList.add('is-3d');
       window.shirtViewer3D.ready = true;
@@ -736,7 +825,7 @@ function capturePreview(side = 'front') {
   }
 }
 
-window.shirtViewer3D = { ready: false, setPrint, setTransform, clearPrint, setCameraAngle, capturePng, capturePreview };
+window.shirtViewer3D = { ready: false, setPrint, setTransform, clearPrint, setCameraAngle, setShirtColor, capturePng, capturePreview };
 
 try {
   init();

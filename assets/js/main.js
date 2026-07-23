@@ -13,14 +13,28 @@ if (window.location.pathname.endsWith('/index.html')) {
   window.history.replaceState(null, '', cleanPath + window.location.search + window.location.hash);
 }
 
-// Menu mobile
+// Menu mobile — gaveta lateral (nav vira drawer no CSS ≤860px).
 const navToggle = document.getElementById('navToggle');
 const navList = document.getElementById('navList');
+const navClose = document.getElementById('navClose');
+const navBackdrop = document.getElementById('navBackdrop');
 
 if (navToggle && navList) {
-  navToggle.addEventListener('click', () => {
-    const isOpen = navList.parentElement.classList.toggle('is-open');
-    navToggle.setAttribute('aria-expanded', String(isOpen));
+  const nav = navList.parentElement; // <nav>
+  const setNav = (open) => {
+    nav.classList.toggle('is-open', open);
+    navBackdrop?.classList.toggle('is-open', open);
+    navToggle.setAttribute('aria-expanded', String(open));
+    // trava o rolar do fundo enquanto a gaveta está aberta
+    document.body.style.overflow = open ? 'hidden' : '';
+  };
+
+  navToggle.addEventListener('click', () => setNav(!nav.classList.contains('is-open')));
+  navClose?.addEventListener('click', () => setNav(false));
+  navBackdrop?.addEventListener('click', () => setNav(false));
+  // Clicar num item leva à seção e fecha a gaveta.
+  navList.querySelectorAll('a').forEach((link) => {
+    link.addEventListener('click', () => setNav(false));
   });
 }
 
@@ -72,10 +86,10 @@ let shirtPrintIndex = 0;  // estampa atualmente aplicada na FRENTE da camisa
    lado). Verso e mangas começam sem arte até o cliente escolher. */
 let activeSide = 'front';
 const sideTransforms = {
-  front: { scale: 1, offsetX: 0, offsetY: 0 },
-  back: { scale: 1, offsetX: 0, offsetY: 0 },
-  sleeveLeft: { scale: 1, offsetX: 0, offsetY: 0 },
-  sleeveRight: { scale: 1, offsetX: 0, offsetY: 0 },
+  front: { scale: 1, offsetX: 0, offsetY: 0, rotation: 0 },
+  back: { scale: 1, offsetX: 0, offsetY: 0, rotation: 0 },
+  sleeveLeft: { scale: 1, offsetX: 0, offsetY: 0, rotation: 0 },
+  sleeveRight: { scale: 1, offsetX: 0, offsetY: 0, rotation: 0 },
 };
 const sidePrintSelections = {
   front: 0,
@@ -144,7 +158,7 @@ function ensureActiveLayer(side = activeSide) {
 function syncLegacyStateFromLayer(side = activeSide) {
   const layer = getActiveLayer(side);
   sidePrintSelections[side] = layer?.printIndex ?? null;
-  sideTransforms[side] = layer?.transform || { scale: 1, offsetX: 0, offsetY: 0 };
+  sideTransforms[side] = layer?.transform || { scale: 1, offsetX: 0, offsetY: 0, rotation: 0 };
   if (side === 'front' && layer?.printIndex !== null && layer?.printIndex !== undefined) {
     shirtPrintIndex = layer.printIndex;
   }
@@ -465,20 +479,45 @@ function getSelectedCoverage() {
   return { label, price, sides, layerCounts };
 }
 
+// Cartão de produto (mobile): preço grande + linha "Lado • Tamanho •
+// unidade". Reaproveita o mesmo cálculo de cobertura do price note.
+const SIDE_LABELS_PT = { front: 'Frente', back: 'Verso', sleeveRight: 'Direita', sleeveLeft: 'Esquerda' };
+const heroCardPrice = document.getElementById('heroCardPrice');
+const heroCardMeta = document.getElementById('heroCardMeta');
+
+function refreshHeroCard() {
+  const coverage = getSelectedCoverage();
+  if (heroCardPrice) heroCardPrice.textContent = formatBRL(coverage.price);
+  if (heroCardMeta) {
+    const size = document.getElementById('heroSizeSelect')?.value || 'M';
+    const qtyEl = document.getElementById('heroQtyInput');
+    const qty = Math.max(1, parseInt(qtyEl?.value || '1', 10) || 1);
+    const sideLabel = SIDE_LABELS_PT[activeSide] || 'Frente';
+    heroCardMeta.textContent = `${sideLabel} • Tamanho ${size} • ${qty} ${qty > 1 ? 'unidades' : 'unidade'}`;
+  }
+}
+
 function refreshHeroPriceNote() {
   if (!heroPriceNote) return;
   const coverage = getSelectedCoverage();
   heroPriceNote.textContent = `${coverage.label} — ${formatBRL(coverage.price)}`;
+  refreshHeroCard();
 }
 
 function syncPrintTransform3D() {
   syncSideCompositeToViewer(activeSide);
 }
 
+const printSizePct = document.getElementById('printSizePct');
+function updateSizePctDisplay() {
+  if (printSizePct) printSizePct.textContent = `${Math.round(sideTransforms[activeSide].scale * 100)}%`;
+}
+
 function applyPrintScale() {
   const t = sideTransforms[activeSide];
   syncPrintTransform3D();
   refreshHeroPriceNote();
+  updateSizePctDisplay();
 }
 
 function updateActivePrintScale(nextScale) {
@@ -525,9 +564,135 @@ printMoveRightBtn?.addEventListener('click', () => {
   applyPrintOffset();
 });
 
+/* --- Girar a estampa (mostrador) ---
+   Arrastar em volta do círculo define o ângulo. A rotação é aplicada
+   na composição 2D (layer-engine), então o decal 3D projeta a imagem
+   já girada — sem tocar no motor three.js. Recompor é custoso, então
+   durante o arrasto agendamos via requestAnimationFrame. */
+const rotateDial = document.getElementById('rotateDial');
+const rotateDialKnob = document.getElementById('rotateDialKnob');
+const rotateValue = document.getElementById('rotateValue');
+let rotateRaf = null;
+
+function updateRotationVisual() {
+  const deg = sideTransforms[activeSide].rotation || 0;
+  if (rotateValue) rotateValue.textContent = `${Math.round(deg)}°`;
+  if (rotateDialKnob) rotateDialKnob.style.transform = `rotate(${deg}deg)`;
+  if (rotateDial) rotateDial.setAttribute('aria-valuenow', String(Math.round(deg)));
+}
+
+function applyPrintRotation() {
+  syncPrintTransform3D();
+  refreshHeroPriceNote();
+  updateRotationVisual();
+}
+
+function scheduleRotationApply() {
+  if (rotateRaf) return;
+  rotateRaf = requestAnimationFrame(() => {
+    rotateRaf = null;
+    applyPrintRotation();
+  });
+}
+
+if (rotateDial) {
+  let dragging = false;
+  const setAngleFromEvent = (event) => {
+    const rect = rotateDial.getBoundingClientRect();
+    const cx = rect.left + rect.width / 2;
+    const cy = rect.top + rect.height / 2;
+    // 0° no topo, sentido horário positivo.
+    const deg = Math.round(Math.atan2(event.clientX - cx, -(event.clientY - cy)) * 180 / Math.PI);
+    sideTransforms[activeSide].rotation = deg;
+    updateRotationVisual();
+    scheduleRotationApply();
+  };
+  rotateDial.addEventListener('pointerdown', (event) => {
+    dragging = true;
+    try { rotateDial.setPointerCapture(event.pointerId); } catch (error) { /* sintético em teste */ }
+    setAngleFromEvent(event);
+  });
+  rotateDial.addEventListener('pointermove', (event) => {
+    if (dragging) setAngleFromEvent(event);
+  });
+  const endRot = () => { if (!dragging) return; dragging = false; applyPrintRotation(); };
+  rotateDial.addEventListener('pointerup', endRot);
+  rotateDial.addEventListener('pointercancel', endRot);
+  rotateDial.addEventListener('keydown', (event) => {
+    const step = ['ArrowLeft', 'ArrowDown'].includes(event.key) ? -5
+      : ['ArrowRight', 'ArrowUp'].includes(event.key) ? 5 : 0;
+    if (!step) return;
+    event.preventDefault();
+    const t = sideTransforms[activeSide];
+    t.rotation = Math.max(-180, Math.min(180, (t.rotation || 0) + step));
+    applyPrintRotation();
+  });
+}
+
+/* Centralizar: zera posição E rotação da estampa do lado em edição. */
+const centerPrintBtn = document.getElementById('centerPrintBtn');
+centerPrintBtn?.addEventListener('click', () => {
+  const t = sideTransforms[activeSide];
+  t.offsetX = 0;
+  t.offsetY = 0;
+  t.rotation = 0;
+  applyPrintOffset();
+  updateRotationVisual();
+});
+
 // Arrasto da arte direto no 3D (viewer3d.js): atualiza o estado local
 // para as setas, o overlay 2D e o preview do carrinho continuarem
 // coerentes. Não chama setTransform de volta — o viewer já se aplicou.
+/* --- Cor da camisa (preta/branca) ---
+   Troca a cor do tecido do modelo 3D num clique. Os botões ficam
+   escondidos até o 3D assumir (CSS: .hero__stage.is-3d) porque a
+   foto 2D do fallback não tem como ser recolorida. */
+const shirtColorButtons = document.querySelectorAll('.shirt-color-btn');
+shirtColorButtons.forEach((btn) => {
+  btn.addEventListener('click', () => {
+    window.shirtViewer3D?.setShirtColor?.(btn.dataset.color);
+    shirtColorButtons.forEach((other) => other.classList.toggle('is-active', other === btn));
+  });
+});
+
+/* --- Painel unificado "Editar estampa" ---
+   Troca de abas (Ajustar / Imagem / Texto / Camadas) e, no celular,
+   abre/fecha o painel como folha deslizante. Os controles internos
+   (setas, lados, camadas, cor…) continuam com os mesmos ids e handlers
+   de sempre — este bloco só cuida da navegação do painel. */
+const editPanel = document.getElementById('editPanel');
+const editPanelTabs = document.querySelectorAll('.edit-panel__tab');
+const editPanelSections = document.querySelectorAll('.edit-panel__section');
+const mobileEditPanelBtn = document.getElementById('mobileEditPanelBtn');
+const editPanelCloseBtn = document.getElementById('editPanelCloseBtn');
+
+function selectEditPanelTab(tabName) {
+  editPanelTabs.forEach((tab) => tab.classList.toggle('is-active', tab.dataset.tab === tabName));
+  editPanelSections.forEach((sec) => sec.classList.toggle('is-active', sec.dataset.section === tabName));
+}
+
+editPanelTabs.forEach((tab) => {
+  tab.addEventListener('click', () => selectEditPanelTab(tab.dataset.tab));
+});
+
+// No celular o painel abre como folha (classe is-open); no PC ele é
+// fixo e a classe não tem efeito (o CSS só a usa até 900px).
+function openEditPanel(tabName) {
+  if (tabName) selectEditPanelTab(tabName);
+  editPanel?.classList.add('is-open');
+}
+function closeEditPanel() {
+  editPanel?.classList.remove('is-open');
+}
+
+mobileEditPanelBtn?.addEventListener('click', () => openEditPanel('ajustar'));
+editPanelCloseBtn?.addEventListener('click', closeEditPanel);
+
+// "Inserir imagem/texto" dentro do painel abrem os modais existentes;
+// no celular, fechar a folha primeiro deixa o modal à vista.
+document.getElementById('personalizarCamisaBtn')?.addEventListener('click', closeEditPanel);
+document.getElementById('textPrintBtn')?.addEventListener('click', closeEditPanel);
+
 window.addEventListener('shirt3d-print-drag', (event) => {
   const { side, offsetX, offsetY } = event.detail || {};
   const t = sideTransforms[side];
@@ -612,6 +777,9 @@ function setActiveSide(side, options = {}) {
   if (layer?.printIndex !== null && layer?.printIndex !== undefined) setQueuedPrint(layer.printIndex);
   renderLayerControls();
   refreshHeroPriceNote();
+  // Mostrador de giro e % de tamanho passam a refletir o novo lado.
+  updateRotationVisual();
+  updateSizePctDisplay();
 }
 
 Object.entries(SIDE_BUTTONS).forEach(([side, btn]) => {
@@ -989,8 +1157,18 @@ const textPrintStyles = document.getElementById('textPrintStyles');
 const textPrintPreviewCanvas = document.getElementById('textPrintPreviewCanvas');
 const applyTextPrintBtn = document.getElementById('applyTextPrintBtn');
 const textPrintNote = document.getElementById('textPrintNote');
+const textPrintColors = document.getElementById('textPrintColors');
 
 let activeTextPresetId = TEXT_PRINT_PRESETS[0].id;
+
+// Trocas de cor feitas pelo cliente, POR estilo: cada estilo guarda um
+// mapa { corOriginal: corEscolhida }, então mudar de estilo e voltar
+// não perde a personalização.
+const textColorOverrides = {};
+
+function getActiveTextColorMap() {
+  return textColorOverrides[activeTextPresetId] || null;
+}
 
 
 // Frase digitada -> linhas não vazias, no máximo 6.
@@ -1019,8 +1197,64 @@ function renderTextPrintPreviews() {
 
   const activePreset = TEXT_PRINT_PRESETS.find((p) => p.id === activeTextPresetId);
   if (textPrintPreviewCanvas && activePreset) {
-    drawTextPrint(textPrintPreviewCanvas, activePreset, previewLines);
+    drawTextPrint(textPrintPreviewCanvas, activePreset, previewLines, getActiveTextColorMap());
   }
+}
+
+/* Bolinhas de cor do estilo ativo: uma por cor que o modelo usa (as
+   cores podem depender da quantidade de linhas — ex.: "Pop colorido").
+   Cada bolinha é um <label> pintado com a cor ATUAL envolvendo um
+   <input type="color"> invisível: clicar abre o seletor nativo do
+   navegador (paleta + código hex). O input só é recriado aqui — nunca
+   durante o arrasto no seletor, senão o navegador fecharia o picker. */
+function renderTextColorDots() {
+  if (!textPrintColors) return;
+
+  const preset = TEXT_PRINT_PRESETS.find((p) => p.id === activeTextPresetId);
+  if (!preset) return;
+
+  const lines = getTextPrintLines();
+  const lineCount = (lines.length ? lines : TEXT_PRINT_SAMPLE).length;
+  const originals = getTextPresetColors(preset, lineCount);
+  const overrides = textColorOverrides[activeTextPresetId] || {};
+
+  textPrintColors.innerHTML = originals
+    .map((original) => {
+      const current = overrides[original] || original;
+      return `
+        <label class="text-color-dot" style="background:${current}" title="Trocar esta cor">
+          <input type="color" value="${current}" data-original="${original}">
+        </label>
+      `;
+    })
+    .join('');
+
+  // Botão de restaurar as cores originais do estilo (só quando há troca).
+  if (Object.keys(overrides).length) {
+    textPrintColors.insertAdjacentHTML(
+      'beforeend',
+      '<button type="button" class="text-color-reset" id="textColorResetBtn">Restaurar cores</button>'
+    );
+    document.getElementById('textColorResetBtn')?.addEventListener('click', () => {
+      delete textColorOverrides[activeTextPresetId];
+      renderTextColorDots();
+      renderTextPrintPreviews();
+    });
+  }
+
+  textPrintColors.querySelectorAll('input[type="color"]').forEach((input) => {
+    input.addEventListener('input', () => {
+      const original = input.dataset.original;
+      if (!textColorOverrides[activeTextPresetId]) textColorOverrides[activeTextPresetId] = {};
+      textColorOverrides[activeTextPresetId][original] = input.value;
+      // Pinta a própria bolinha e redesenha a prévia AO VIVO, sem
+      // recriar as bolinhas (o seletor continua aberto durante o arrasto).
+      input.parentElement.style.background = input.value;
+      renderTextPrintPreviews();
+    });
+    // Ao fechar o seletor, recria a linha para o "Restaurar cores" aparecer.
+    input.addEventListener('change', renderTextColorDots);
+  });
 }
 
 // Monta a galeria de estilos (uma vez).
@@ -1042,6 +1276,7 @@ function renderTextStyleCards() {
       textPrintStyles.querySelectorAll('.text-style-card').forEach((el) => {
         el.classList.toggle('is-active', el === card);
       });
+      renderTextColorDots();
       renderTextPrintPreviews();
     });
   });
@@ -1055,6 +1290,7 @@ function openTextPrintModal() {
   document.body.style.overflow = 'hidden';
   if (textPrintNote) textPrintNote.textContent = '';
   textFontsReady.then(renderTextPrintPreviews);
+  renderTextColorDots();
   renderTextPrintPreviews();
   textPrintInput?.focus();
 }
@@ -1079,7 +1315,12 @@ textPrintInput?.addEventListener('input', () => {
       : '';
   }
   clearTimeout(textPrintRenderTimeout);
-  textPrintRenderTimeout = setTimeout(renderTextPrintPreviews, 120);
+  textPrintRenderTimeout = setTimeout(() => {
+    // A quantidade de linhas pode mudar as cores do estilo (ex.: "Pop
+    // colorido" com 1, 2 ou 3+ linhas) — refaz as bolinhas junto.
+    renderTextColorDots();
+    renderTextPrintPreviews();
+  }, 120);
 });
 
 // Gera o PNG final em alta resolução e envia pelo fluxo de upload já
@@ -1104,7 +1345,7 @@ applyTextPrintBtn?.addEventListener('click', async () => {
     const canvas = document.createElement('canvas');
     canvas.width = 1024;
     canvas.height = 1024;
-    drawTextPrint(canvas, preset, lines);
+    drawTextPrint(canvas, preset, lines, getActiveTextColorMap());
 
     const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
     if (!blob) throw new Error('Falha ao gerar o PNG da estampa');
@@ -1350,6 +1591,7 @@ function restoreHeroEditorState(state) {
 
   if (heroSizeSelect && state.size) {
     heroSizeSelect.value = state.size;
+    syncSizeButtons();
   }
 
   refreshHeroPriceNote();
@@ -1626,15 +1868,37 @@ let feedbackTimeoutId;
 heroQtyDecrease?.addEventListener('click', () => {
   if (!heroQtyInput) return;
   heroQtyInput.value = String(Math.max(1, normalizeHeroQty() - 1));
+  refreshHeroCard();
 });
 
 heroQtyIncrease?.addEventListener('click', () => {
   if (!heroQtyInput) return;
   heroQtyInput.value = String(normalizeHeroQty() + 1);
+  refreshHeroCard();
 });
 
-heroQtyInput?.addEventListener('change', normalizeHeroQty);
+heroQtyInput?.addEventListener('change', () => { normalizeHeroQty(); refreshHeroCard(); });
 mobileAddToCartBtn?.addEventListener('click', () => addToCartBtn?.click());
+
+/* Botões de tamanho (substituem o antigo select). Escrevem o valor no
+   input oculto #heroSizeSelect, que é o que o carrinho já lia — então
+   nenhuma outra parte precisou mudar. */
+const heroSizeButtons = document.getElementById('heroSizeButtons');
+function syncSizeButtons() {
+  const val = heroSizeSelect?.value || 'M';
+  heroSizeButtons?.querySelectorAll('button').forEach((b) => {
+    b.classList.toggle('is-active', b.dataset.size === val);
+  });
+}
+heroSizeButtons?.querySelectorAll('button').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    if (heroSizeSelect) heroSizeSelect.value = btn.dataset.size;
+    syncSizeButtons();
+    refreshHeroCard();
+  });
+});
+syncSizeButtons();
+refreshHeroCard();
 
 addToCartBtn?.addEventListener('click', async () => {
   // Adiciona a estampa que está VESTIDA na camisa (mockup), que não é

@@ -14,6 +14,10 @@
       scale: Math.max(0.22, Math.min(2.35, numberOr(transform.scale, 1))),
       offsetX: Math.max(-24, Math.min(24, numberOr(transform.offsetX, 0))),
       offsetY: Math.max(-24, Math.min(24, numberOr(transform.offsetY, 0))),
+      // Rotação da estampa em graus (-180 a 180). Aplicada aqui, na
+      // composição 2D — o decal 3D projeta a imagem já rotacionada, sem
+      // precisar mexer no motor three.js.
+      rotation: Math.max(-180, Math.min(180, numberOr(transform.rotation, 0))),
     };
   }
 
@@ -167,7 +171,16 @@
       const centerX = size * (0.5 + transform.offsetX / 100);
       const centerY = size * (0.5 + transform.offsetY / 100);
       ctx.globalCompositeOperation = 'source-over';
-      ctx.drawImage(drawable, centerX - width / 2, centerY - height / 2, width, height);
+      if (transform.rotation) {
+        // Gira em torno do CENTRO da estampa, sem mover a posição.
+        ctx.save();
+        ctx.translate(centerX, centerY);
+        ctx.rotate((transform.rotation * Math.PI) / 180);
+        ctx.drawImage(drawable, -width / 2, -height / 2, width, height);
+        ctx.restore();
+      } else {
+        ctx.drawImage(drawable, centerX - width / 2, centerY - height / 2, width, height);
+      }
     }
 
     ctx.globalCompositeOperation = 'source-over';

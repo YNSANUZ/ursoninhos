@@ -10,6 +10,16 @@
      tela inicial (notificação do sino oferece a instalação). -->
 <link rel="manifest" href="manifest.json">
 <meta name="theme-color" content="#161009">
+<!-- Service worker: habilita instalar como app (PWA) e um fallback
+     offline. Estratégia network-first (ver sw.js) — com internet
+     sempre carrega a versão fresca, nunca conteúdo velho. -->
+<script>
+  if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+      navigator.serviceWorker.register('sw.js').catch(() => { /* sem SW, o site funciona igual */ });
+    });
+  }
+</script>
 <!-- Fontes usadas nos estilos da estampa de texto (cursiva e condensada).
      Precisam estar carregadas antes de desenhar o PNG no canvas — mas o
      canvas só é usado quando o cliente abre "Inserir texto", então elas
@@ -22,7 +32,8 @@
 <!-- O "?v=" força o navegador a baixar a versão nova do arquivo em vez
      de usar o cache. Sempre que CSS ou JS mudarem, aumente este número
      aqui e no <script> do final da página. -->
-<link rel="stylesheet" href="assets/css/style.css?v=35">
+<script src="assets/js/theme-toggle.js?v=1"></script>
+<link rel="stylesheet" href="assets/css/style.css?v=48">
 <!-- three.js para o manequim 3D do hero (decal da estampa no tecido).
      O importmap precisa vir antes de qualquer script type="module". -->
 <script type="importmap">
@@ -40,6 +51,15 @@
   <div class="topbar">
     <div class="container topbar__inner topbar__inner--compact">
       <ul class="topbar__actions">
+        <!-- Botão de instalar o app (PWA): aparece só quando o navegador
+             realmente permite instalar (body.pwa-installable, controlado
+             por pwa-install.js). -->
+        <li class="topbar__install" data-pwa-install-wrap>
+          <button type="button" class="topbar-install-btn" data-pwa-install>
+            <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><path d="M12 3v11M8 11l4 4 4-4"/><path d="M5 20h14"/></svg>
+            Instalar app
+          </button>
+        </li>
         <li><button type="button" id="authToggleBtn">Entrar</button></li>
         <li class="topbar__account" id="topbarAccount" data-hide-guest="true"></li>
         <!-- Sino de notificações: aparece só para quem está logado; a
@@ -73,6 +93,11 @@
   <!-- ===== Header principal ===== -->
   <header class="header">
     <div class="container header__inner">
+      <!-- Hambúrguer: fica no cabeçalho (fora da <nav>, que no celular
+           vira a gaveta deslizante). Oculto no PC via CSS. -->
+      <button class="nav__toggle" id="navToggle" aria-label="Abrir menu" aria-expanded="false">
+        <span></span><span></span><span></span>
+      </button>
       <a href="#" class="brand">
         <span class="brand__icon">
           <img src="https://i.ibb.co/wrPpWWsf/ea990759-29d9-4e67-98ce-bb22e69f8e9e-Sem-T-tulo-1.webp" alt="Logo Ursoninhos">
@@ -100,21 +125,28 @@
       </div>
 
       <nav class="nav">
-        <button class="nav__toggle" id="navToggle" aria-label="Abrir menu" aria-expanded="false">
-          <span></span><span></span><span></span>
-        </button>
+        <!-- No celular a <nav> vira gaveta lateral (CSS ≤860px). O
+             cabeçalho com X e a lista com ícones só aparecem nesse modo;
+             no PC os ícones ficam ocultos e a barra segue horizontal. -->
+        <div class="nav__drawer-head">
+          <span class="brand__name">Ursoninhos</span>
+          <button type="button" class="nav__close" id="navClose" aria-label="Fechar menu">×</button>
+        </div>
         <ul class="nav__list" id="navList">
-          <li><a href="#inicio" class="is-active">Início</a></li>
-          <li><a href="#destaques">Produtos</a></li>
-          <li><a href="#hero">Camisas Personalizadas</a></li>
-          <li><a href="camisas-de-frases.html">Camisas de Frases</a></li>
-          <li><a href="#colecoes">Coleções</a></li>
-          <li><a href="#por-que">Empresas</a></li>
-          <li><a href="#por-que">Sobre nós</a></li>
-          <li><a href="#rodape">Contato</a></li>
-          <li><a href="#">Rastrear pedido</a></li>
+          <li><a href="#inicio" class="is-active"><span class="nav__icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 11l9-8 9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg></span>Início</a></li>
+          <li><a href="#destaques"><span class="nav__icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 7l9-4 9 4-9 4-9-4z"/><path d="M3 7v10l9 4 9-4V7"/><path d="M12 11v10"/></svg></span>Produtos</a></li>
+          <li><a href="#hero"><span class="nav__icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M8 3l4 3 4-3 5 4-3 4-2-1v9H8v-9l-2 1-3-4z"/></svg></span>Camisas Personalizadas</a></li>
+          <li><a href="camisas-de-frases.html"><span class="nav__icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M21 15a2 2 0 0 1-2 2H8l-4 4V5a2 2 0 0 1 2-2h13a2 2 0 0 1 2 2z"/></svg></span>Camisas de Frases</a></li>
+          <li><a href="#colecoes"><span class="nav__icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M12 3l2.9 5.9 6.5.9-4.7 4.6 1.1 6.5L12 17.8 6.2 21l1.1-6.5L2.6 9.8l6.5-.9z"/></svg></span>Coleções</a></li>
+          <li><a href="#por-que"><span class="nav__icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 21V8l7-4 7 4v13"/><path d="M17 21V11l4 2v8"/><path d="M7 12h.01M7 16h.01M10 12h.01M10 16h.01"/></svg></span>Empresas</a></li>
+          <li><a href="#por-que"><span class="nav__icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="9" cy="8" r="3.2"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><path d="M16 5.5a3 3 0 0 1 0 5M21 20a5.5 5.5 0 0 0-4-5.3"/></svg></span>Sobre nós</a></li>
+          <li><a href="#rodape"><span class="nav__icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M4 5h16v14H4z"/><path d="M4 7l8 6 8-6"/></svg></span>Contato</a></li>
+          <li class="nav__sep" aria-hidden="true"></li>
+          <li><a href="#"><span class="nav__icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><path d="M3 16V6a1 1 0 0 1 1-1h11v11H4a1 1 0 0 1-1-1z"/><path d="M15 10h4l3 3v3h-7z"/><circle cx="7.5" cy="18.5" r="1.5"/><circle cx="17.5" cy="18.5" r="1.5"/></svg></span>Rastrear pedido</a></li>
+          <li class="nav__item--drawer"><a href="#" id="navMinhaConta"><span class="nav__icon"><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.7"><circle cx="12" cy="8" r="3.5"/><path d="M5 20c0-3.9 3.1-7 7-7s7 3.1 7 7"/></svg></span>Minha conta</a></li>
         </ul>
       </nav>
+      <div class="nav__backdrop" id="navBackdrop" hidden></div>
 
     </div>
   </header>
@@ -182,13 +214,22 @@
                overlay 2D acima (classe is-3d no palco) e a estampa passa
                a ser projetada no tecido — arraste para girar. Se WebGL
                falhar, a foto 2D continua funcionando como sempre. -->
-          <div class="hero__stage-viewer3d" id="shirtViewer3d" aria-label="Manequim 3D — arraste para girar; segure na arte para reposicioná-la"></div>
+          <div class="hero__stage-viewer3d" id="shirtViewer3d" aria-label="Camisa 3D — arraste para girar; segure na arte para reposicioná-la"></div>
+          <!-- Trilha de lados: fica na LATERAL do palco (como na
+               referência). Mesmos ids/handlers de sempre — o main.js
+               não distingue onde os botões estão. -->
+          <div class="stage-side-toggle stage-side-toggle--rail" role="group" aria-label="Lado da camisa em edição">
+            <button type="button" class="stage-side-btn is-active" id="sideFrontBtn">Frente</button>
+            <button type="button" class="stage-side-btn" id="sideBackBtn">Costas</button>
+            <button type="button" class="stage-side-btn" id="sideSleeveLeftBtn" title="Manga esquerda (de quem veste)">Esq.</button>
+            <button type="button" class="stage-side-btn" id="sideSleeveRightBtn" title="Manga direita (de quem veste)">Dir.</button>
+          </div>
           <!-- Barra de progresso do manequim 3D: aparece quando o
                download começa (o 3D é adiado de propósito — ver script
                no fim da página) e some no shirt3d-ready. O progresso é
                REAL: acompanha os bytes do modelo GLB baixados. -->
           <div class="stage-loading" id="stageLoading" hidden aria-live="polite">
-            <span class="stage-loading__label">Carregando manequim 3D…</span>
+            <span class="stage-loading__label">Carregando camisa 3D…</span>
             <span class="stage-loading__bar"><span class="stage-loading__fill" id="stageLoadingFill"></span></span>
             <span class="stage-loading__pct" id="stageLoadingPct">0%</span>
           </div>
@@ -213,51 +254,19 @@
             Tutorial
           </button>
           <div class="stage-mobile-actions" aria-label="Ações rápidas no celular">
-            <button type="button" class="stage-mobile-action-btn" id="mobilePersonalizarCamisaBtn">Imagem</button>
-            <button type="button" class="stage-mobile-action-btn" id="mobileTextPrintBtn">Texto</button>
+            <!-- "Editar estampa" abre o painel unificado como folha
+                 deslizante; Imagem/Texto ficaram dentro do painel (os
+                 botões antigos seguem no HTML, escondidos por CSS, para
+                 nenhum código antigo quebrar). -->
+            <button type="button" class="stage-mobile-action-btn" id="mobileEditPanelBtn">Editar estampa</button>
+            <button type="button" class="stage-mobile-action-btn" id="mobilePersonalizarCamisaBtn" hidden>Imagem</button>
+            <button type="button" class="stage-mobile-action-btn" id="mobileTextPrintBtn" hidden>Texto</button>
             <button type="button" class="stage-mobile-action-btn stage-mobile-action-btn--gold" id="mobileAddToCartBtn">Carrinho</button>
           </div>
-          <!-- Controles sobre a base dourada: à esquerda do play, - e +
-               (tamanho da estampa); à direita, setas para descer e
-               subir a estampa na camisa. Todos só o símbolo dourado. -->
-          <div class="stage-controls">
-            <button type="button" class="stage-size-btn" id="printSizeDown" aria-label="Diminuir estampa">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
-                <path d="M5 12h14"/>
-              </svg>
-            </button>
-            <button type="button" class="stage-size-btn" id="printSizeUp" aria-label="Aumentar estampa">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
-                <path d="M12 5v14M5 12h14"/>
-              </svg>
-            </button>
-            <button type="button" class="stage-size-btn" id="printMoveLeft" aria-label="Mover estampa para a esquerda">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M19 12H5M12 5l-7 7 7 7"/>
-              </svg>
-            </button>
-            <button type="button" class="stage-play-toggle" id="autoRotateToggle" aria-label="Pausar troca automática de estampas">
-              <!-- Um único ícone: o main.js troca o desenho (pause <-> play) -->
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true">
-                <path id="autoRotateToggleIcon" d="M6.5 5h3.4v14H6.5zM14.1 5h3.4v14h-3.4z"/>
-              </svg>
-            </button>
-            <button type="button" class="stage-size-btn" id="printMoveRight" aria-label="Mover estampa para a direita">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M5 12h14M12 5l7 7-7 7"/>
-              </svg>
-            </button>
-            <button type="button" class="stage-size-btn" id="printMoveUp" aria-label="Subir estampa">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12 19V5M5 12l7-7 7 7"/>
-              </svg>
-            </button>
-            <button type="button" class="stage-size-btn" id="printMoveDown" aria-label="Descer estampa">
-              <svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12 5v14M5 12l7 7 7-7"/>
-              </svg>
-            </button>
-          </div>
+          <!-- Os controles de tamanho/posição da estampa, o play e a cor
+               da camisa moraram aqui, soltos sobre o palco. Agora vivem
+               todos no painel "Editar estampa" (aba Ajustar), na coluna
+               ao lado — mesmos ids, o main.js continua achando tudo. -->
         </div>
 
         <!-- Coluna direita: seletor de estampas (carrossel giratório).
@@ -267,33 +276,162 @@
              clique/seta/swipe do usuário respondem na hora e o giro
              automático continua depois. -->
         <div class="hero__picker">
-          <div class="print-picker-row">
-            <button class="hero__arrow hero__arrow--prev" id="printPrev" aria-label="Estampa anterior">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6l-6 6 6 6"/></svg>
-            </button>
-
-            <div class="print-picker" id="printPicker">
-              <div class="print-picker__track" id="printPickerTrack"></div>
+          <!-- Painel unificado "Editar estampa": todos os controles de
+               criação agrupados em abas (Ajustar / Imagem / Texto /
+               Camadas). No PC é este cartão fixo; no celular ele vira
+               folha deslizante aberta pelo botão "Editar estampa" do
+               palco. Os elementos internos são os MESMOS de antes
+               (mesmos ids), só mudaram de casa. -->
+          <aside class="edit-panel" id="editPanel" aria-label="Editar estampa">
+            <!-- Puxador da folha (só aparece no celular). Arrastar para
+                 baixo fecha o painel, como numa bottom-sheet nativa. -->
+            <div class="edit-panel__handle" id="editPanelHandle" aria-hidden="true"></div>
+            <div class="edit-panel__head">
+              <strong>Editar estampa</strong>
+              <button type="button" class="edit-panel__close" id="editPanelCloseBtn" aria-label="Fechar painel">×</button>
+            </div>
+            <div class="edit-panel__tabs" role="tablist">
+              <button type="button" class="edit-panel__tab is-active" data-tab="ajustar">Ajustar</button>
+              <button type="button" class="edit-panel__tab" data-tab="imagem">Imagem</button>
+              <button type="button" class="edit-panel__tab" data-tab="texto">Texto</button>
+              <button type="button" class="edit-panel__tab" data-tab="camadas">Camadas</button>
             </div>
 
-            <button class="hero__arrow hero__arrow--next" id="printNext" aria-label="Próxima estampa">
-              <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6l6 6-6 6"/></svg>
-            </button>
+            <section class="edit-panel__section is-active" data-section="ajustar">
+              <!-- Três grupos rotulados, como na referência:
+                   Mover (setas) · Tamanho (− % +) · Girar (mostrador). -->
+              <div class="adjust-grid">
+                <div class="adjust-group">
+                  <span class="adjust-group__label">Mover</span>
+                  <div class="move-pad">
+                    <button type="button" class="move-pad__btn move-pad__btn--up" id="printMoveUp" aria-label="Subir estampa">
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 19V5M5 12l7-7 7 7"/></svg>
+                    </button>
+                    <button type="button" class="move-pad__btn move-pad__btn--left" id="printMoveLeft" aria-label="Mover estampa para a esquerda">
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+                    </button>
+                    <button type="button" class="move-pad__btn move-pad__btn--down" id="printMoveDown" aria-label="Descer estampa">
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14M5 12l7 7 7-7"/></svg>
+                    </button>
+                    <button type="button" class="move-pad__btn move-pad__btn--right" id="printMoveRight" aria-label="Mover estampa para a direita">
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14M12 5l7 7-7 7"/></svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="adjust-group">
+                  <span class="adjust-group__label">Tamanho</span>
+                  <div class="size-adjust">
+                    <button type="button" class="stage-size-btn" id="printSizeDown" aria-label="Diminuir estampa">
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M5 12h14"/></svg>
+                    </button>
+                    <span class="size-adjust__value" id="printSizePct">100%</span>
+                    <button type="button" class="stage-size-btn" id="printSizeUp" aria-label="Aumentar estampa">
+                      <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+                    </button>
+                  </div>
+                </div>
+
+                <div class="adjust-group">
+                  <span class="adjust-group__label">Girar</span>
+                  <!-- Mostrador: arraste em volta para girar a estampa. -->
+                  <div class="rotate-dial" id="rotateDial" role="slider" aria-label="Girar estampa" aria-valuemin="-180" aria-valuemax="180" aria-valuenow="0" tabindex="0">
+                    <span class="rotate-dial__knob" id="rotateDialKnob"></span>
+                    <span class="rotate-dial__value" id="rotateValue">0°</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Centralizar zera posição e rotação da estampa do lado
+                   em edição. (Desfazer/Refazer entram numa próxima etapa.) -->
+              <button type="button" class="adjust-center-btn" id="centerPrintBtn">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.8"><path d="M12 3v4M12 17v4M3 12h4M17 12h4"/><circle cx="12" cy="12" r="3"/></svg>
+                Centralizar
+              </button>
+
+              <div class="edit-panel__color-row">
+                <span>Cor da camisa</span>
+                <div class="shirt-color-toggle" id="shirtColorToggle" role="group" aria-label="Cor da camisa">
+                  <button type="button" class="shirt-color-btn shirt-color-btn--black is-active" data-color="black" aria-label="Camisa preta" title="Camisa preta"></button>
+                  <button type="button" class="shirt-color-btn shirt-color-btn--white" data-color="white" aria-label="Camisa branca" title="Camisa branca"></button>
+                </div>
+              </div>
+            </section>
+
+            <section class="edit-panel__section" data-section="imagem">
+              <div class="print-picker-row">
+                <button class="hero__arrow hero__arrow--prev" id="printPrev" aria-label="Estampa anterior">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6l-6 6 6 6"/></svg>
+                </button>
+
+                <div class="print-picker" id="printPicker">
+                  <div class="print-picker__track" id="printPickerTrack"></div>
+                </div>
+
+                <button class="hero__arrow hero__arrow--next" id="printNext" aria-label="Próxima estampa">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 6l6 6-6 6"/></svg>
+                </button>
+              </div>
+
+              <p class="print-picker__active-name" id="activePrintName"></p>
+              <div class="print-picker__foot">
+                <button type="button" class="stage-play-toggle" id="autoRotateToggle" aria-label="Pausar troca automática de estampas">
+                  <!-- Um único ícone: o main.js troca o desenho (pause <-> play) -->
+                  <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+                    <path id="autoRotateToggleIcon" d="M6.5 5h3.4v14H6.5zM14.1 5h3.4v14h-3.4z"/>
+                  </svg>
+                </button>
+                <span class="print-picker__hint">Deslize ou clique para trocar a estampa</span>
+              </div>
+              <button type="button" class="stage-action-btn" id="personalizarCamisaBtn">Inserir imagem</button>
+            </section>
+
+            <section class="edit-panel__section" data-section="texto">
+              <p class="print-picker__hint">Crie uma estampa com a sua frase:<br>40 estilos prontos e cores personalizáveis.</p>
+              <button type="button" class="stage-action-btn" id="textPrintBtn">Inserir texto</button>
+            </section>
+
+            <section class="edit-panel__section" data-section="camadas">
+              <div class="stage-layer-control" id="stageLayerControl" aria-label="Camadas do lado em edição">
+                <div class="stage-layer-control__head">
+                  <strong>Camadas</strong>
+                  <span id="stageLayerPriceHint">até 3 por lado</span>
+                </div>
+                <div class="stage-layer-control__buttons" id="stageLayerButtons"></div>
+                <button type="button" class="stage-layer-remove" id="removeActiveLayerBtn">Remover camada selecionada</button>
+              </div>
+            </section>
+          </aside>
+
+          <!-- Cabeçalho do produto (título, preço e "Frente • Tamanho •
+               unidade"). Mobile-only: reproduz o cartão da referência;
+               no PC a coluna direita segue enxuta como na Fase 1. -->
+          <div class="hero-card-head">
+            <div class="hero-card-head__top">
+              <h2 class="hero-card-head__title">Camisa personalizada</h2>
+              <span class="hero-card-head__price" id="heroCardPrice">R$ 49,90</span>
+            </div>
+            <p class="hero-card-head__meta" id="heroCardMeta">Frente • Tamanho M • 1 unidade</p>
           </div>
 
-          <p class="print-picker__active-name" id="activePrintName"></p>
-          <p class="print-picker__hint">Deslize ou clique<br>para trocar a estampa</p>
-
           <div class="product-config product-config--hero">
-            <label class="product-config__field">
-              <span>Tamanho</span>
-              <select id="heroSizeSelect">
-                <option value="P">P</option>
-                <option value="M" selected>M</option>
-                <option value="G">G</option>
-                <option value="GG">GG</option>
-              </select>
-            </label>
+            <!-- Tamanho em BOTÕES (como na referência). O carrinho lê
+                 #heroSizeSelect, que virou um input oculto: os botões
+                 só escrevem o valor nele — nenhum código do carrinho
+                 precisou mudar. -->
+            <div class="product-config__field product-config__field--sizes">
+              <span>Tamanho da camisa</span>
+              <input type="hidden" id="heroSizeSelect" value="M">
+              <div class="size-buttons" id="heroSizeButtons" role="group" aria-label="Tamanho da camisa">
+                <button type="button" data-size="PP">PP</button>
+                <button type="button" data-size="P">P</button>
+                <button type="button" data-size="M" class="is-active">M</button>
+                <button type="button" data-size="G">G</button>
+                <button type="button" data-size="GG">GG</button>
+                <button type="button" data-size="XG">XG</button>
+                <button type="button" data-size="2XG">2XG</button>
+              </div>
+            </div>
             <label class="product-config__field product-config__field--qty">
               <span>Quantidade</span>
               <div class="qty-stepper">
@@ -304,33 +442,36 @@
             </label>
           </div>
 
+          <p class="stage-layer-price" id="heroPriceNote">Frente — R$ 49,90</p>
           <button class="btn btn--gold btn--cart" id="addToCartBtn">Adicionar ao carrinho</button>
           <a href="carrinho.html" class="btn btn--outline btn--cart-link">Ver carrinho e checkout</a>
-          <div class="stage-side-toggle" role="group" aria-label="Lado da camisa em edição">
-            <button type="button" class="stage-side-btn is-active" id="sideFrontBtn">Frente</button>
-            <button type="button" class="stage-side-btn" id="sideBackBtn">Verso</button>
-            <button type="button" class="stage-side-btn" id="sideSleeveRightBtn" title="Manga direita (de quem veste)">Direita</button>
-            <button type="button" class="stage-side-btn" id="sideSleeveLeftBtn" title="Manga esquerda (de quem veste)">Esquerda</button>
-          </div>
-          <div class="stage-layer-control" id="stageLayerControl" aria-label="Camadas do lado em edição">
-            <div class="stage-layer-control__head">
-              <strong>Camadas</strong>
-              <span id="stageLayerPriceHint">até 3 por lado</span>
-            </div>
-            <div class="stage-layer-control__buttons" id="stageLayerButtons"></div>
-            <button type="button" class="stage-layer-remove" id="removeActiveLayerBtn">Remover camada selecionada</button>
-          </div>
-          <p class="stage-layer-price" id="heroPriceNote">Frente — R$ 49,90</p>
-          <div class="stage-action-buttons">
-            <button type="button" class="stage-action-btn" id="personalizarCamisaBtn">Inserir imagem</button>
-            <button type="button" class="stage-action-btn" id="textPrintBtn">Inserir texto</button>
-          </div>
           <!-- Qualquer usuário logado pode publicar o modelo montado no
                manequim como produto do catálogo público (preço padrão,
                crédito do criador na página do produto). -->
           <button type="button" class="btn btn--gold btn--publish-model" id="publishModelBtn">Postar camisa</button>
           <p class="cart-feedback" id="publishFeedback" aria-live="polite"></p>
           <p class="cart-feedback" id="cartFeedback" aria-live="polite"></p>
+
+          <!-- Selos de confiança (mobile), como no rodapé do cartão da
+               referência. -->
+          <div class="hero-card-perks">
+            <div class="hero-card-perk">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M12 2 4 5v6c0 5 3.5 8 8 9 4.5-1 8-4 8-9V5z"/><path d="M9 12l2 2 4-4"/></svg>
+              <span><strong>Pagamento seguro</strong>PIX, cartão e boleto</span>
+            </div>
+            <div class="hero-card-perk">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6"><circle cx="12" cy="12" r="9"/><path d="M8 12l2.5 2.5L16 9"/></svg>
+              <span><strong>Produção própria</strong>Qualidade que você vê</span>
+            </div>
+            <div class="hero-card-perk">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 4v5h5"/></svg>
+              <span><strong>Satisfação garantida</strong>Troca fácil e sem burocracia</span>
+            </div>
+          </div>
+          <p class="hero-card-secure">
+            <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.8"><rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>
+            Compra 100% segura
+          </p>
         </div>
 
       </div>
@@ -566,6 +707,8 @@
           <li><a href="#">Como funciona</a></li>
           <li><a href="#">Fale conosco</a></li>
           <li><a href="#">Perguntas frequentes</a></li>
+          <!-- Aparece só quando dá para instalar (body.pwa-installable). -->
+          <li class="footer__install" data-pwa-install-wrap><a href="#" data-pwa-install>📲 Instalar app no aparelho</a></li>
         </ul>
       </div>
 
@@ -945,6 +1088,12 @@
       <!-- Cards de estilo renderizados pelo main.js (TEXT_PRINT_PRESETS) -->
       <div class="text-print-styles" id="textPrintStyles"></div>
 
+      <!-- Bolinhas de cor do estilo ativo: uma por cor usada no modelo.
+           Clicar numa bolinha abre o seletor de cor do navegador (com
+           código hexadecimal). Renderizadas pelo main.js. -->
+      <p class="text-print-styles__label">Cores deste estilo — clique na bolinha para trocar</p>
+      <div class="text-color-dots" id="textPrintColors"></div>
+
       <p class="text-print-styles__label">Prévia na camisa</p>
       <div class="text-print-preview">
         <canvas id="textPrintPreviewCanvas" width="640" height="640"></canvas>
@@ -961,14 +1110,16 @@
   <script src="assets/js/sheet-products.js?v=3"></script>
   <script src="assets/js/shop-store.js?v=26"></script>
   <script src="assets/js/account-ui.js?v=23"></script>
-  <script src="assets/js/notifications.js?v=1"></script>
+  <!-- pwa-install ANTES de notifications: é a fonte única do prompt. -->
+  <script src="assets/js/pwa-install.js?v=1"></script>
+  <script src="assets/js/notifications.js?v=2"></script>
   <script src="assets/js/public-api.js?v=21"></script>
   <!-- Motor dos estilos de texto (compartilhado com camisas-de-frases.html)
        e dados das frases: precisam vir ANTES do main.js. -->
-  <script src="assets/js/layer-engine.js?v=3"></script>
-  <script src="assets/js/text-print-engine.js?v=20"></script>
+  <script src="assets/js/layer-engine.js?v=4"></script>
+  <script src="assets/js/text-print-engine.js?v=22"></script>
   <script src="assets/js/frases-data.js?v=19"></script>
-  <script src="assets/js/main.js?v=39"></script>
+  <script src="assets/js/main.js?v=44"></script>
   <script src="assets/js/public-catalog.js?v=21"></script>
   <script src="assets/js/header-search.js?v=1"></script>
   <!-- Manequim 3D ADIADO: three.js + modelo GLB somam ~3 MB e travavam
@@ -1059,8 +1210,19 @@
       const restartTutorialGif = () => {
         if (!tutorialGif) return;
         const baseSrc = tutorialGif.dataset.src || tutorialGif.getAttribute('src');
+        // Mesma URL de sempre: o navegador usa o CACHE e o GIF reinicia
+        // na hora. O "?play=" + timestamp que ficava aqui obrigava a
+        // baixar os ~9 MB de novo a CADA abertura — por isso o tutorial
+        // aparecia preto (fechava antes de o download terminar).
         tutorialGif.src = '';
-        tutorialGif.src = baseSrc + '?play=' + Date.now();
+        tutorialGif.src = baseSrc;
+      };
+
+      const startTutorialCountdown = () => {
+        tutorialEndsAt = Date.now() + (TUTORIAL_SECONDS * 1000);
+        updateTutorialTimer();
+        tutorialTick = setInterval(updateTutorialTimer, 250);
+        tutorialHide = setTimeout(hideTutorial, TUTORIAL_SECONDS * 1000);
       };
 
       const openTutorial = () => {
@@ -1068,10 +1230,15 @@
         intro.hidden = false;
         intro.classList.remove('is-done');
         restartTutorialGif();
-        tutorialEndsAt = Date.now() + (TUTORIAL_SECONDS * 1000);
-        updateTutorialTimer();
-        tutorialTick = setInterval(updateTutorialTimer, 250);
-        tutorialHide = setTimeout(hideTutorial, TUTORIAL_SECONDS * 1000);
+        // Na primeira visita o GIF ainda está baixando: o contador de
+        // 12s só começa quando ele estiver PRONTO na tela — antes disso
+        // o cartão espera, em vez de fechar mostrando um quadro preto.
+        if (tutorialGif && !tutorialGif.complete) {
+          if (tutorialTimer) tutorialTimer.textContent = '…';
+          tutorialGif.addEventListener('load', startTutorialCountdown, { once: true });
+        } else {
+          startTutorialCountdown();
+        }
       };
 
       if (introClose) introClose.addEventListener('click', hideTutorial);
@@ -1087,7 +1254,7 @@
       started = true;
       events.forEach(([target, name]) => target.removeEventListener(name, load3d));
       showLoading();
-      import('./assets/js/viewer3d.js?v=25')
+      import('./assets/js/viewer3d.js?v=26')
         .catch((error) => {
           console.warn('Manequim 3D indisponível, mantendo o palco 2D:', error);
           finishLoading(false);

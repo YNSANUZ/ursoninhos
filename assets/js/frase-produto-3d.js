@@ -11,7 +11,7 @@
    'frase-produto-pronto'.
    ========================================================= */
 
-import { createInteractiveViewer } from './interactive-viewer3d.js';
+import { createInteractiveViewer } from './interactive-viewer3d.js?v=2';
 
 const container = document.getElementById('pfViewer3d');
 const loading = document.getElementById('pfViewerLoading');

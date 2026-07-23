@@ -19,14 +19,10 @@
 
   const DISMISSED_KEY = 'ursoninhos_notif_dismissed';
 
-  // O Chrome/Edge dispara este evento quando o site pode ser instalado;
-  // guardamos o prompt para disparar no clique da notificação.
-  let installPrompt = null;
-  window.addEventListener('beforeinstallprompt', (event) => {
-    event.preventDefault();
-    installPrompt = event;
-    refresh();
-  });
+  // A captura do "beforeinstallprompt" mora em pwa-install.js (fonte
+  // única). Aqui só perguntamos se dá para instalar e disparamos o
+  // prompt por lá.
+  const canInstall = () => !!window.UrsoninhosPWA?.canInstall?.();
   window.addEventListener('appinstalled', () => {
     dismiss('install-shortcut');
   });
@@ -68,14 +64,13 @@
       list.push({
         id: 'install-shortcut',
         title: 'Instale o atalho do site',
-        text: installPrompt
+        text: canInstall()
           ? 'Adicione a Ursoninhos na sua área de trabalho com um clique.'
           : 'No menu do navegador, use "Instalar Ursoninhos" para criar o atalho.',
-        actionLabel: installPrompt ? 'Instalar agora' : 'Entendi',
+        actionLabel: canInstall() ? 'Instalar agora' : 'Entendi',
         onAction: () => {
-          if (installPrompt) {
-            installPrompt.prompt();
-            installPrompt = null;
+          if (canInstall()) {
+            window.UrsoninhosPWA.promptInstall();
           } else {
             dismiss('install-shortcut');
           }

@@ -432,6 +432,43 @@ const textFontsReady = Promise.all([
   document.fonts.load("100px 'Special Elite'"),
 ]).catch(() => {});
 
+// Cores padrão dos balões do WhatsApp (preset "bubbles").
+const BUBBLE_BG_COLOR = '#2e2e30';
+const BUBBLE_TEXT_COLOR = '#f7f7f7';
+
+/* Lista as cores ÚNICAS que um estilo usa com a quantidade de linhas
+   atual (a cor pode depender da linha — ex.: "Pop colorido" só usa as
+   3 cores se houver 3+ linhas). É daqui que saem as bolinhas de cor
+   do modal: uma bolinha por cor, na ordem em que aparecem. */
+function getTextPresetColors(preset, lineCount) {
+  const colors = [];
+  const add = (color) => {
+    if (color && !colors.includes(color)) colors.push(color);
+  };
+
+  if (preset.type === 'bubbles') {
+    add(BUBBLE_BG_COLOR);
+    add(BUBBLE_TEXT_COLOR);
+    return colors;
+  }
+
+  const n = Math.max(1, lineCount || 1);
+  const addStyle = (style) => {
+    if (!style) return;
+    add(style.color || '#ffffff'); // preenchimento (branco é o padrão)
+    add(style.bg);
+    add(style.glow);
+    add(style.strike);
+    add(style.underline);
+  };
+
+  if (preset.frame) add(preset.frame.color || '#ffffff');
+  if (preset.decoTop) addStyle(preset.decoTop.style);
+  for (let i = 0; i < n; i += 1) addStyle(preset.line(i, n));
+  if (preset.decoBottom) addStyle(preset.decoBottom.style);
+  return colors;
+}
+
 function textForLine(line, style) {
   let text = line;
   if (style.upper) text = text.toUpperCase();
@@ -448,17 +485,21 @@ function fontStringFor(style, size) {
 /* Motor de desenho. Tudo é medido numa fonte-base de 100px e depois
    escalado para caber na área útil do canvas — é isso que faz frase
    curta ficar grande e frase longa diminuir para caber. */
-function drawTextPrint(canvas, preset, lines) {
+// colorMap (opcional): { corOriginal: corEscolhida } — troca de cores
+// feita pelo cliente nas bolinhas do modal, sem alterar os presets.
+function drawTextPrint(canvas, preset, lines, colorMap) {
   const ctx = canvas.getContext('2d');
   ctx.clearRect(0, 0, canvas.width, canvas.height);
   if (!lines.length) return;
+
+  const pick = (color) => (colorMap && colorMap[color]) || color;
 
   const margin = canvas.width * 0.09;
   const availW = canvas.width - margin * 2;
   const availH = canvas.height - margin * 2;
 
   if (preset.type === 'bubbles') {
-    drawBubblePrint(ctx, canvas, lines, availW, availH);
+    drawBubblePrint(ctx, canvas, lines, availW, availH, pick);
     return;
   }
 
@@ -496,7 +537,7 @@ function drawTextPrint(canvas, preset, lines) {
     const frameH = totalHeight * scale + padF * 2;
     const frameX = (canvas.width - frameW) / 2;
     const frameY = (canvas.height - frameH) / 2;
-    ctx.strokeStyle = preset.frame.color || '#ffffff';
+    ctx.strokeStyle = pick(preset.frame.color || '#ffffff');
     ctx.lineWidth = Math.max(2, BASE * scale * 0.05);
     ctx.strokeRect(frameX, frameY, frameW, frameH);
     if (preset.frame.double) {
@@ -536,22 +577,22 @@ function drawTextPrint(canvas, preset, lines) {
     // Tarja de fundo (marca-texto / etiqueta / placa).
     if (style.bg) {
       const padH = size * 0.35;
-      ctx.fillStyle = style.bg;
+      ctx.fillStyle = pick(style.bg);
       ctx.fillRect(textLeft - padH, baseline - size * 0.86, textWidth + padH * 2, size * 1.14);
     }
 
     // Brilho neon: sombra colorida + segunda passada do texto.
     if (style.glow) {
-      ctx.shadowColor = style.glow;
+      ctx.shadowColor = pick(style.glow);
       ctx.shadowBlur = size * 0.45;
     }
 
     if (style.mode === 'stroke') {
-      ctx.strokeStyle = style.color || '#ffffff';
+      ctx.strokeStyle = pick(style.color || '#ffffff');
       ctx.lineWidth = Math.max(1.2, size * 0.05);
       ctx.strokeText(spec.text, cx, baseline);
     } else {
-      ctx.fillStyle = style.color || '#ffffff';
+      ctx.fillStyle = pick(style.color || '#ffffff');
       ctx.fillText(spec.text, cx, baseline);
       if (style.glow) ctx.fillText(spec.text, cx, baseline);
     }
@@ -559,7 +600,7 @@ function drawTextPrint(canvas, preset, lines) {
     ctx.shadowBlur = 0;
 
     if (style.strike) {
-      ctx.strokeStyle = style.strike;
+      ctx.strokeStyle = pick(style.strike);
       ctx.lineWidth = Math.max(2, size * 0.09);
       ctx.beginPath();
       ctx.moveTo(textLeft - size * 0.1, baseline - size * 0.28);
@@ -568,7 +609,7 @@ function drawTextPrint(canvas, preset, lines) {
     }
 
     if (style.underline) {
-      ctx.strokeStyle = style.underline;
+      ctx.strokeStyle = pick(style.underline);
       ctx.lineWidth = Math.max(2, size * 0.07);
       ctx.beginPath();
       ctx.moveTo(textLeft, baseline + size * 0.14);
@@ -586,7 +627,7 @@ function drawTextPrint(canvas, preset, lines) {
    redondo; no lado esquerdo, só o topo do primeiro e a base do último
    têm curva grande — os cantos onde os balões se encostam são curtos,
    como nas mensagens agrupadas do WhatsApp (igual ao print). */
-function drawBubblePrint(ctx, canvas, lines, availW, availH) {
+function drawBubblePrint(ctx, canvas, lines, availW, availH, pick = (c) => c) {
   const BASE = 100;
   ctx.font = `${BASE}px ${TEXT_SANS}`;
 
@@ -617,7 +658,7 @@ function drawBubblePrint(ctx, canvas, lines, availW, availH) {
     // Cantos: [sup-esq, sup-dir, inf-dir, inf-esq]
     const corners = [first ? rBig : rSmall, rBig, rBig, last ? rBig : rSmall];
 
-    ctx.fillStyle = '#2e2e30';
+    ctx.fillStyle = pick(BUBBLE_BG_COLOR);
     ctx.beginPath();
     if (ctx.roundRect) {
       ctx.roundRect(x0, y, w, h, corners);
@@ -626,7 +667,7 @@ function drawBubblePrint(ctx, canvas, lines, availW, availH) {
     }
     ctx.fill();
 
-    ctx.fillStyle = '#f7f7f7';
+    ctx.fillStyle = pick(BUBBLE_TEXT_COLOR);
     ctx.font = `${BASE * scale}px ${TEXT_SANS}`;
     ctx.fillText(line, x0 + padH * scale, y + h / 2 + BASE * scale * 0.06);
 
