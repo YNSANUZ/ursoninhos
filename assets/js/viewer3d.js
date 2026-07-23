@@ -66,6 +66,7 @@ const state = {
 };
 
 let renderer = null;
+let interactionSurface = null;
 let scene = null;
 let camera = null;
 let controls = null;
@@ -336,6 +337,8 @@ const SCALE_MIN = 0.22;
 const SCALE_MAX = 2.35;
 
 function setupDecalDrag() {
+  if (!interactionSurface) return;
+
   const raycaster = new THREE.Raycaster();
   const pointerNdc = new THREE.Vector2();
   let dragSide = null;
@@ -428,7 +431,7 @@ function setupDecalDrag() {
     emitDrag();
   };
 
-  renderer.domElement.addEventListener('pointerdown', (event) => {
+  interactionSurface.addEventListener('pointerdown', (event) => {
     activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY, type: event.pointerType });
     const side = decalSideAt(event);
     if (!side) return;
@@ -455,15 +458,15 @@ function setupDecalDrag() {
     const dist = camera.position.distanceTo(controls ? controls.target : new THREE.Vector3());
     worldPerPixel = (2 * dist * Math.tan(THREE.MathUtils.degToRad(camera.fov / 2))) / rect.height;
     if (controls) controls.enabled = false; // pausa o giro durante o arrasto
-    renderer.domElement.style.cursor = 'grabbing';
+    interactionSurface.style.cursor = 'grabbing';
     try {
-      renderer.domElement.setPointerCapture(event.pointerId);
+      interactionSurface.setPointerCapture(event.pointerId);
     } catch (error) {
       /* pointerId sintético em testes não suporta captura */
     }
   });
 
-  renderer.domElement.addEventListener('pointermove', (event) => {
+  interactionSurface.addEventListener('pointermove', (event) => {
     if (activePointers.has(event.pointerId)) {
       activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY, type: event.pointerType });
     }
@@ -488,7 +491,7 @@ function setupDecalDrag() {
       return;
     }
     // Fora do arrasto, o cursor indica quando o ponteiro está sobre a arte.
-    renderer.domElement.style.cursor = decalSideAt(event) ? 'move' : '';
+    interactionSurface.style.cursor = decalSideAt(event) ? 'move' : '';
   });
 
   const endDrag = (event) => {
@@ -499,7 +502,7 @@ function setupDecalDrag() {
       dragSide = null;
       activePointerId = null;
       if (controls) controls.enabled = true;
-      renderer.domElement.style.cursor = '';
+      interactionSurface.style.cursor = '';
       queueRebuild(releasedSide);
       return;
     }
@@ -508,14 +511,14 @@ function setupDecalDrag() {
     dragSide = null;
     activePointerId = null;
     if (controls) controls.enabled = true;
-    renderer.domElement.style.cursor = '';
+    interactionSurface.style.cursor = '';
     // Agora sim: reprojeta o decal na posição final, assentado no tecido.
     queueRebuild(releasedSide);
   };
-  renderer.domElement.addEventListener('pointerup', endDrag);
-  renderer.domElement.addEventListener('pointercancel', endDrag);
+  interactionSurface.addEventListener('pointerup', endDrag);
+  interactionSurface.addEventListener('pointercancel', endDrag);
 
-  renderer.domElement.addEventListener('wheel', (event) => {
+  interactionSurface.addEventListener('wheel', (event) => {
     const side = decalSideAt(event);
     if (!side) return;
     event.preventDefault();
@@ -532,6 +535,14 @@ function init() {
   renderer.toneMapping = THREE.ACESFilmicToneMapping;
   renderer.toneMappingExposure = 1.15;
   container.appendChild(renderer.domElement);
+
+  // Uma camada transparente ultrapassa discretamente o retângulo visível
+  // do canvas. Ela recebe giro, zoom e toque sem alterar a câmera, o tamanho
+  // do manequim ou o cenário renderizado.
+  interactionSurface = document.createElement('div');
+  interactionSurface.className = 'hero__stage-interaction';
+  interactionSurface.setAttribute('aria-hidden', 'true');
+  container.appendChild(interactionSurface);
 
   // Registrado ANTES do OrbitControls: no clique sobre a arte, este
   // handler roda primeiro e desliga o giro antes de o controle reagir.
@@ -556,7 +567,7 @@ function init() {
 
   camera = new THREE.PerspectiveCamera(28, container.clientWidth / container.clientHeight, 0.01, 20);
 
-  controls = new OrbitControls(camera, renderer.domElement);
+  controls = new OrbitControls(camera, interactionSurface);
   controls.enableZoom = true; // roda do mouse / pinça aproxima e afasta
   controls.enablePan = false;
   controls.enableDamping = true;

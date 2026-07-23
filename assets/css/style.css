@@ -846,14 +846,28 @@ ul {
 }
 
 .hero__stage-viewer3d canvas {
+  position: relative;
+  z-index: 0;
   display: block;
   width: 100% !important;
   height: 100% !important;
   outline: none;
-  cursor: grab;
+  pointer-events: none;
 }
 
-.hero__stage-viewer3d canvas:active {
+/* Zona transparente de controle maior que o retângulo renderizado.
+   O canvas continua exatamente no mesmo lugar e tamanho; somente o espaço
+   que aceita giro, zoom, mouse e toque avança pelas margens vazias. */
+.hero__stage-interaction {
+  position: absolute;
+  z-index: 1;
+  inset: -42px -72px;
+  background: transparent;
+  cursor: grab;
+  touch-action: none;
+}
+
+.hero__stage-interaction:active {
   cursor: grabbing;
 }
 
@@ -4063,6 +4077,10 @@ ul {
   .hero__stage {
     max-width: 380px;
     aspect-ratio: 1 / 1;
+  }
+
+  .hero__stage-interaction {
+    inset: -28px -18px;
   }
 
   .stage-intro {
