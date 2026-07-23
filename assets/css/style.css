@@ -5354,9 +5354,36 @@ ul {
   gap: 8px;
 }
 
-.product-config__field--sizes > span {
+.product-config__field--sizes > span,
+.product-config__field--sizes > label {
   font-size: 0.8rem;
   color: var(--text-muted);
+}
+
+.hero-size-select {
+  width: 92px;
+  min-height: 38px;
+  padding: 7px 30px 7px 12px;
+  border: 1px solid rgba(217, 167, 92, 0.34);
+  border-radius: 10px;
+  background: rgba(20, 14, 9, 0.68);
+  color: var(--text-main);
+  font: inherit;
+  font-size: 0.82rem;
+  font-weight: 700;
+  cursor: pointer;
+  color-scheme: dark;
+}
+
+.hero-size-select:hover,
+.hero-size-select:focus-visible {
+  border-color: var(--gold);
+  outline: none;
+}
+
+[data-theme="light"] .hero-size-select {
+  background: rgba(255, 255, 255, 0.78);
+  color-scheme: light;
 }
 
 .size-buttons {
@@ -5438,6 +5465,14 @@ ul {
   .product-config__field {
     gap: 4px;
     font-size: 0.7rem;
+  }
+
+  .hero-size-select {
+    width: 82px;
+    min-height: 32px;
+    padding: 5px 26px 5px 10px;
+    border-radius: 8px;
+    font-size: 0.72rem;
   }
 
   .size-buttons {

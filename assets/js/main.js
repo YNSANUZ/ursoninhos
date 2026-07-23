@@ -1849,6 +1849,7 @@ function restoreHeroEditorState(state) {
   if (heroSizeSelect && state.size) {
     heroSizeSelect.value = state.size;
     syncSizeButtons();
+    refreshHeroCard();
   }
 
   refreshHeroPriceNote();
@@ -2156,9 +2157,8 @@ heroQtyIncrease?.addEventListener('click', () => {
 heroQtyInput?.addEventListener('change', () => { normalizeHeroQty(); refreshHeroCard(); });
 mobileAddToCartBtn?.addEventListener('click', () => addToCartBtn?.click());
 
-/* Botões de tamanho (substituem o antigo select). Escrevem o valor no
-   input oculto #heroSizeSelect, que é o que o carrinho já lia — então
-   nenhuma outra parte precisou mudar. */
+/* Compatibilidade com versões antigas que ainda possuíam botões. O
+   seletor atual mantém o mesmo ID lido pelo carrinho e pelo snapshot. */
 const heroSizeButtons = document.getElementById('heroSizeButtons');
 function syncSizeButtons() {
   const val = heroSizeSelect?.value || 'M';
@@ -2172,6 +2172,10 @@ heroSizeButtons?.querySelectorAll('button').forEach((btn) => {
     syncSizeButtons();
     refreshHeroCard();
   });
+});
+heroSizeSelect?.addEventListener('change', () => {
+  syncSizeButtons();
+  refreshHeroCard();
 });
 syncSizeButtons();
 refreshHeroCard();
