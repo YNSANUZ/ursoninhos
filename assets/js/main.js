@@ -120,6 +120,10 @@ const sideCompositeTokens = { front: 0, back: 0, sleeveLeft: 0, sleeveRight: 0 }
 const stageLayerButtons = document.getElementById('stageLayerButtons');
 const removeActiveLayerBtn = document.getElementById('removeActiveLayerBtn');
 const stageLayerPriceHint = document.getElementById('stageLayerPriceHint');
+const imageTreatmentHint = document.getElementById('imageTreatmentHint');
+const imageTreatmentStatus = document.getElementById('imageTreatmentStatus');
+const imageTreatmentButtons = document.querySelectorAll('[data-image-treatment]');
+const restoreImageTreatmentBtn = document.getElementById('restoreImageTreatmentBtn');
 
 function escapeLayerHtml(value) {
   return String(value ?? '')
@@ -167,13 +171,16 @@ function syncLegacyStateFromLayer(side = activeSide) {
 function getLayerPayload(side) {
   return (sideLayers[side] || [])
     .map((layer, index) => {
-      const print = shirtPrints[layer.printIndex];
+      const print = layer.printOverride || shirtPrints[layer.printIndex];
       if (!print?.file) return null;
       return {
         id: layer.id || `${side}-layer-${index + 1}`,
         name: layer.name || print.name || `Camada ${index + 1}`,
         type: layer.type || (layer.textData ? 'text' : 'image'),
         url: print.file,
+        originalUrl: print.originalFile || print.file,
+        imageTreatment: print.imageTreatment || 'original',
+        darkBackgroundDetected: Boolean(print.darkBackgroundDetected || print.blend === 'screen'),
         blend: print.blend || 'screen',
         transform: { ...layer.transform },
         textData: layer.textData || print.textData || null,
@@ -240,7 +247,7 @@ function renderLayerControls() {
   const activeIndex = activeLayerIndexes[activeSide];
   stageLayerButtons.innerHTML = [0, 1, 2].map((index) => {
     const layer = layers[index];
-    const print = layer ? shirtPrints[layer.printIndex] : null;
+    const print = layer ? (layer.printOverride || shirtPrints[layer.printIndex]) : null;
     const label = print?.name || (layer ? `Camada ${index + 1}` : `+ ${index + 1}`);
     return `<button type="button" class="stage-layer-btn${index === activeIndex ? ' is-active' : ''}${!layer ? ' is-empty' : ''}" data-layer-index="${index}">${escapeLayerHtml(label)}</button>`;
   }).join('');
@@ -267,6 +274,66 @@ function renderLayerControls() {
   if (stageLayerPriceHint) {
     stageLayerPriceHint.textContent = `${getLayerPayload(activeSide).length}/3 • +20% por extra`;
   }
+  renderImageTreatmentControls();
+}
+
+function getActiveImageContext() {
+  const layer = getActiveLayer(activeSide);
+  const print = layer ? (layer.printOverride || shirtPrints[layer.printIndex]) : null;
+  if (!layer || !print?.file || layer.type === 'text' || print.type === 'text' || layer.textData || print.textData) {
+    return { layer: null, print: null };
+  }
+  return { layer, print };
+}
+
+function setImageTreatmentStatus(message = '', isError = false) {
+  if (!imageTreatmentStatus) return;
+  imageTreatmentStatus.textContent = message;
+  imageTreatmentStatus.classList.toggle('is-error', Boolean(isError));
+}
+
+function renderImageTreatmentControls() {
+  const { print } = getActiveImageContext();
+  const treatment = print?.imageTreatment || 'original';
+  const hasImage = Boolean(print);
+
+  imageTreatmentButtons.forEach((button) => {
+    button.disabled = !hasImage;
+    button.classList.toggle('is-active', hasImage && button.dataset.imageTreatment === treatment);
+  });
+
+  if (restoreImageTreatmentBtn) {
+    restoreImageTreatmentBtn.disabled = !hasImage || (
+      treatment === 'original' &&
+      (!print.originalFile || print.originalFile === print.file)
+    );
+  }
+
+  if (!imageTreatmentHint) return;
+  imageTreatmentHint.classList.remove('is-recommended');
+
+  if (!hasImage) {
+    imageTreatmentHint.textContent = 'Selecione uma camada de imagem para ajustar.';
+    return;
+  }
+
+  if (treatment === 'remove-dark') {
+    imageTreatmentHint.textContent = 'Fundo preto removido; cores e detalhes foram preservados.';
+    return;
+  }
+
+  if (treatment === 'invert-mono') {
+    imageTreatmentHint.textContent = 'Claro e escuro invertidos. Indicado para logos e desenhos P/B.';
+    return;
+  }
+
+  if (print.darkBackgroundDetected || print.blend === 'screen') {
+    imageTreatmentHint.textContent = 'Fundo escuro detectado: recomendamos “Remover fundo preto”.';
+    imageTreatmentHint.classList.add('is-recommended');
+    return;
+  }
+
+  imageTreatmentHint.textContent = 'Use a inversão somente em logos e desenhos preto e branco.';
 }
 
 removeActiveLayerBtn?.addEventListener('click', async () => {
@@ -328,6 +395,7 @@ function applyPrintToShirt(index, animate = true) {
   const layer = ensureActiveLayer(activeSide);
   if (!layer) return;
   layer.printIndex = index;
+  layer.printOverride = null;
   layer.name = print.name || layer.name;
   layer.type = print.textData ? 'text' : (print.type || 'image');
   layer.textData = print.textData || null;
@@ -351,6 +419,7 @@ function applyPrintToShirt(index, animate = true) {
   // individuais continuam preservados para edição, preço e publicação.
   syncSideCompositeToViewer(activeSide);
   renderLayerControls();
+  renderImageTreatmentControls();
   if (Object.values(getLayerCounts()).some((count) => count > 1)) stopAutoRotate();
   refreshHeroPriceNote();
 }
@@ -648,9 +717,11 @@ centerPrintBtn?.addEventListener('click', () => {
    escondidos até o 3D assumir (CSS: .hero__stage.is-3d) porque a
    foto 2D do fallback não tem como ser recolorida. */
 const shirtColorButtons = document.querySelectorAll('.shirt-color-btn');
+let selectedShirtColor = 'black';
 shirtColorButtons.forEach((btn) => {
   btn.addEventListener('click', () => {
-    window.shirtViewer3D?.setShirtColor?.(btn.dataset.color);
+    selectedShirtColor = btn.dataset.color === 'white' ? 'white' : 'black';
+    window.shirtViewer3D?.setShirtColor?.(selectedShirtColor);
     shirtColorButtons.forEach((other) => other.classList.toggle('is-active', other === btn));
   });
 });
@@ -853,6 +924,7 @@ heroStage?.addEventListener('touchend', (event) => {
 // estampa atual na FRENTE com o tamanho/posição escolhidos. O verso
 // começa vazio, esperando o cliente escolher pela chave FRENTE/VERSO.
 window.addEventListener('shirt3d-ready', () => {
+  window.shirtViewer3D?.setShirtColor?.(selectedShirtColor);
   syncAllSidePrintsToViewer();
   consumePendingHeroEditorResume();
 });
@@ -973,61 +1045,134 @@ function detectDarkBackground(file) {
   });
 }
 
-/* Cria uma cópia PNG da arte com fundo preto suavemente transparente.
-   O arquivo escolhido pelo cliente nunca é alterado: somente a cópia
-   processada é enviada. A opacidade acompanha o canal mais claro, como
-   numa separação de tinta para tecido preto: preto puro desaparece,
-   meios-tons ganham uma borda suave e cores/luzes permanecem nítidas. */
-function removeBlackBackground(file) {
+/* Carrega arquivo local ou URL sem alterar a fonte. URLs do próprio site
+   e do ImgBB permitem CORS, então podem voltar ao canvas para novos
+   ajustes sem degradar o original. */
+function loadImageForTreatment(source) {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    const objectUrl = URL.createObjectURL(file);
+    const isBlob = source instanceof Blob;
+    const objectUrl = isBlob ? URL.createObjectURL(source) : '';
 
     img.onload = () => {
-      URL.revokeObjectURL(objectUrl);
-      try {
-        const MAX_SIDE = 2400;
-        const reduction = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
-        const canvas = document.createElement('canvas');
-        canvas.width = Math.max(1, Math.round(img.naturalWidth * reduction));
-        canvas.height = Math.max(1, Math.round(img.naturalHeight * reduction));
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-        const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-        const pixels = imageData.data;
-        const TRANSPARENT_AT = 10;
-        const OPAQUE_AT = 72;
-
-        for (let i = 0; i < pixels.length; i += 4) {
-          const brightness = Math.max(pixels[i], pixels[i + 1], pixels[i + 2]);
-          const matte = Math.max(
-            0,
-            Math.min(1, (brightness - TRANSPARENT_AT) / (OPAQUE_AT - TRANSPARENT_AT))
-          );
-          pixels[i + 3] = Math.round(pixels[i + 3] * matte);
-        }
-
-        ctx.putImageData(imageData, 0, 0);
-        canvas.toBlob((blob) => {
-          if (!blob) {
-            reject(new Error('Não foi possível preparar a transparência da imagem.'));
-            return;
-          }
-          resolve(blob);
-        }, 'image/png');
-      } catch (error) {
-        reject(error);
-      }
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
+      resolve(img);
     };
 
     img.onerror = () => {
-      URL.revokeObjectURL(objectUrl);
+      if (objectUrl) URL.revokeObjectURL(objectUrl);
       reject(new Error('Não foi possível ler a imagem selecionada.'));
     };
 
-    img.src = objectUrl;
+    if (!isBlob) img.crossOrigin = 'anonymous';
+    img.src = objectUrl || String(source);
   });
+}
+
+/* Remove somente o fundo escuro que está conectado às bordas. Diferente
+   da chave antiga por luminosidade global, isto preserva pretos internos
+   do rosto, cabelo, barba, sombras e traços fechados. Uma pequena rampa
+   de alfa suaviza a transição sem criar halo serrilhado. */
+function keyOutConnectedDarkBackground(imageData, width, height) {
+  const pixels = imageData.data;
+  const total = width * height;
+  const visited = new Uint8Array(total);
+  const queue = new Int32Array(total);
+  let head = 0;
+  let tail = 0;
+  const CONNECT_AT = 96;
+  const TRANSPARENT_AT = 12;
+
+  const isConnectedDark = (pixelIndex) => {
+    const offset = pixelIndex * 4;
+    if (pixels[offset + 3] < 8) return true;
+    return Math.max(pixels[offset], pixels[offset + 1], pixels[offset + 2]) <= CONNECT_AT;
+  };
+
+  const enqueue = (pixelIndex) => {
+    if (visited[pixelIndex] || !isConnectedDark(pixelIndex)) return;
+    visited[pixelIndex] = 1;
+    queue[tail++] = pixelIndex;
+  };
+
+  for (let x = 0; x < width; x++) {
+    enqueue(x);
+    enqueue((height - 1) * width + x);
+  }
+  for (let y = 1; y < height - 1; y++) {
+    enqueue(y * width);
+    enqueue(y * width + width - 1);
+  }
+
+  while (head < tail) {
+    const current = queue[head++];
+    const x = current % width;
+    const y = Math.floor(current / width);
+    if (x > 0) enqueue(current - 1);
+    if (x + 1 < width) enqueue(current + 1);
+    if (y > 0) enqueue(current - width);
+    if (y + 1 < height) enqueue(current + width);
+  }
+
+  for (let pixelIndex = 0; pixelIndex < total; pixelIndex++) {
+    if (!visited[pixelIndex]) continue;
+    const offset = pixelIndex * 4;
+    const brightness = Math.max(pixels[offset], pixels[offset + 1], pixels[offset + 2]);
+    const linear = Math.max(0, Math.min(1, (brightness - TRANSPARENT_AT) / (CONNECT_AT - TRANSPARENT_AT)));
+    const feather = linear * linear;
+    pixels[offset + 3] = Math.round(pixels[offset + 3] * feather);
+  }
+}
+
+async function createTreatedImageBlob(source, treatment) {
+  const img = await loadImageForTreatment(source);
+  const MAX_SIDE = 2400;
+  const reduction = Math.min(1, MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.max(1, Math.round(img.naturalWidth * reduction));
+  canvas.height = Math.max(1, Math.round(img.naturalHeight * reduction));
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  keyOutConnectedDarkBackground(imageData, canvas.width, canvas.height);
+
+  if (treatment === 'invert-mono') {
+    const pixels = imageData.data;
+    for (let index = 0; index < pixels.length; index += 4) {
+      if (pixels[index + 3] < 2) continue;
+      pixels[index] = 255 - pixels[index];
+      pixels[index + 1] = 255 - pixels[index + 1];
+      pixels[index + 2] = 255 - pixels[index + 2];
+    }
+  }
+
+  ctx.putImageData(imageData, 0, 0);
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (blob) resolve(blob);
+      else reject(new Error('Não foi possível gerar a imagem tratada.'));
+    }, 'image/png');
+  });
+}
+
+function removeBlackBackground(file) {
+  return createTreatedImageBlob(file, 'remove-dark');
+}
+
+async function uploadImageBlob(blob, filename) {
+  const formData = new FormData();
+  formData.append('image', blob, filename);
+  const response = await fetch(
+    `https://api.imgbb.com/1/upload?key=${encodeURIComponent(IMGBB_API_KEY)}`,
+    { method: 'POST', body: formData }
+  );
+  const result = await response.json();
+  const url = result?.data?.display_url || result?.data?.url;
+  if (!response.ok || !result.success || !url) {
+    throw new Error(result?.error?.message || 'Falha no ImgBB');
+  }
+  return url;
 }
 
 async function uploadCustomPrint(file, printName = 'Minha Arte', forcedBlend = null, layerDetails = {}) {
@@ -1049,30 +1194,19 @@ async function uploadCustomPrint(file, printName = 'Minha Arte', forcedBlend = n
   }
 
   try {
-    // Fundo preto é convertido numa cópia PNG transparente antes do envio.
-    // Assim 2D, 3D, cabide e carrinho recebem exatamente a mesma arte, sem
-    // depender de modos de mesclagem diferentes em cada navegador.
+    // O original é salvo primeiro. Se houver fundo preto, uma segunda URL
+    // recebe o PNG tratado; assim "Restaurar original" continua possível
+    // sem reenviar o arquivo e o pedido usa exatamente a versão visualizada.
     const hasDarkBackground = !forcedBlend && await detectDarkBackground(file);
+    const originalUrl = await uploadImageBlob(file, file.name);
     const uploadFile = hasDarkBackground ? await removeBlackBackground(file) : file;
     const blend = forcedBlend || 'normal';
-
-    const formData = new FormData();
-    formData.append(
-      'image',
-      uploadFile,
-      hasDarkBackground ? `${file.name.replace(/\.[^.]+$/, '') || 'arte'}-sem-fundo.png` : file.name
-    );
-
-    const response = await fetch(
-      `https://api.imgbb.com/1/upload?key=${encodeURIComponent(IMGBB_API_KEY)}`,
-      { method: 'POST', body: formData }
-    );
-    const result = await response.json();
-    const url = result?.data?.display_url || result?.data?.url;
-
-    if (!response.ok || !result.success || !url) {
-      throw new Error(result?.error?.message || 'Falha no ImgBB');
-    }
+    const url = hasDarkBackground
+      ? await uploadImageBlob(
+          uploadFile,
+          `${file.name.replace(/\.[^.]+$/, '') || 'arte'}-sem-fundo.png`
+        )
+      : originalUrl;
 
     // Cada lado precisa manter sua própria arte. Só substituímos o slot
     // personalizado que já pertence ao lado em edição quando nenhum outro
@@ -1092,9 +1226,13 @@ async function uploadCustomPrint(file, printName = 'Minha Arte', forcedBlend = n
     const customPrint = {
       name: printName,
       file: url,
+      originalFile: originalUrl,
+      originalBlend: forcedBlend || (hasDarkBackground ? 'screen' : 'normal'),
       isCustom: true,
       blend,
       blackBackgroundRemoved: hasDarkBackground,
+      darkBackgroundDetected: hasDarkBackground,
+      imageTreatment: hasDarkBackground ? 'remove-dark' : 'original',
       type: layerDetails.type || 'image',
       textData: layerDetails.textData || null,
     };
@@ -1132,6 +1270,108 @@ customPrintInput?.addEventListener('change', () => {
   if (file) uploadCustomPrint(file);
   customPrintInput.value = ''; // permite reenviar o mesmo arquivo depois
 });
+
+function setImageTreatmentBusy(busy) {
+  imageTreatmentButtons.forEach((button) => {
+    button.disabled = busy || !getActiveImageContext().print;
+  });
+  if (restoreImageTreatmentBtn) restoreImageTreatmentBtn.disabled = busy;
+}
+
+async function restoreActiveImageOriginal() {
+  const { layer, print } = getActiveImageContext();
+  if (!layer || !print) return;
+
+  const originalUrl = print.originalFile || print.file;
+  const originalBlend = print.originalBlend || (
+    print.darkBackgroundDetected || print.blend === 'screen' ? 'screen' : 'normal'
+  );
+  layer.printOverride = {
+    ...print,
+    file: originalUrl,
+    originalFile: originalUrl,
+    originalBlend,
+    blend: originalBlend,
+    imageTreatment: 'original',
+  };
+
+  stopAutoRotate();
+  await syncSideCompositeToViewer(activeSide);
+  renderLayerControls();
+  setImageTreatmentStatus('Imagem original restaurada.');
+}
+
+async function applyImageTreatment(treatment) {
+  if (treatment === 'original') {
+    await restoreActiveImageOriginal();
+    return;
+  }
+
+  const { layer, print } = getActiveImageContext();
+  if (!layer || !print) {
+    setImageTreatmentStatus('Selecione uma camada de imagem primeiro.', true);
+    return;
+  }
+  if (!['remove-dark', 'invert-mono'].includes(treatment)) return;
+  if (print.imageTreatment === treatment) return;
+
+  // A troca automática não pode substituir a camada enquanto a nova
+  // versão está sendo processada e enviada.
+  stopAutoRotate();
+  const originalUrl = print.originalFile || print.file;
+  const baseName = String(print.name || 'arte')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/[^a-z0-9]+/gi, '-')
+    .replace(/^-|-$/g, '')
+    .toLowerCase() || 'arte';
+
+  setImageTreatmentBusy(true);
+  setImageTreatmentStatus(
+    treatment === 'remove-dark'
+      ? 'Removendo somente o fundo conectado às bordas…'
+      : 'Preparando a versão invertida…'
+  );
+
+  try {
+    const blob = await createTreatedImageBlob(originalUrl, treatment);
+    const suffix = treatment === 'remove-dark' ? 'sem-fundo' : 'invertida';
+    const treatedUrl = await uploadImageBlob(blob, `${baseName}-${suffix}.png`);
+    layer.printOverride = {
+      ...print,
+      file: treatedUrl,
+      originalFile: originalUrl,
+      originalBlend: print.originalBlend || print.blend || 'normal',
+      blend: 'normal',
+      imageTreatment: treatment,
+      darkBackgroundDetected: true,
+      blackBackgroundRemoved: true,
+    };
+
+    stopAutoRotate();
+    await syncSideCompositeToViewer(activeSide);
+    renderLayerControls();
+    setImageTreatmentStatus(
+      treatment === 'remove-dark'
+        ? 'Fundo preto removido. O original foi preservado.'
+        : 'Cores invertidas. Use esta opção somente em artes P/B.'
+    );
+  } catch (error) {
+    console.error('Não foi possível tratar a imagem:', error);
+    setImageTreatmentStatus(
+      'Não foi possível processar esta imagem. Tente reenviá-la pelo botão “Inserir imagem”.',
+      true
+    );
+  } finally {
+    setImageTreatmentBusy(false);
+    renderImageTreatmentControls();
+  }
+}
+
+imageTreatmentButtons.forEach((button) => {
+  button.addEventListener('click', () => applyImageTreatment(button.dataset.imageTreatment));
+});
+restoreImageTreatmentBtn?.addEventListener('click', restoreActiveImageOriginal);
 
 /* ---------------------------------------------------------
    Estampa de texto ("Estampa de texto")
@@ -1479,6 +1719,9 @@ function buildPrintsBySide() {
     prints[side] = {
       name: firstLayer.name || 'Minha Arte',
       file: firstLayer.url,
+      originalFile: firstLayer.originalUrl || firstLayer.url,
+      imageTreatment: firstLayer.imageTreatment || 'original',
+      darkBackgroundDetected: Boolean(firstLayer.darkBackgroundDetected),
       blend: firstLayer.blend || 'normal',
       isCustom: true,
     };
@@ -1489,6 +1732,7 @@ function buildPrintsBySide() {
 function buildEditorState(size = '') {
   return {
     activeSide,
+    shirtColor: selectedShirtColor,
     queuedPrintIndex,
     shirtPrintIndex,
     size,
@@ -1516,6 +1760,10 @@ function ensurePrintAvailable(printData) {
   shirtPrints.push({
     name: printData.name || 'Minha Arte',
     file: printData.file,
+    originalFile: printData.originalFile || printData.originalUrl || printData.file,
+    originalBlend: printData.originalBlend || printData.blend || 'normal',
+    imageTreatment: printData.imageTreatment || 'original',
+    darkBackgroundDetected: Boolean(printData.darkBackgroundDetected),
     blend: printData.blend || 'screen',
     isCustom: Boolean(printData.isCustom),
     type: printData.type || (printData.textData ? 'text' : 'image'),
@@ -1537,6 +1785,12 @@ function syncFrontOverlayFromState() {
 function restoreHeroEditorState(state) {
   if (!state || typeof state !== 'object') return false;
 
+  selectedShirtColor = state.shirtColor === 'white' ? 'white' : 'black';
+  shirtColorButtons.forEach((button) => {
+    button.classList.toggle('is-active', button.dataset.color === selectedShirtColor);
+  });
+  window.shirtViewer3D?.setShirtColor?.(selectedShirtColor);
+
   const printsBySide = state.printsBySide && typeof state.printsBySide === 'object'
     ? state.printsBySide
     : {};
@@ -1552,6 +1806,9 @@ function restoreHeroEditorState(state) {
         name: savedLayer.name,
         file: savedLayer.url || savedLayer.file,
         blend: savedLayer.blend,
+        originalFile: savedLayer.originalUrl || savedLayer.originalFile,
+        imageTreatment: savedLayer.imageTreatment,
+        darkBackgroundDetected: savedLayer.darkBackgroundDetected,
         isCustom: true,
         type: savedLayer.type,
         textData: savedLayer.textData,
@@ -1611,11 +1868,11 @@ function consumePendingHeroEditorResume() {
   }
 }
 
-async function generateHeroPreviewViews() {
-  const frontFallback = await generateFrontPreview();
+async function generateHeroPreviewViews(frontFallback = null) {
+  const safeFrontFallback = frontFallback || await generateFrontPreview();
   const viewer = window.shirtViewer3D;
   if (!viewer?.ready || !viewer.capturePng) {
-    return { front: frontFallback };
+    return { front: safeFrontFallback };
   }
 
   const previousSide = activeSide;
@@ -1640,6 +1897,26 @@ async function generateHeroPreviewViews() {
 
   viewer.setCameraAngle(SIDE_CAMERA_ANGLES[previousSide] || 0);
   return previewViews;
+}
+
+function waitForShirtViewerReady(timeoutMs = 8000) {
+  if (window.shirtViewer3D?.ready) return Promise.resolve(true);
+  return new Promise((resolve) => {
+    let settled = false;
+    const finish = (ready) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      window.removeEventListener('shirt3d-ready', onReady);
+      window.removeEventListener('shirt3d-error', onError);
+      resolve(ready);
+    };
+    const onReady = () => finish(true);
+    const onError = () => finish(false);
+    const timer = setTimeout(() => finish(false), timeoutMs);
+    window.addEventListener('shirt3d-ready', onReady, { once: true });
+    window.addEventListener('shirt3d-error', onError, { once: true });
+  });
 }
 
 async function generateFrontPreview() {
@@ -1854,7 +2131,6 @@ document.querySelectorAll('.product-card[data-price]').forEach((card) => {
 
 renderCart();
 refreshHeroPriceNote();
-consumePendingHeroEditorResume();
 
 /* ---------------------------------------------------------
    Botão "Adicionar ao carrinho" do hero (camisa + estampa atual)
@@ -1899,6 +2175,9 @@ heroSizeButtons?.querySelectorAll('button').forEach((btn) => {
 });
 syncSizeButtons();
 refreshHeroCard();
+// A restauração pode atualizar o tamanho selecionado; só deve rodar
+// depois que os botões de tamanho já foram inicializados.
+consumePendingHeroEditorResume();
 
 addToCartBtn?.addEventListener('click', async () => {
   // Adiciona a estampa que está VESTIDA na camisa (mockup), que não é
@@ -1910,8 +2189,12 @@ addToCartBtn?.addEventListener('click', async () => {
   const qty = normalizeHeroQty();
   const size = heroSizeSelect?.value || 'M';
   const coverage = getSelectedCoverage();
-  const previewImage = await generateFrontPreview();
-  const previewViews = await generateHeroPreviewViews();
+  if (selectedShirtColor === 'white') await waitForShirtViewerReady();
+  const hangingPreview = await generateFrontPreview();
+  const previewViews = await generateHeroPreviewViews(hangingPreview);
+  const previewImage = selectedShirtColor === 'white' && previewViews.front
+    ? previewViews.front
+    : hangingPreview;
   const preferredPreviewSide = getPreferredPreviewSideForCart();
   const editorState = buildEditorState(size);
 
@@ -1926,6 +2209,7 @@ addToCartBtn?.addEventListener('click', async () => {
     previewViews,
     metadata: {
       editorSource: 'home-customizer',
+      shirtColor: selectedShirtColor,
       preferredPreviewSide,
       pricingMode: 'layered-shirt',
       sides: coverage.sides,
@@ -2014,7 +2298,12 @@ publishModelBtn?.addEventListener('click', async () => {
   setPublishFeedback('Publicando seu modelo no catálogo…');
 
   try {
-    const catalogImage = await generateFrontPreview();
+    if (selectedShirtColor === 'white') await waitForShirtViewerReady();
+    const hangingPreview = await generateFrontPreview();
+    const publicViews = await generateHeroPreviewViews(hangingPreview);
+    const catalogImage = selectedShirtColor === 'white' && publicViews.front
+      ? publicViews.front
+      : hangingPreview;
     const firstName = String(user.name || 'Cliente').split(' ')[0];
     const publishCoverage = getSelectedCoverage();
 
@@ -2026,9 +2315,10 @@ publishModelBtn?.addEventListener('click', async () => {
       ),
       price: publishCoverage.price,
       catalogImage,
-      views: { front: catalogImage },
+      views: { ...publicViews, front: catalogImage },
       model: buildModelFromCurrentShirt(),
       layerCounts: publishCoverage.layerCounts,
+      shirtColor: selectedShirtColor,
       // O backend atual ignora este campo; a versão nova (backend/
       // products.php) passa a persisti-lo. O marcador na descrição
       // garante o crédito nos dois casos.

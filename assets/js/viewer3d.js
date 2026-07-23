@@ -141,6 +141,16 @@ function emitVisibleSideChange(force = false) {
   }));
 }
 
+// A etiqueta fica na parte interna da nuca. Alguns ângulos oblíquos do
+// verso conseguiam enxergar o verso do decal através da malha fina da
+// camisa; ocultá-la no hemisfério traseiro mantém o efeito físico correto.
+function updateNeckLabelVisibility() {
+  if (!neckLabelMesh || !camera || !controls) return;
+  const frontDepth = camera.position.z - controls.target.z;
+  const safeMargin = (modelSize?.y || 1) * 0.04;
+  neckLabelMesh.visible = frontDepth > safeMargin;
+}
+
 function setPrint(url, blend, side = 'front') {
   const sideState = state[side];
   if (!sideState) return;
@@ -753,6 +763,7 @@ function init() {
 
   renderer.setAnimationLoop(() => {
     controls.update();
+    updateNeckLabelVisibility();
     emitVisibleSideChange();
     renderer.render(scene, camera);
   });
@@ -818,6 +829,7 @@ function capturePreview(side = 'front') {
     camera.aspect = 1;
     camera.updateProjectionMatrix();
     applyPreviewCamera(side);
+    updateNeckLabelVisibility();
     renderer.render(scene, camera);
     return renderer.domElement.toDataURL('image/png');
   } finally {

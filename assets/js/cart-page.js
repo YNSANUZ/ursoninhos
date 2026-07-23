@@ -306,6 +306,15 @@
   }
 
   async function resolveDetailViewPreview(item, view) {
+    // A composição legada usa mockups de cabide exclusivamente pretos.
+    // Para camisa branca, a captura 3D salva é a fonte fiel da cor e da arte.
+    if (isCustomShirt(item) && item.metadata?.shirtColor === 'white') {
+      const savedView = item.previewViews?.[view] ||
+        (view === 'front' ? item.previewImage : '') ||
+        item.previewViews?.front;
+      if (savedView) return savedView;
+    }
+
     if (view === 'back') {
       if (isCustomShirt(item)) {
         const layeredBack = await buildLayeredShirtMockup(item, 'back');
@@ -350,6 +359,7 @@
       item.previewImage ||
       'assets/img/banner-estatico.jpg';
     if (!isCustomShirt(item)) return preferredPreview;
+    if (item.metadata?.shirtColor === 'white') return preferredPreview;
     const layeredFront = await buildLayeredShirtMockup(item, 'front');
     if (layeredFront) return layeredFront;
     if (!item.metadata?.frontPrintUrl) return item.previewImage || preferredPreview;

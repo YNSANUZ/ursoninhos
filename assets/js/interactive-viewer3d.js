@@ -249,6 +249,13 @@ export async function createInteractiveViewer({ container, cameraDistance = EDIT
     controls.update();
   };
 
+  const updateNeckLabelVisibility = () => {
+    if (!neckLabelMesh) return;
+    const frontDepth = camera.position.z - controls.target.z;
+    const safeMargin = (anchors?.boxSize?.y || 1) * 0.04;
+    neckLabelMesh.visible = frontDepth > safeMargin;
+  };
+
   const capturePng = () => renderer.domElement.toDataURL('image/png');
 
   // Troca a cor do tecido (preta/branca) sem trocar de modelo.
@@ -358,6 +365,7 @@ export async function createInteractiveViewer({ container, cameraDistance = EDIT
 
   renderer.setAnimationLoop(() => {
     controls.update();
+    updateNeckLabelVisibility();
     renderer.render(scene, camera);
   });
 

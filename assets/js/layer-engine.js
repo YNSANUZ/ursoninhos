@@ -44,6 +44,11 @@
       name: String(layer.name || (textData ? 'Texto' : 'Imagem')),
       type: textData || layer.type === 'text' ? 'text' : 'image',
       url,
+      originalUrl: String(layer.originalUrl || layer.originalFile || url),
+      imageTreatment: ['original', 'remove-dark', 'invert-mono'].includes(layer.imageTreatment)
+        ? layer.imageTreatment
+        : 'original',
+      darkBackgroundDetected: Boolean(layer.darkBackgroundDetected),
       blend: isBuiltInBlackArtwork
         ? 'screen'
         : ['screen', 'normal'].includes(layer.blend) ? layer.blend : 'normal',

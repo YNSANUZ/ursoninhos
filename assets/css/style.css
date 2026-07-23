@@ -5155,6 +5155,76 @@ ul {
   text-align: center;
 }
 
+.image-treatment {
+  display: grid;
+  gap: 8px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(217, 167, 92, 0.18);
+}
+
+.image-treatment__hint,
+.image-treatment__status {
+  margin: 0;
+  text-align: center;
+  color: var(--text-dim);
+  font-size: 0.7rem;
+  line-height: 1.35;
+}
+
+.image-treatment__hint.is-recommended {
+  color: var(--gold);
+}
+
+.image-treatment__buttons {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.image-treatment__btn,
+.image-treatment__restore {
+  min-height: 34px;
+  padding: 6px 7px;
+  border: 1px solid rgba(217, 167, 92, 0.3);
+  border-radius: 9px;
+  background: rgba(13, 9, 6, 0.4);
+  color: var(--text-muted);
+  font: inherit;
+  font-size: 0.68rem;
+  line-height: 1.2;
+  cursor: pointer;
+}
+
+.image-treatment__btn:hover,
+.image-treatment__restore:hover {
+  color: var(--gold);
+  border-color: rgba(217, 167, 92, 0.6);
+}
+
+.image-treatment__btn.is-active {
+  color: #211409;
+  border-color: transparent;
+  background: linear-gradient(180deg, #e8b878, var(--caramel));
+}
+
+.image-treatment__btn:disabled,
+.image-treatment__restore:disabled {
+  cursor: default;
+  opacity: 0.42;
+}
+
+.image-treatment__restore {
+  justify-self: center;
+  min-height: 30px;
+  padding-inline: 14px;
+  border-radius: 999px;
+  background: transparent;
+}
+
+.image-treatment__status.is-error {
+  color: #e08a7a;
+}
+
 /* --- Celular: o painel vira folha deslizante --- */
 @media (max-width: 900px) {
   .edit-panel {
