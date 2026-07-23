@@ -1254,7 +1254,7 @@
       started = true;
       events.forEach(([target, name]) => target.removeEventListener(name, load3d));
       showLoading();
-      import('./assets/js/viewer3d.js?v=26')
+      import('./assets/js/viewer3d.js?v=27')
         .catch((error) => {
           console.warn('Manequim 3D indisponível, mantendo o palco 2D:', error);
           finishLoading(false);

@@ -21,6 +21,10 @@ const NECK_LABEL_WIDTH = 0.085;
 const NECK_LABEL_TINT = { black: 0xffffff, white: 0x555555 };
 const OFFSET_X_M_PER_PCT = 0.006;
 const OFFSET_Y_M_PER_PCT = 0.008;
+// Mantém uma margem visível ao redor da camisa para estampas grandes ou
+// posicionadas perto da gola não parecerem cortadas pelo canvas.
+const EDITOR_CAMERA_DISTANCE = 2.9;
+const EDITOR_CAMERA_MAX_DISTANCE = 4.2;
 
 const SIDE_CONFIG = {
   front: { rotY: 0, baseWidth: 0.26, depth: 0.15, offsetXDir: [1, 0, 0] },
@@ -92,7 +96,7 @@ function computeAnchors(mannequinMesh, model) {
   };
 }
 
-export async function createInteractiveViewer({ container, cameraDistance = 2.3, shirtColor = 'black' }) {
+export async function createInteractiveViewer({ container, cameraDistance = EDITOR_CAMERA_DISTANCE, shirtColor = 'black' }) {
   const state = {
     front: makeSideState(),
     back: makeSideState(),
@@ -335,7 +339,7 @@ export async function createInteractiveViewer({ container, cameraDistance = 2.3,
         camera.position.set(0, size.y * 0.52, size.y * cameraDistance);
         controls.target.set(0, size.y * 0.5, 0);
         controls.minDistance = size.y * 0.9;
-        controls.maxDistance = size.y * 3.2;
+        controls.maxDistance = size.y * EDITOR_CAMERA_MAX_DISTANCE;
         controls.update();
         resolve();
       },

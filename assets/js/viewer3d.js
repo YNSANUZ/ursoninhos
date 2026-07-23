@@ -50,6 +50,12 @@ const NECK_LABEL_TINT = { black: 0xffffff, white: 0x555555 };
 // Conversão dos passos dos botões (em "%") para metros no tecido.
 const OFFSET_X_M_PER_PCT = 0.009;
 const OFFSET_Y_M_PER_PCT = 0.011;
+// Folga de enquadramento do editor. A distância anterior (2.3) deixava
+// estampas grandes ou movidas para perto da gola ultrapassarem o canvas,
+// parecendo cortadas. Esta distância mantém a camisa e toda a faixa de
+// personalização visíveis, sem reduzir os limites livres de movimento.
+const EDITOR_CAMERA_DISTANCE = 2.9;
+const EDITOR_CAMERA_MAX_DISTANCE = 4.2;
 
 /* Configuração de cada lado editável da camisa:
    - rotY: orientação do projetor do decal (0 projeta no peito, PI nas
@@ -707,10 +713,10 @@ function init() {
 
       // Enquadra a camisa inteira, mirando no centro dela (sem cabeça
       // nem pedestal, o meio do modelo é o meio da própria camisa).
-      camera.position.set(0, size.y * 0.52, size.y * 2.3);
+      camera.position.set(0, size.y * 0.52, size.y * EDITOR_CAMERA_DISTANCE);
       controls.target.set(0, size.y * 0.5, 0);
       controls.minDistance = size.y * 0.9;
-      controls.maxDistance = size.y * 3.2;
+      controls.maxDistance = size.y * EDITOR_CAMERA_MAX_DISTANCE;
       controls.update();
       emitVisibleSideChange(true);
 
@@ -770,11 +776,11 @@ function setCameraAngle(degrees) {
 function applyPreviewCamera(side = 'front') {
   if (!camera || !controls || !modelSize) return;
   const previewConfig = {
-    front: { targetX: 0, targetY: 0.55, cameraY: 0.62, radius: 1.86 },
-    back: { targetX: 0, targetY: 0.55, cameraY: 0.62, radius: 1.86 },
-    sleeveLeft: { targetX: 0, targetY: 0.55, cameraY: 0.62, radius: 1.9 },
-    sleeveRight: { targetX: 0, targetY: 0.55, cameraY: 0.62, radius: 1.9 },
-  }[side] || { targetX: 0, targetY: 0.55, cameraY: 0.62, radius: 1.86 };
+    front: { targetX: 0, targetY: 0.5, cameraY: 0.52, radius: 2.75 },
+    back: { targetX: 0, targetY: 0.5, cameraY: 0.52, radius: 2.75 },
+    sleeveLeft: { targetX: 0, targetY: 0.5, cameraY: 0.52, radius: 2.8 },
+    sleeveRight: { targetX: 0, targetY: 0.5, cameraY: 0.52, radius: 2.8 },
+  }[side] || { targetX: 0, targetY: 0.5, cameraY: 0.52, radius: 2.75 };
 
   const targetX = modelSize.x * previewConfig.targetX;
   const targetY = modelSize.y * previewConfig.targetY;
