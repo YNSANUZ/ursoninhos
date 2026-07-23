@@ -962,14 +962,75 @@
     return payload;
   }
 
-  function checkoutItemPayload(item) {
+  const CUSTOMIZATION_SNAPSHOT_VERSION = 1;
+
+  function isPersonalizedShirtItem(item) {
+    return String(item?.productId || item?.lineId || '').startsWith('camisa-personalizada::');
+  }
+
+  function customizationSnapshotForItem(item) {
+    if (!isPersonalizedShirtItem(item)) return null;
+
+    const metadata = item?.metadata && typeof item.metadata === 'object'
+      ? item.metadata
+      : {};
+    const editorState = metadata.editorState && typeof metadata.editorState === 'object'
+      ? metadata.editorState
+      : null;
+    const layersBySide = metadata.layersBySide && typeof metadata.layersBySide === 'object'
+      ? metadata.layersBySide
+      : editorState?.layersBySide;
+    const model = metadata.model && typeof metadata.model === 'object'
+      ? metadata.model
+      : null;
+    const sides = metadata.sides && typeof metadata.sides === 'object'
+      ? metadata.sides
+      : null;
+    const previewViews = item?.previewViews && typeof item.previewViews === 'object'
+      ? item.previewViews
+      : null;
+
+    // Carrinhos antigos podem não ter o estado completo. Nesta fase opcional,
+    // eles seguem pelo payload legado; apenas personalizações completas enviam
+    // o snapshot versionado para o pedido interno.
+    if (!editorState || !layersBySide || !model || !sides || !previewViews?.front || !item?.previewImage) {
+      return null;
+    }
+
+    const layerCounts = metadata.layerCounts && typeof metadata.layerCounts === 'object'
+      ? metadata.layerCounts
+      : Object.fromEntries(
+        ['front', 'back', 'sleeveLeft', 'sleeveRight'].map((side) => [
+          side,
+          Array.isArray(layersBySide[side]) ? layersBySide[side].length : 0,
+        ])
+      );
+
     return {
+      version: CUSTOMIZATION_SNAPSHOT_VERSION,
+      productId: String(item.productId || item.lineId || ''),
+      size: String(item.size || editorState.size || ''),
+      sides,
+      layerCounts,
+      layersBySide,
+      model,
+      editorState,
+      previewImage: String(item.previewImage || ''),
+      previewViews,
+    };
+  }
+
+  function checkoutItemPayload(item) {
+    const payload = {
       id: String(item.productId || item.lineId || 'produto'),
       title: String(item.title || 'Produto Ursoninhos'),
       description: [item.variantLabel, item.size ? `Tamanho ${item.size}` : ''].filter(Boolean).join(' - '),
       quantity: Number(item.quantity || 1),
       unitPrice: Number(item.price || 0),
     };
+    const customizationSnapshot = customizationSnapshotForItem(item);
+    if (customizationSnapshot) payload.customizationSnapshot = customizationSnapshot;
+    return payload;
   }
 
   async function createCheckoutSession() {
