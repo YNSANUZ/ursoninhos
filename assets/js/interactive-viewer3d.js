@@ -122,7 +122,14 @@ export async function createInteractiveViewer({ container, cameraDistance = EDIT
   const camera = new THREE.PerspectiveCamera(28, (container.clientWidth || 1) / (container.clientHeight || 1), 0.01, 20);
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableZoom = true;
-  controls.enablePan = false;
+  controls.enablePan = true;
+  controls.screenSpacePanning = true;
+  controls.zoomToCursor = true;
+  controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+  controls.mouseButtons.MIDDLE = THREE.MOUSE.PAN;
+  controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
+  controls.touches.ONE = THREE.TOUCH.ROTATE;
+  controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
   controls.minPolarAngle = Math.PI * 0.28;
@@ -140,6 +147,26 @@ export async function createInteractiveViewer({ container, cameraDistance = EDIT
   let anchors = null;
   let decals = [];
   let rebuildQueued = false;
+  let modelSize = null;
+  let defaultCameraPosition = null;
+  let defaultCameraTarget = null;
+
+  const clampCameraTarget = () => {
+    if (!modelSize) return;
+    const previousTarget = controls.target.clone();
+    controls.target.x = clamp(controls.target.x, -modelSize.x * 0.68, modelSize.x * 0.68);
+    controls.target.y = clamp(controls.target.y, modelSize.y * 0.08, modelSize.y * 0.96);
+    controls.target.z = clamp(controls.target.z, -modelSize.z * 0.45, modelSize.z * 0.45);
+    camera.position.add(controls.target.clone().sub(previousTarget));
+  };
+
+  const resetView = () => {
+    if (!defaultCameraPosition || !defaultCameraTarget) return;
+    camera.position.copy(defaultCameraPosition);
+    controls.target.copy(defaultCameraTarget);
+    controls.update();
+    renderer.render(scene, camera);
+  };
 
   const rebuildDecals = () => {
     decals.forEach((decal) => {
@@ -342,12 +369,15 @@ export async function createInteractiveViewer({ container, cameraDistance = EDIT
         anchors = computeAnchors(mannequinMesh, model);
         buildNeckLabel();
         const size = anchors.boxSize || new THREE.Vector3(1, 1, 1);
+        modelSize = size.clone();
         // Mira no centro da camisa (não há mais cabeça nem pedestal).
         camera.position.set(0, size.y * 0.52, size.y * cameraDistance);
         controls.target.set(0, size.y * 0.5, 0);
-        controls.minDistance = size.y * 0.9;
+        controls.minDistance = size.y * 0.24;
         controls.maxDistance = size.y * EDITOR_CAMERA_MAX_DISTANCE;
         controls.update();
+        defaultCameraPosition = camera.position.clone();
+        defaultCameraTarget = controls.target.clone();
         resolve();
       },
       undefined,
@@ -365,6 +395,7 @@ export async function createInteractiveViewer({ container, cameraDistance = EDIT
 
   renderer.setAnimationLoop(() => {
     controls.update();
+    clampCameraTarget();
     updateNeckLabelVisibility();
     renderer.render(scene, camera);
   });
@@ -375,6 +406,7 @@ export async function createInteractiveViewer({ container, cameraDistance = EDIT
     setTransform,
     setCameraAngle,
     setShirtColor,
+    resetView,
     capturePng,
     state,
     controls,

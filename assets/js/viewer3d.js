@@ -101,6 +101,8 @@ let decals = [];
 let rebuildQueued = false;
 let lastVisibleSide = null;
 let modelSize = null;
+let defaultCameraPosition = null;
+let defaultCameraTarget = null;
 
 const textureLoader = new THREE.TextureLoader();
 textureLoader.setCrossOrigin('anonymous');
@@ -149,6 +151,29 @@ function updateNeckLabelVisibility() {
   const frontDepth = camera.position.z - controls.target.z;
   const safeMargin = (modelSize?.y || 1) * 0.04;
   neckLabelMesh.visible = frontDepth > safeMargin;
+}
+
+// Mantém a navegação livre o suficiente para inspecionar gola e mangas,
+// mas impede que um pan longo faça a camisa desaparecer completamente.
+function clampCameraTarget() {
+  if (!camera || !controls || !modelSize) return;
+  const previousTarget = controls.target.clone();
+  controls.target.x = clamp(controls.target.x, -modelSize.x * 0.68, modelSize.x * 0.68);
+  controls.target.y = clamp(controls.target.y, modelSize.y * 0.08, modelSize.y * 0.96);
+  controls.target.z = clamp(controls.target.z, -modelSize.z * 0.45, modelSize.z * 0.45);
+
+  // Corrige câmera e alvo juntos: o enquadramento não dá um salto quando
+  // o usuário alcança um dos limites.
+  camera.position.add(controls.target.clone().sub(previousTarget));
+}
+
+function resetView() {
+  if (!camera || !controls || !defaultCameraPosition || !defaultCameraTarget) return;
+  camera.position.copy(defaultCameraPosition);
+  controls.target.copy(defaultCameraTarget);
+  controls.update();
+  emitVisibleSideChange(true);
+  renderer?.render?.(scene, camera);
 }
 
 function setPrint(url, blend, side = 'front') {
@@ -522,6 +547,12 @@ function setupDecalDrag() {
 
   interactionSurface.addEventListener('pointerdown', (event) => {
     activePointers.set(event.pointerId, { x: event.clientX, y: event.clientY, type: event.pointerType });
+    // Botão central/direito e Shift/Ctrl + clique pertencem à câmera,
+    // mesmo quando o ponteiro está sobre a estampa.
+    if (
+      event.pointerType === 'mouse'
+      && (event.button !== 0 || event.shiftKey || event.ctrlKey || event.metaKey)
+    ) return;
     const side = decalSideAt(event);
     if (!side) return;
 
@@ -658,7 +689,16 @@ function init() {
 
   controls = new OrbitControls(camera, interactionSurface);
   controls.enableZoom = true; // roda do mouse / pinça aproxima e afasta
-  controls.enablePan = false;
+  controls.enablePan = true;
+  controls.screenSpacePanning = true;
+  controls.zoomToCursor = true;
+  // Scroll pressionado ou botão direito deslocam a visão. Shift + botão
+  // esquerdo também é convertido em pan pelo próprio OrbitControls.
+  controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
+  controls.mouseButtons.MIDDLE = THREE.MOUSE.PAN;
+  controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
+  controls.touches.ONE = THREE.TOUCH.ROTATE;
+  controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
   controls.minPolarAngle = Math.PI * 0.28;
@@ -725,9 +765,13 @@ function init() {
       // nem pedestal, o meio do modelo é o meio da própria camisa).
       camera.position.set(0, size.y * 0.52, size.y * EDITOR_CAMERA_DISTANCE);
       controls.target.set(0, size.y * 0.5, 0);
-      controls.minDistance = size.y * 0.9;
+      // Permite chegar perto da gola. O near plane da câmera continua em
+      // 0,01, portanto o tecido não é recortado prematuramente.
+      controls.minDistance = size.y * 0.24;
       controls.maxDistance = size.y * EDITOR_CAMERA_MAX_DISTANCE;
       controls.update();
+      defaultCameraPosition = camera.position.clone();
+      defaultCameraTarget = controls.target.clone();
       emitVisibleSideChange(true);
 
       computeAnchors(model);
@@ -763,6 +807,7 @@ function init() {
 
   renderer.setAnimationLoop(() => {
     controls.update();
+    clampCameraTarget();
     updateNeckLabelVisibility();
     emitVisibleSideChange();
     renderer.render(scene, camera);
@@ -843,7 +888,17 @@ function capturePreview(side = 'front') {
   }
 }
 
-window.shirtViewer3D = { ready: false, setPrint, setTransform, clearPrint, setCameraAngle, setShirtColor, capturePng, capturePreview };
+window.shirtViewer3D = {
+  ready: false,
+  setPrint,
+  setTransform,
+  clearPrint,
+  setCameraAngle,
+  setShirtColor,
+  resetView,
+  capturePng,
+  capturePreview,
+};
 
 try {
   init();

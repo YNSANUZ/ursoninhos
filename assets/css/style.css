@@ -999,8 +999,8 @@ ul {
   font-variant-numeric: tabular-nums;
 }
 
-/* --- Tutorial em GIF sobre o manequim ---
-   Card central com GIF 3:4, contador e fechar. Some sozinho em 12s,
+/* --- Tutorial em GIF sobre a camisa ---
+   Card central com GIF, comandos, contador e fechar. Some sozinho em 20s,
    mas pode ser reaberto pelo botao "Tutorial" no canto do palco. */
 .stage-intro {
   position: absolute;
@@ -1010,6 +1010,7 @@ ul {
   z-index: 5;
   width: min(88%, 420px);
   max-height: 88%;
+  overflow-y: auto;
   padding: 10px;
   border-radius: calc(var(--radius-m) + 2px);
   border: 1px solid var(--gold-soft);
@@ -1037,7 +1038,7 @@ ul {
   border-radius: calc(var(--radius-m) - 2px);
   background: #000;
   aspect-ratio: 3 / 4;
-  max-height: min(72vh, 560px);
+  max-height: min(46vh, 390px);
 }
 
 .stage-intro__gif {
@@ -1046,6 +1047,45 @@ ul {
   height: 100%;
   object-fit: contain;
   object-position: center;
+}
+
+.stage-intro__controls {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  margin-top: 9px;
+}
+
+.stage-intro__device {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  padding: 9px 10px;
+  border: 1px solid rgba(221, 164, 86, 0.24);
+  border-radius: 10px;
+  background: rgba(255, 239, 218, 0.055);
+  color: rgba(255, 245, 233, 0.82);
+  font-size: 0.64rem;
+  line-height: 1.35;
+}
+
+.stage-intro__device strong {
+  margin-bottom: 2px;
+  color: var(--gold);
+  font-size: 0.72rem;
+}
+
+.stage-intro__device b,
+.stage-intro__tip b {
+  color: #fff4e4;
+  font-weight: 700;
+}
+
+.stage-intro__tip {
+  margin: 8px 42px 0 2px;
+  color: rgba(255, 245, 233, 0.68);
+  font-size: 0.63rem;
+  line-height: 1.35;
 }
 
 .stage-intro__close {
@@ -1113,7 +1153,35 @@ ul {
   transform: translateY(-1px);
 }
 
+.stage-view-reset-btn {
+  position: absolute;
+  right: 12px;
+  top: 54px;
+  z-index: 4;
+  border: 1px solid rgba(221, 164, 86, 0.42);
+  border-radius: 999px;
+  background: rgba(20, 14, 9, 0.76);
+  color: rgba(255, 235, 207, 0.9);
+  padding: 7px 12px;
+  font: inherit;
+  font-size: 0.66rem;
+  font-weight: 700;
+  cursor: pointer;
+  box-shadow: 0 8px 20px rgba(7, 4, 2, 0.2);
+  transition: transform 0.2s ease, background 0.2s ease, opacity 0.2s ease;
+}
+
+.stage-view-reset-btn:hover {
+  background: rgba(38, 27, 18, 0.94);
+  transform: translateY(-1px);
+}
+
 .stage-intro:not([hidden]) + .stage-tutorial-btn {
+  opacity: 0;
+  pointer-events: none;
+}
+
+.stage-intro:not([hidden]) ~ .stage-view-reset-btn {
   opacity: 0;
   pointer-events: none;
 }
@@ -4374,6 +4442,18 @@ ul {
     top: 46%;
   }
 
+  .stage-intro__media {
+    max-height: min(38vh, 280px);
+  }
+
+  .stage-intro__controls {
+    grid-template-columns: 1fr;
+  }
+
+  .stage-intro__device {
+    font-size: 0.61rem;
+  }
+
   .stage-intro__close {
     width: 32px;
     height: 32px;
@@ -4394,6 +4474,14 @@ ul {
     border-radius: 12px;
     background: rgba(20, 14, 9, 0.72);
     box-shadow: 0 6px 14px rgba(7, 4, 2, 0.2);
+  }
+
+  .stage-view-reset-btn {
+    top: 48px;
+    right: 12px;
+    padding: 6px 9px;
+    font-size: 0.61rem;
+    border-radius: 12px;
   }
 
   .hero__picker {

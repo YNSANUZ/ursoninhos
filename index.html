@@ -33,7 +33,7 @@
      de usar o cache. Sempre que CSS ou JS mudarem, aumente este número
      aqui e no <script> do final da página. -->
 <script src="assets/js/theme-toggle.js?v=1"></script>
-  <link rel="stylesheet" href="assets/css/style.css?v=50">
+  <link rel="stylesheet" href="assets/css/style.css?v=51">
 <!-- three.js para o manequim 3D do hero (decal da estampa no tecido).
      O importmap precisa vir antes de qualquer script type="module". -->
 <script type="importmap">
@@ -248,10 +248,32 @@
                 height="1024"
                 decoding="async">
             </div>
-            <p class="stage-intro__timer" id="stageIntroTimer" aria-label="Tempo restante do tutorial">12</p>
+            <div class="stage-intro__controls" aria-label="Comandos para personalizar e navegar pela camisa">
+              <section class="stage-intro__device">
+                <strong>💻 No computador</strong>
+                <span><b>Arrastar fora da estampa:</b> girar a camisa</span>
+                <span><b>Scroll fora da estampa:</b> aproximar ou afastar</span>
+                <span><b>Scroll pressionado + arrastar:</b> mover a visão</span>
+                <span><b>Shift + arrastar:</b> também move a visão</span>
+                <span><b>Arrastar sobre a estampa:</b> reposicionar a arte</span>
+                <span><b>Scroll sobre a estampa:</b> redimensionar a arte</span>
+              </section>
+              <section class="stage-intro__device">
+                <strong>📱 No celular</strong>
+                <span><b>Um dedo fora da estampa:</b> girar a camisa</span>
+                <span><b>Dois dedos:</b> aproximar, afastar e mover</span>
+                <span><b>Arrastar sobre a estampa:</b> reposicionar a arte</span>
+                <span><b>Pinça sobre a estampa:</b> redimensionar a arte</span>
+              </section>
+            </div>
+            <p class="stage-intro__tip">Use as abas <b>Imagem, Texto e Camadas</b> para criar. Depois, <b>Centralizar visão</b> volta ao enquadramento inicial.</p>
+            <p class="stage-intro__timer" id="stageIntroTimer" aria-label="Tempo restante do tutorial">20</p>
           </div>
           <button type="button" class="stage-tutorial-btn" id="stageTutorialBtn" aria-controls="stageIntro">
             Tutorial
+          </button>
+          <button type="button" class="stage-view-reset-btn" id="stageViewResetBtn" aria-label="Centralizar a visualização da camisa">
+            ↻ Centralizar visão
           </button>
           <div class="stage-mobile-actions" aria-label="Ações rápidas no celular">
             <!-- "Editar estampa" abre o painel unificado como folha
@@ -1183,7 +1205,7 @@
     window.addEventListener('shirt3d-ready', () => finishLoading(true));
     window.addEventListener('shirt3d-error', () => finishLoading(false));
 
-    // Tutorial em GIF: abre sozinho por 12s, pode ser fechado no X e
+    // Tutorial em GIF e comandos: abre sozinho por 20s, pode ser fechado no X e
     // sempre pode ser reaberto no botao "Tutorial". O GIF reinicia
     // toda vez que o tutorial abre.
     const intro = document.getElementById('stageIntro');
@@ -1192,7 +1214,7 @@
       const tutorialBtn = document.getElementById('stageTutorialBtn');
       const tutorialGif = document.getElementById('stageIntroGif');
       const tutorialTimer = document.getElementById('stageIntroTimer');
-      const TUTORIAL_SECONDS = 12;
+      const TUTORIAL_SECONDS = 20;
       let tutorialTick = null;
       let tutorialHide = null;
       let tutorialFade = null;
@@ -1243,7 +1265,7 @@
         intro.classList.remove('is-done');
         restartTutorialGif();
         // Na primeira visita o GIF ainda está baixando: o contador de
-        // 12s só começa quando ele estiver PRONTO na tela — antes disso
+        // 20s só começa quando ele estiver PRONTO na tela — antes disso
         // o cartão espera, em vez de fechar mostrando um quadro preto.
         if (tutorialGif && !tutorialGif.complete) {
           if (tutorialTimer) tutorialTimer.textContent = '…';
@@ -1260,13 +1282,18 @@
       window.addEventListener('beforeunload', stopTutorialTimers);
     }
 
+    const stageViewResetBtn = document.getElementById('stageViewResetBtn');
+    stageViewResetBtn?.addEventListener('click', () => {
+      window.shirtViewer3D?.resetView?.();
+    });
+
     let started = false;
     function load3d() {
       if (started) return;
       started = true;
       events.forEach(([target, name]) => target.removeEventListener(name, load3d));
       showLoading();
-      import('./assets/js/viewer3d.js?v=28')
+      import('./assets/js/viewer3d.js?v=29')
         .catch((error) => {
           console.warn('Manequim 3D indisponível, mantendo o palco 2D:', error);
           finishLoading(false);
