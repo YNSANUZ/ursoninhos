@@ -733,9 +733,20 @@ async function uploadCustomPrint(file, printName = 'Minha Arte', forcedBlend = n
       throw new Error(result?.error?.message || 'Falha no ImgBB');
     }
 
-    // Reaproveita o mesmo slot "Minha Arte" em envios seguintes, em vez
-    // de acumular um card novo para cada foto enviada.
-    const existingCustomIndex = shirtPrints.findIndex((print) => print.isCustom);
+    // Cada lado precisa manter sua própria arte. Só substituímos o slot
+    // personalizado que já pertence ao lado em edição quando nenhum outro
+    // lado aponta para ele. Isso evita que uma imagem nova no verso troque,
+    // por referência, o texto que já estava aplicado na frente.
+    const currentSideIndex = sidePrintSelections[activeSide];
+    const currentSidePrint = currentSideIndex === null || currentSideIndex === undefined
+      ? null
+      : shirtPrints[currentSideIndex];
+    const sharedWithAnotherSide = Object.entries(sidePrintSelections).some(
+      ([side, index]) => side !== activeSide && index === currentSideIndex
+    );
+    const replaceableCustomIndex = currentSidePrint?.isCustom && !sharedWithAnotherSide
+      ? currentSideIndex
+      : -1;
     const customPrint = {
       name: printName,
       file: url,
@@ -746,10 +757,10 @@ async function uploadCustomPrint(file, printName = 'Minha Arte', forcedBlend = n
 
     // A arte enviada entra em destaque na lateral e já veste a camisa
     // na hora (lateral e mockup sempre mostram a mesma estampa).
-    if (existingCustomIndex >= 0) {
-      shirtPrints[existingCustomIndex] = customPrint;
+    if (replaceableCustomIndex >= 0) {
+      shirtPrints[replaceableCustomIndex] = customPrint;
       renderPrintPicker();
-      rotateCarousel(existingCustomIndex);
+      rotateCarousel(replaceableCustomIndex);
     } else {
       shirtPrints.push(customPrint);
       renderPrintPicker();
