@@ -37,6 +37,7 @@ const adminLayerEditorNote = document.getElementById('adminLayerEditorNote');
 const refreshAdminLibraryBtn = document.getElementById('refreshAdminLibraryBtn');
 const closeAdminLayerEditorBtn = document.getElementById('closeAdminLayerEditorBtn');
 const previewAdminLayersBtn = document.getElementById('previewAdminLayersBtn');
+const adminSaveProductBtn = document.getElementById('adminSaveProductBtn');
 const ADMIN_EMAILS = ['ynsanuz@gmail.com', 'obstruir#gmail.com'];
 const IMGBB_API_KEY = 'b7150269142e0e38166f3e528598d051';
 
@@ -275,7 +276,13 @@ function renderAdminLayerSides() {
         </label>
         <label class="form-field"><span>Tamanho</span><input type="number" data-field="scale" min="0.22" max="2.35" step="0.05" value="${layer.transform.scale}"></label>
         <label class="form-field"><span>Horizontal</span><input type="number" data-field="offsetX" min="-24" max="24" step="1" value="${layer.transform.offsetX}"></label>
-        <label class="form-field"><span>Vertical</span><input type="number" data-field="offsetY" min="-24" max="24" step="1" value="${layer.transform.offsetY}"></label>
+        <label class="form-field"><span>Vertical <small>(negativo sobe)</small></span><input type="number" data-field="offsetY" min="-24" max="24" step="1" value="${layer.transform.offsetY}"></label>
+        <div class="admin-layer-nudges" aria-label="Ajuste rápido da posição">
+          <button type="button" data-nudge-field="offsetY" data-nudge-value="-2" title="Subir">↑ Subir</button>
+          <button type="button" data-nudge-field="offsetY" data-nudge-value="2" title="Descer">↓ Descer</button>
+          <button type="button" data-nudge-field="offsetX" data-nudge-value="-2" title="Mover para esquerda">← Esquerda</button>
+          <button type="button" data-nudge-field="offsetX" data-nudge-value="2" title="Mover para direita">→ Direita</button>
+        </div>
         <button type="button" class="admin-layer-row__remove" data-remove-layer>Remover</button>
       </div>
     `).join('');
@@ -337,6 +344,22 @@ function renderAdminLayerSides() {
       } finally {
         input.disabled = false;
       }
+    });
+  });
+
+  adminLayerSides.querySelectorAll('[data-nudge-field]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const row = button.closest('.admin-layer-row');
+      const layer = editingLayers[row.dataset.side]?.[Number(row.dataset.layerIndex)];
+      if (!layer) return;
+      const field = button.dataset.nudgeField;
+      const next = Math.max(-24, Math.min(24,
+        Number(layer.transform[field] || 0) + Number(button.dataset.nudgeValue || 0)
+      ));
+      layer.transform[field] = next;
+      const input = row.querySelector(`[data-field="${field}"]`);
+      if (input) input.value = String(next);
+      setLayerEditorNote('Posição ajustada. Use “Visualizar no manequim” antes de salvar.');
     });
   });
 
@@ -481,10 +504,14 @@ async function loadAdminLibrary() {
   }
 }
 
-adminLayerEditor?.addEventListener('submit', async (event) => {
-  event.preventDefault();
+async function saveEditingProduct() {
   if (!editingProduct) return;
   try {
+    await store?.refreshSession();
+    if (!isAuthorizedAdmin(store?.getCurrentUser())) {
+      throw new Error('Entre com a conta Gestor administradora para salvar alterações.');
+    }
+    adminSaveProductBtn.disabled = true;
     setLayerEditorNote('Salvando produto e camadas...');
     const model = await prepareEditingModel();
     const frontLayers = layerEngine.normalizeSide(model.front);
@@ -508,8 +535,16 @@ adminLayerEditor?.addEventListener('submit', async (event) => {
   } catch (error) {
     console.error('Não foi possível atualizar as camadas:', error);
     setLayerEditorNote(error.message || 'Não foi possível salvar as alterações.', true);
+  } finally {
+    adminSaveProductBtn.disabled = false;
   }
+}
+
+adminLayerEditor?.addEventListener('submit', (event) => {
+  event.preventDefault();
+  saveEditingProduct();
 });
+adminSaveProductBtn?.addEventListener('click', saveEditingProduct);
 
 previewAdminLayersBtn?.addEventListener('click', previewEditingProduct);
 refreshAdminLibraryBtn?.addEventListener('click', loadAdminLibrary);
@@ -611,6 +646,8 @@ async function init() {
   await store?.refreshSession();
   if (!isAuthorizedAdmin(store?.getCurrentUser())) {
     adminPublishForm?.querySelectorAll('input, textarea, button').forEach((control) => { control.disabled = true; });
+    if (refreshAdminLibraryBtn) refreshAdminLibraryBtn.disabled = true;
+    if (adminProductList) adminProductList.innerHTML = '<p>Entre com a conta Gestor administradora para editar produtos.</p>';
     setNote('Acesso restrito aos administradores autorizados.', true);
     return;
   }

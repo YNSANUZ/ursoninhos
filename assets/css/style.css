@@ -2327,6 +2327,24 @@ ul {
   min-width: 240px;
 }
 
+.admin-layer-nudges {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(92px, 1fr));
+  gap: 6px;
+  min-width: 210px;
+}
+
+.admin-layer-nudges button {
+  border: 1px solid rgba(217, 167, 92, 0.3);
+  border-radius: 999px;
+  background: rgba(11, 8, 5, 0.58);
+  color: var(--gold);
+  padding: 7px 9px;
+  font: inherit;
+  font-size: 0.62rem;
+  cursor: pointer;
+}
+
 @media (max-width: 760px) {
   .admin-layer-editor__meta,
   .admin-layer-row {
