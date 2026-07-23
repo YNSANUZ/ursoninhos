@@ -1134,6 +1134,80 @@ ul {
   width: 100%;
 }
 
+.stage-layer-control {
+  width: 100%;
+  padding: 9px 10px;
+  border: 1px solid rgba(217, 167, 92, 0.24);
+  border-radius: 14px;
+  background: rgba(20, 14, 9, 0.56);
+}
+
+.stage-layer-control__head,
+.stage-layer-control__buttons {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+}
+
+.stage-layer-control__head {
+  margin-bottom: 7px;
+  color: var(--text-main);
+  font-size: 0.68rem;
+}
+
+.stage-layer-control__head span {
+  color: var(--text-dim);
+  font-size: 0.61rem;
+}
+
+.stage-layer-btn,
+.stage-layer-remove {
+  border: 1px solid rgba(217, 167, 92, 0.28);
+  background: rgba(11, 8, 5, 0.58);
+  color: var(--text-muted);
+  border-radius: 999px;
+  font: inherit;
+  cursor: pointer;
+}
+
+.stage-layer-btn {
+  flex: 1;
+  min-width: 0;
+  padding: 6px 5px;
+  font-size: 0.62rem;
+}
+
+.stage-layer-btn.is-active {
+  border-color: var(--gold);
+  background: rgba(201, 143, 77, 0.2);
+  color: var(--gold);
+}
+
+.stage-layer-btn.is-empty {
+  border-style: dashed;
+}
+
+.stage-layer-remove {
+  width: 100%;
+  margin-top: 7px;
+  padding: 5px 8px;
+  font-size: 0.6rem;
+}
+
+.stage-layer-remove:disabled {
+  opacity: 0.38;
+  cursor: not-allowed;
+}
+
+.stage-layer-price {
+  margin: -8px 0 0;
+  color: var(--gold);
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-align: center;
+}
+
 .stage-action-btn {
   min-width: 104px;
   padding: 7px 12px;
@@ -2123,6 +2197,145 @@ ul {
   width: 100%;
   height: 100%;
   cursor: grab;
+}
+
+.admin-library {
+  margin-top: 24px;
+}
+
+.admin-artwork-library,
+.admin-product-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.admin-artwork-card,
+.admin-product-library-card {
+  border: 1px solid rgba(217, 167, 92, 0.22);
+  border-radius: 14px;
+  background: rgba(20, 14, 9, 0.58);
+  padding: 10px;
+}
+
+.admin-artwork-card img,
+.admin-product-library-card img {
+  display: block;
+  width: 100%;
+  aspect-ratio: 1;
+  object-fit: contain;
+  border-radius: 9px;
+  background: #090705;
+}
+
+.admin-artwork-card strong,
+.admin-product-library-card strong {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.72rem;
+  color: var(--text-main);
+}
+
+.admin-artwork-card span,
+.admin-product-library-card span {
+  display: block;
+  margin: 4px 0 8px;
+  color: var(--text-dim);
+  font-size: 0.62rem;
+}
+
+.admin-product-library-card button {
+  width: 100%;
+  padding: 7px;
+  border: 1px solid var(--gold-soft);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--gold);
+  font: inherit;
+  font-size: 0.66rem;
+  cursor: pointer;
+}
+
+.admin-layer-editor {
+  margin-top: 22px;
+  padding-top: 20px;
+  border-top: 1px solid rgba(217, 167, 92, 0.2);
+}
+
+.admin-layer-editor__head,
+.admin-layer-editor__meta,
+.admin-layer-side__head,
+.admin-layer-row {
+  display: flex;
+  gap: 12px;
+  align-items: flex-end;
+}
+
+.admin-layer-editor__head,
+.admin-layer-side__head {
+  justify-content: space-between;
+  align-items: center;
+}
+
+.admin-layer-editor__meta {
+  margin: 16px 0;
+}
+
+.admin-layer-editor__meta .form-field {
+  flex: 1;
+}
+
+.admin-layer-editor__description {
+  flex: 2 !important;
+}
+
+.admin-layer-side {
+  margin: 14px 0;
+  padding: 14px;
+  border: 1px solid rgba(217, 167, 92, 0.18);
+  border-radius: 14px;
+}
+
+.admin-layer-side__head button,
+.admin-layer-row__remove {
+  border: 1px solid rgba(217, 167, 92, 0.3);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--gold);
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 0.64rem;
+  cursor: pointer;
+}
+
+.admin-layer-row {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid rgba(217, 167, 92, 0.12);
+  flex-wrap: wrap;
+}
+
+.admin-layer-row .form-field {
+  min-width: 110px;
+  flex: 1;
+}
+
+.admin-layer-row .admin-layer-row__url,
+.admin-layer-row .admin-layer-row__text {
+  flex: 2;
+  min-width: 240px;
+}
+
+@media (max-width: 760px) {
+  .admin-layer-editor__meta,
+  .admin-layer-row {
+    align-items: stretch;
+    flex-direction: column;
+  }
+  .admin-layer-row .form-field {
+    width: 100%;
+  }
 }
 
 .admin-viewer-actions {

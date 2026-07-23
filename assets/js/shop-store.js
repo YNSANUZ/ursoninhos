@@ -72,17 +72,34 @@
     };
   }
 
-  function getStandardShirtPrice(sides = {}) {
+  function normalizeLayerCounts(layerCounts = {}, sides = {}) {
+    const normalizedSides = normalizeSides(sides);
+    return {
+      front: Math.max(1, Math.min(3, Number(layerCounts.front || 1))),
+      back: normalizedSides.back ? Math.max(1, Math.min(3, Number(layerCounts.back || 1))) : 0,
+      sleeveLeft: normalizedSides.sleeveLeft ? Math.max(1, Math.min(3, Number(layerCounts.sleeveLeft || 1))) : 0,
+      sleeveRight: normalizedSides.sleeveRight ? Math.max(1, Math.min(3, Number(layerCounts.sleeveRight || 1))) : 0,
+    };
+  }
+
+  function getStandardShirtPrice(sides = {}, layerCounts = {}) {
     const normalized = normalizeSides(sides);
-    let total = STANDARD_SHIRT_PRICING.front;
-    if (normalized.back) total += STANDARD_SHIRT_PRICING.back;
-    if (normalized.sleeveLeft) total += STANDARD_SHIRT_PRICING.sleeveLeft;
-    if (normalized.sleeveRight) total += STANDARD_SHIRT_PRICING.sleeveRight;
+    const counts = normalizeLayerCounts(layerCounts, normalized);
+    const priceForSide = (side) => {
+      const count = counts[side] || 0;
+      if (!count) return 0;
+      return STANDARD_SHIRT_PRICING[side] * (1 + Math.max(0, count - 1) * 0.2);
+    };
+    let total = priceForSide('front');
+    if (normalized.back) total += priceForSide('back');
+    if (normalized.sleeveLeft) total += priceForSide('sleeveLeft');
+    if (normalized.sleeveRight) total += priceForSide('sleeveRight');
     return Number(total.toFixed(2));
   }
 
-  function describeShirtSides(sides = {}) {
+  function describeShirtSides(sides = {}, layerCounts = {}) {
     const normalized = normalizeSides(sides);
+    const counts = normalizeLayerCounts(layerCounts, normalized);
     const parts = ['Frente'];
     const sleeveCount = Number(normalized.sleeveLeft) + Number(normalized.sleeveRight);
 
@@ -91,14 +108,16 @@
     else if (normalized.sleeveLeft) parts.push('Manga esquerda');
     else if (normalized.sleeveRight) parts.push('Manga direita');
 
-    return parts.join(' + ');
+    const totalLayers = Object.values(counts).reduce((sum, count) => sum + count, 0);
+    const layerLabel = totalLayers > parts.length ? ` • ${totalLayers} camadas` : '';
+    return parts.join(' + ') + layerLabel;
   }
 
   function normalizeCartItem(item) {
     const metadata = item.metadata || {};
     const normalizedSides = normalizeSides(metadata.sides || {});
-    const normalizedPrice = metadata.pricingMode === 'standard-shirt'
-      ? getStandardShirtPrice(normalizedSides)
+    const normalizedPrice = ['standard-shirt', 'layered-shirt'].includes(metadata.pricingMode)
+      ? getStandardShirtPrice(normalizedSides, metadata.layerCounts || {})
       : Number(item.price || 0);
 
     return {
@@ -358,6 +377,7 @@
     getCartCount,
     getCartTotal,
     getStandardShirtPrice,
+    normalizeLayerCounts,
     describeShirtSides,
     getCurrentUser,
     getAuthHeaders,

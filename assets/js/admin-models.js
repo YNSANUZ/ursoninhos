@@ -23,7 +23,22 @@ const previewRight = document.getElementById('previewRight');
 const previewLeft = document.getElementById('previewLeft');
 const applyDefaultLogoBtn = document.getElementById('applyDefaultLogoBtn');
 const refreshPreviewBtn = document.getElementById('refreshPreviewBtn');
+const layerEngine = window.UrsoninhosLayers;
+const textEngine = window.UrsoninhosTextPrint;
+const adminArtworkLibrary = document.getElementById('adminArtworkLibrary');
+const adminProductList = document.getElementById('adminProductList');
+const adminLayerEditor = document.getElementById('adminLayerEditor');
+const adminLayerSides = document.getElementById('adminLayerSides');
+const adminEditingTitle = document.getElementById('adminEditingTitle');
+const adminEditTitle = document.getElementById('adminEditTitle');
+const adminEditPrice = document.getElementById('adminEditPrice');
+const adminEditDescription = document.getElementById('adminEditDescription');
+const adminLayerEditorNote = document.getElementById('adminLayerEditorNote');
+const refreshAdminLibraryBtn = document.getElementById('refreshAdminLibraryBtn');
+const closeAdminLayerEditorBtn = document.getElementById('closeAdminLayerEditorBtn');
+const previewAdminLayersBtn = document.getElementById('previewAdminLayersBtn');
 const ADMIN_EMAILS = ['ynsanuz@gmail.com', 'obstruir#gmail.com'];
+const IMGBB_API_KEY = 'b7150269142e0e38166f3e528598d051';
 
 const CAMERA_BY_SIDE = {
   front: 0,
@@ -42,6 +57,16 @@ const state = {
 };
 
 let viewer = null;
+let adminProducts = [];
+let editingProduct = null;
+let editingLayers = { front: [], back: [], sleeveRight: [], sleeveLeft: [] };
+
+const ADMIN_SIDE_LABELS = {
+  front: 'Frente',
+  back: 'Verso',
+  sleeveRight: 'Manga direita',
+  sleeveLeft: 'Manga esquerda',
+};
 
 function isAuthorizedAdmin(user) {
   const email = String(user?.email || '').trim().toLowerCase();
@@ -179,6 +204,320 @@ async function applyCurrentPrints() {
   viewer.setTransform('sleeveLeft', { scale: 1, offsetX: 0, offsetY: 0 });
 }
 
+function setLayerEditorNote(message, isError = false) {
+  if (!adminLayerEditorNote) return;
+  adminLayerEditorNote.textContent = message;
+  adminLayerEditorNote.style.color = isError ? '#e08a7a' : '';
+}
+
+function editableLayer(layer, side, index) {
+  const normalized = layerEngine?.normalizeLayer(layer, index) || layer;
+  return {
+    id: normalized?.id || `${side}-${Date.now()}-${index + 1}`,
+    name: normalized?.name || `Camada ${index + 1}`,
+    type: normalized?.type || 'image',
+    url: normalized?.url || '',
+    blend: normalized?.blend || 'normal',
+    transform: layerEngine?.normalizeTransform(normalized?.transform) || { scale: 1, offsetX: 0, offsetY: 0 },
+    textData: normalized?.textData || null,
+  };
+}
+
+function renderTextPresetOptions(selectedId) {
+  return (textEngine?.presets || []).map((preset) =>
+    `<option value="${escapeHtml(preset.id)}"${preset.id === selectedId ? ' selected' : ''}>${escapeHtml(preset.label || preset.id)}</option>`
+  ).join('');
+}
+
+async function uploadAdminArtwork(file) {
+  const formData = new FormData();
+  formData.append('image', file);
+  const response = await fetch(
+    `https://api.imgbb.com/1/upload?key=${encodeURIComponent(IMGBB_API_KEY)}`,
+    { method: 'POST', body: formData }
+  );
+  const payload = await response.json();
+  const url = payload?.data?.display_url || payload?.data?.url;
+  if (!response.ok || !payload.success || !url) {
+    throw new Error(payload?.error?.message || 'Não foi possível enviar a imagem.');
+  }
+  return url;
+}
+
+function renderAdminLayerSides() {
+  if (!adminLayerSides) return;
+  adminLayerSides.innerHTML = Object.entries(ADMIN_SIDE_LABELS).map(([side, label]) => {
+    const layers = editingLayers[side] || [];
+    const rows = layers.map((layer, index) => `
+      <div class="admin-layer-row" data-side="${side}" data-layer-index="${index}">
+        <label class="form-field">
+          <span>Tipo</span>
+          <select data-field="type">
+            <option value="image"${layer.type === 'image' ? ' selected' : ''}>Imagem</option>
+            <option value="text"${layer.type === 'text' ? ' selected' : ''}>Texto editável</option>
+          </select>
+        </label>
+        <label class="form-field admin-layer-row__url">
+          <span>Imagem/PNG</span>
+          <input type="text" data-field="url" value="${escapeHtml(layer.url)}" placeholder="https://...">
+        </label>
+        <label class="form-field">
+          <span>Substituir arquivo</span>
+          <input type="file" data-layer-file accept="image/*">
+        </label>
+        <label class="form-field admin-layer-row__text"${layer.type === 'text' ? '' : ' hidden'}>
+          <span>Texto</span>
+          <textarea data-field="text" rows="2">${escapeHtml(layer.textData?.text || '')}</textarea>
+        </label>
+        <label class="form-field"${layer.type === 'text' ? '' : ' hidden'}>
+          <span>Estilo</span>
+          <select data-field="presetId">${renderTextPresetOptions(layer.textData?.presetId || 'statement')}</select>
+        </label>
+        <label class="form-field"><span>Tamanho</span><input type="number" data-field="scale" min="0.22" max="2.35" step="0.05" value="${layer.transform.scale}"></label>
+        <label class="form-field"><span>Horizontal</span><input type="number" data-field="offsetX" min="-24" max="24" step="1" value="${layer.transform.offsetX}"></label>
+        <label class="form-field"><span>Vertical</span><input type="number" data-field="offsetY" min="-24" max="24" step="1" value="${layer.transform.offsetY}"></label>
+        <button type="button" class="admin-layer-row__remove" data-remove-layer>Remover</button>
+      </div>
+    `).join('');
+    return `
+      <section class="admin-layer-side" data-layer-side="${side}">
+        <div class="admin-layer-side__head">
+          <div><strong>${label}</strong><span> ${layers.length}/3 camadas</span></div>
+          <button type="button" data-add-layer="${side}"${layers.length >= 3 ? ' disabled' : ''}>Adicionar camada</button>
+        </div>
+        ${rows || '<p>Nenhuma estampa neste lado.</p>'}
+      </section>
+    `;
+  }).join('');
+
+  adminLayerSides.querySelectorAll('[data-field]').forEach((control) => {
+    control.addEventListener('input', () => {
+      const row = control.closest('.admin-layer-row');
+      const layer = editingLayers[row.dataset.side]?.[Number(row.dataset.layerIndex)];
+      if (!layer) return;
+      const field = control.dataset.field;
+      if (['scale', 'offsetX', 'offsetY'].includes(field)) {
+        layer.transform[field] = Number(control.value);
+      } else if (field === 'text') {
+        layer.textData = layer.textData || { text: '', lines: [], presetId: 'statement' };
+        layer.textData.text = control.value;
+        layer.textData.lines = control.value.split('\n').map((line) => line.trim()).filter(Boolean);
+      } else if (field === 'presetId') {
+        layer.textData = layer.textData || { text: '', lines: [], presetId: 'statement' };
+        layer.textData.presetId = control.value;
+      } else {
+        layer[field] = control.value;
+      }
+      if (field === 'type') {
+        if (control.value === 'text') {
+          layer.textData = layer.textData || { text: '', lines: [], presetId: 'statement' };
+        }
+        renderAdminLayerSides();
+      }
+    });
+  });
+
+  adminLayerSides.querySelectorAll('[data-layer-file]').forEach((input) => {
+    input.addEventListener('change', async () => {
+      const file = input.files?.[0];
+      if (!file) return;
+      const row = input.closest('.admin-layer-row');
+      const layer = editingLayers[row.dataset.side]?.[Number(row.dataset.layerIndex)];
+      if (!layer) return;
+      try {
+        input.disabled = true;
+        setLayerEditorNote('Enviando nova imagem...');
+        layer.url = await uploadAdminArtwork(file);
+        layer.type = 'image';
+        layer.textData = null;
+        renderAdminLayerSides();
+        setLayerEditorNote('Imagem substituída. Clique em salvar para atualizar o produto.');
+      } catch (error) {
+        setLayerEditorNote(error.message, true);
+      } finally {
+        input.disabled = false;
+      }
+    });
+  });
+
+  adminLayerSides.querySelectorAll('[data-add-layer]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const side = button.dataset.addLayer;
+      if (editingLayers[side].length >= 3) return;
+      editingLayers[side].push(editableLayer({ name: `Camada ${editingLayers[side].length + 1}` }, side, editingLayers[side].length));
+      updateAdminLayerPrice();
+      renderAdminLayerSides();
+    });
+  });
+
+  adminLayerSides.querySelectorAll('[data-remove-layer]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const row = button.closest('.admin-layer-row');
+      editingLayers[row.dataset.side].splice(Number(row.dataset.layerIndex), 1);
+      updateAdminLayerPrice();
+      renderAdminLayerSides();
+    });
+  });
+}
+
+function getEditingLayerCounts() {
+  return Object.keys(editingLayers).reduce((counts, side) => {
+    counts[side] = editingLayers[side].filter((layer) => layer.url || layer.type === 'text').length;
+    return counts;
+  }, {});
+}
+
+function updateAdminLayerPrice() {
+  if (!adminEditPrice || !store?.getStandardShirtPrice) return;
+  const counts = getEditingLayerCounts();
+  const sides = {
+    front: true,
+    back: counts.back > 0,
+    sleeveRight: counts.sleeveRight > 0,
+    sleeveLeft: counts.sleeveLeft > 0,
+  };
+  adminEditPrice.value = store.getStandardShirtPrice(sides, counts).toFixed(2);
+}
+
+function renderEditableTextLayer(layer) {
+  const lines = (layer.textData?.lines?.length
+    ? layer.textData.lines
+    : String(layer.textData?.text || '').split('\n'))
+    .map((line) => String(line).trim())
+    .filter(Boolean);
+  if (!lines.length || !textEngine?.draw) return layer.url;
+  const preset = textEngine.presets.find((item) => item.id === layer.textData?.presetId) || textEngine.presets[0];
+  const canvas = document.createElement('canvas');
+  canvas.width = 1024;
+  canvas.height = 1024;
+  textEngine.draw(canvas, preset, lines);
+  layer.textData = { text: lines.join('\n'), lines, presetId: preset.id };
+  layer.url = canvas.toDataURL('image/png');
+  return layer.url;
+}
+
+async function prepareEditingModel() {
+  Object.values(editingLayers).flat().forEach((layer) => {
+    if (layer.type === 'text') renderEditableTextLayer(layer);
+  });
+  return layerEngine.serializeModel(editingLayers);
+}
+
+async function previewEditingProduct() {
+  if (!viewer) return;
+  const model = await prepareEditingModel();
+  for (const side of layerEngine.SIDES) {
+    const layers = layerEngine.normalizeSide(model[side]);
+    if (!layers.length) {
+      viewer.clearPrint?.(side);
+      continue;
+    }
+    const composite = await layerEngine.composeLayers(layers);
+    await viewer.setPrint(side, composite, 'normal');
+    viewer.setTransform(side, { scale: 1, offsetX: 0, offsetY: 0 });
+  }
+  viewer.setCameraAngle(0);
+  setLayerEditorNote('Camadas aplicadas ao manequim. Confira os quatro lados.');
+}
+
+function openProductEditor(product) {
+  editingProduct = product;
+  editingLayers = layerEngine.normalizeModel(product.model);
+  Object.keys(editingLayers).forEach((side) => {
+    editingLayers[side] = editingLayers[side].map((layer, index) => editableLayer(layer, side, index));
+  });
+  if (adminEditingTitle) adminEditingTitle.textContent = `Editar: ${product.title}`;
+  if (adminEditTitle) adminEditTitle.value = product.title || '';
+  if (adminEditDescription) adminEditDescription.value = product.description || '';
+  if (adminEditPrice) adminEditPrice.value = Number(product.price || 0).toFixed(2);
+  renderAdminLayerSides();
+  adminLayerEditor.hidden = false;
+  adminLayerEditor.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+function renderAdminLibrary() {
+  if (adminProductList) {
+    adminProductList.innerHTML = adminProducts.map((product) => `
+      <article class="admin-product-library-card">
+        <img src="${escapeHtml(product.catalogImage || product.views?.front || '')}" alt="${escapeHtml(product.title)}">
+        <strong>${escapeHtml(product.title)}</strong>
+        <span>${Number(product.price || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' })}</span>
+        <button type="button" data-edit-product="${escapeHtml(product.id)}">Editar produto e camadas</button>
+      </article>
+    `).join('') || '<p>Nenhum produto publicado.</p>';
+    adminProductList.querySelectorAll('[data-edit-product]').forEach((button) => {
+      button.addEventListener('click', () => {
+        const product = adminProducts.find((item) => String(item.id) === button.dataset.editProduct);
+        if (product) openProductEditor(product);
+      });
+    });
+  }
+
+  if (adminArtworkLibrary) {
+    const unique = new Map();
+    adminProducts.forEach((product) => {
+      const model = layerEngine.normalizeModel(product.model);
+      Object.entries(model).forEach(([side, layers]) => layers.forEach((layer) => {
+        if (!unique.has(layer.url)) unique.set(layer.url, { ...layer, side, productTitle: product.title });
+      }));
+    });
+    adminArtworkLibrary.innerHTML = [...unique.values()].map((layer) => `
+      <article class="admin-artwork-card">
+        <img src="${escapeHtml(layer.url)}" alt="${escapeHtml(layer.name)}">
+        <strong>${escapeHtml(layer.name)}</strong>
+        <span>${escapeHtml(ADMIN_SIDE_LABELS[layer.side])} • ${layer.type === 'text' ? 'Texto editável' : 'Imagem'} • ${escapeHtml(layer.productTitle)}</span>
+      </article>
+    `).join('') || '<p>As estampas dos produtos aparecerão aqui.</p>';
+  }
+}
+
+async function loadAdminLibrary() {
+  if (!api || !layerEngine) return;
+  try {
+    adminProducts = await api.listProducts();
+    renderAdminLibrary();
+  } catch (error) {
+    if (adminProductList) adminProductList.innerHTML = '<p>Não foi possível carregar os produtos.</p>';
+  }
+}
+
+adminLayerEditor?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (!editingProduct) return;
+  try {
+    setLayerEditorNote('Salvando produto e camadas...');
+    const model = await prepareEditingModel();
+    const frontLayers = layerEngine.normalizeSide(model.front);
+    const frontComposite = frontLayers.length ? await layerEngine.composeLayers(frontLayers) : '';
+    const catalogImage = frontComposite ? await composeCardImage(frontComposite) : editingProduct.catalogImage;
+    const payload = {
+      title: adminEditTitle.value.trim(),
+      description: adminEditDescription.value.trim(),
+      price: Number(adminEditPrice.value || 0),
+      catalogImage,
+      views: { ...(editingProduct.views || {}), front: catalogImage },
+      model,
+      creator: editingProduct.creator || '',
+      creatorPhoto: editingProduct.creatorPhoto || '',
+    };
+    editingProduct = await api.updateProduct(editingProduct.id, payload);
+    const index = adminProducts.findIndex((item) => item.id === editingProduct.id);
+    if (index >= 0) adminProducts[index] = editingProduct;
+    renderAdminLibrary();
+    setLayerEditorNote('Produto atualizado sem alterar o ID ou o link.');
+  } catch (error) {
+    console.error('Não foi possível atualizar as camadas:', error);
+    setLayerEditorNote(error.message || 'Não foi possível salvar as alterações.', true);
+  }
+});
+
+previewAdminLayersBtn?.addEventListener('click', previewEditingProduct);
+refreshAdminLibraryBtn?.addEventListener('click', loadAdminLibrary);
+closeAdminLayerEditorBtn?.addEventListener('click', () => {
+  adminLayerEditor.hidden = true;
+  editingProduct = null;
+});
+
 async function generatePreviews() {
   if (!viewer) return;
 
@@ -214,7 +553,12 @@ async function publishModel(event) {
       await generatePreviews();
     }
 
-    const price = Number((Math.random() * 30 + 20).toFixed(2));
+    const price = store?.getStandardShirtPrice
+      ? store.getStandardShirtPrice(
+          { front: true, back: true, sleeveRight: true, sleeveLeft: true },
+          { front: 1, back: 1, sleeveRight: 1, sleeveLeft: 1 }
+        )
+      : 83.9;
     const catalogImage = await composeCardImage(adminFrontUrl?.value.trim() || defaultLogoUrl);
     const payload = {
       title: adminTitleInput?.value.trim() || 'Modelo publico Ursoninhos',
@@ -270,6 +614,7 @@ async function init() {
     setNote('Acesso restrito aos administradores autorizados.', true);
     return;
   }
+  await loadAdminLibrary();
   syncDefaultInputs();
   viewer = await createInteractiveViewer({ container: adminViewerEl, cameraDistance: 2.2 });
   await generatePreviews();

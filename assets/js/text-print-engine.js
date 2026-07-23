@@ -633,3 +633,11 @@ function drawBubblePrint(ctx, canvas, lines, availW, availH) {
     y += h + gap * scale;
   });
 }
+
+// API compartilhada com o painel administrativo. Mantém o texto original
+// editável e permite regenerar o PNG quando o administrador troca frase
+// ou estilo, em vez de guardar somente uma imagem "achatada".
+window.UrsoninhosTextPrint = {
+  presets: TEXT_PRINT_PRESETS,
+  draw: drawTextPrint,
+};

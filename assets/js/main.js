@@ -57,6 +57,8 @@ const activePrintName = document.getElementById('activePrintName');
 const heroStage = document.querySelector('.hero__stage');
 const heroPicker = document.querySelector('.hero__picker');
 const pricingStore = window.UrsoninhosStore;
+const shopStore = window.UrsoninhosStore;
+const layerEngine = window.UrsoninhosLayers;
 
 /* O card em destaque na lateral direita e a camisa do manequim ficam
    SEMPRE sincronizados: a estampa destacada é a mesma vestida no
@@ -81,6 +83,188 @@ const sidePrintSelections = {
   sleeveLeft: null,
   sleeveRight: null,
 };
+const sideLayers = {
+  front: [{
+    id: `front-${Date.now()}-1`,
+    printIndex: 0,
+    type: 'image',
+    name: shirtPrints[0]?.name || 'Estampa',
+    textData: null,
+    transform: sideTransforms.front,
+  }],
+  back: [],
+  sleeveLeft: [],
+  sleeveRight: [],
+};
+const activeLayerIndexes = {
+  front: 0,
+  back: 0,
+  sleeveLeft: 0,
+  sleeveRight: 0,
+};
+const sideCompositeTokens = { front: 0, back: 0, sleeveLeft: 0, sleeveRight: 0 };
+const stageLayerButtons = document.getElementById('stageLayerButtons');
+const removeActiveLayerBtn = document.getElementById('removeActiveLayerBtn');
+const stageLayerPriceHint = document.getElementById('stageLayerPriceHint');
+
+function escapeLayerHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function makeEmptyLayer(side, index) {
+  return {
+    id: `${side}-${Date.now()}-${index + 1}`,
+    printIndex: null,
+    type: 'image',
+    name: `Camada ${index + 1}`,
+    textData: null,
+    transform: { scale: 1, offsetX: 0, offsetY: 0 },
+  };
+}
+
+function getActiveLayer(side = activeSide) {
+  return sideLayers[side]?.[activeLayerIndexes[side]] || null;
+}
+
+function ensureActiveLayer(side = activeSide) {
+  const layers = sideLayers[side];
+  const index = Math.min(activeLayerIndexes[side], 2);
+  while (layers.length <= index && layers.length < 3) {
+    layers.push(makeEmptyLayer(side, layers.length));
+  }
+  activeLayerIndexes[side] = Math.min(index, Math.max(0, layers.length - 1));
+  return layers[activeLayerIndexes[side]] || null;
+}
+
+function syncLegacyStateFromLayer(side = activeSide) {
+  const layer = getActiveLayer(side);
+  sidePrintSelections[side] = layer?.printIndex ?? null;
+  sideTransforms[side] = layer?.transform || { scale: 1, offsetX: 0, offsetY: 0 };
+  if (side === 'front' && layer?.printIndex !== null && layer?.printIndex !== undefined) {
+    shirtPrintIndex = layer.printIndex;
+  }
+}
+
+function getLayerPayload(side) {
+  return (sideLayers[side] || [])
+    .map((layer, index) => {
+      const print = shirtPrints[layer.printIndex];
+      if (!print?.file) return null;
+      return {
+        id: layer.id || `${side}-layer-${index + 1}`,
+        name: layer.name || print.name || `Camada ${index + 1}`,
+        type: layer.type || (layer.textData ? 'text' : 'image'),
+        url: print.file,
+        blend: print.blend || 'normal',
+        transform: { ...layer.transform },
+        textData: layer.textData || print.textData || null,
+      };
+    })
+    .filter(Boolean)
+    .slice(0, 3);
+}
+
+function getLayersModel() {
+  return Object.keys(sideLayers).reduce((model, side) => {
+    model[side] = getLayerPayload(side);
+    return model;
+  }, {});
+}
+
+function getLayerCounts() {
+  return Object.keys(sideLayers).reduce((counts, side) => {
+    counts[side] = getLayerPayload(side).length;
+    return counts;
+  }, {});
+}
+
+async function syncSideCompositeToViewer(side, options = {}) {
+  const { updateOverlay = true } = options;
+  const layers = getLayerPayload(side);
+  const token = ++sideCompositeTokens[side];
+
+  if (!layers.length) {
+    window.shirtViewer3D?.clearPrint?.(side);
+    if (side === 'front' && updateOverlay && shirtOverlay) shirtOverlay.style.display = 'none';
+    return '';
+  }
+
+  try {
+    const composite = layerEngine
+      ? await layerEngine.composeLayers(layers)
+      : layers[0].url;
+    if (token !== sideCompositeTokens[side]) return '';
+
+    if (window.shirtViewer3D?.ready) {
+      window.shirtViewer3D.setPrint(composite, 'normal', side);
+      window.shirtViewer3D.setTransform({ scale: 1, offsetX: 0, offsetY: 0 }, side);
+    }
+    if (side === 'front' && updateOverlay && shirtOverlay) {
+      shirtOverlay.style.backgroundImage = `url('${composite}')`;
+      shirtOverlay.style.mixBlendMode = 'normal';
+      shirtOverlay.style.display = 'block';
+      shirtOverlay.style.width = '30%';
+      shirtOverlay.style.height = '30%';
+      shirtOverlay.style.left = '50%';
+      shirtOverlay.style.top = '46%';
+    }
+    return composite;
+  } catch (error) {
+    console.error('Não foi possível combinar as camadas da camisa:', error);
+    return layers[0]?.url || '';
+  }
+}
+
+function renderLayerControls() {
+  if (!stageLayerButtons) return;
+  const layers = sideLayers[activeSide];
+  const activeIndex = activeLayerIndexes[activeSide];
+  stageLayerButtons.innerHTML = [0, 1, 2].map((index) => {
+    const layer = layers[index];
+    const print = layer ? shirtPrints[layer.printIndex] : null;
+    const label = print?.name || (layer ? `Camada ${index + 1}` : `+ ${index + 1}`);
+    return `<button type="button" class="stage-layer-btn${index === activeIndex ? ' is-active' : ''}${!layer ? ' is-empty' : ''}" data-layer-index="${index}">${escapeLayerHtml(label)}</button>`;
+  }).join('');
+  const priceDisplay = document.getElementById('heroPriceNote');
+  if (priceDisplay) {
+    const coverage = getSelectedCoverage();
+    priceDisplay.textContent = `${coverage.label} — ${formatBRL(coverage.price)}`;
+  }
+  stageLayerButtons.querySelectorAll('[data-layer-index]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const index = Number(button.dataset.layerIndex);
+      activeLayerIndexes[activeSide] = index;
+      ensureActiveLayer(activeSide);
+      syncLegacyStateFromLayer(activeSide);
+      const layer = getActiveLayer(activeSide);
+      if (layer?.printIndex !== null && layer?.printIndex !== undefined) setQueuedPrint(layer.printIndex);
+      renderLayerControls();
+      refreshHeroPriceNote();
+    });
+  });
+  if (removeActiveLayerBtn) {
+    removeActiveLayerBtn.disabled = !layers.length;
+  }
+  if (stageLayerPriceHint) {
+    stageLayerPriceHint.textContent = `${getLayerPayload(activeSide).length}/3 • +20% por extra`;
+  }
+}
+
+removeActiveLayerBtn?.addEventListener('click', async () => {
+  const layers = sideLayers[activeSide];
+  if (!layers.length) return;
+  layers.splice(activeLayerIndexes[activeSide], 1);
+  activeLayerIndexes[activeSide] = Math.max(0, Math.min(activeLayerIndexes[activeSide], layers.length - 1));
+  syncLegacyStateFromLayer(activeSide);
+  renderLayerControls();
+  await syncSideCompositeToViewer(activeSide);
+  refreshHeroPriceNote();
+});
 
 function normalizePrintIndex(index) {
   const total = shirtPrints.length;
@@ -127,35 +311,34 @@ function applyPrintToShirt(index, animate = true) {
   const print = shirtPrints[index];
   if (!print) return;
 
+  const layer = ensureActiveLayer(activeSide);
+  if (!layer) return;
+  layer.printIndex = index;
+  layer.name = print.name || layer.name;
+  layer.type = print.textData ? 'text' : (print.type || 'image');
+  layer.textData = print.textData || null;
   sidePrintSelections[activeSide] = index;
+  sideTransforms[activeSide] = layer.transform;
 
   // Editando a FRENTE, atualiza também o manequim 2D (fallback) e o
   // índice usado pelo carrinho; no VERSO só a projeção das costas muda.
   if (activeSide === 'front') {
     shirtPrintIndex = index;
 
-    if (shirtOverlay) {
-      shirtOverlay.style.backgroundImage = `url('${print.file}')`;
-      shirtOverlay.style.display = 'block';
-      // Artes da pasta ARTE CAMISA/ têm canvas preto opaco -> "screen" some
-      // com a camisa preta. Fotos enviadas pelo cliente não têm esse fundo
-      // preto, então usam blend normal para não estourar as cores.
-      shirtOverlay.style.mixBlendMode = print.blend || 'screen';
-
-      if (animate) {
-        // Reinicia a animação de carregamento: remove a classe, força um
-        // reflow e recoloca, para o efeito rodar a cada virada.
-        shirtOverlay.classList.remove('is-loading-in');
-        void shirtOverlay.offsetWidth;
-        shirtOverlay.classList.add('is-loading-in');
-      }
+    if (shirtOverlay && animate) {
+      // Reinicia a animação de carregamento para a composição atual.
+      shirtOverlay.classList.remove('is-loading-in');
+      void shirtOverlay.offsetWidth;
+      shirtOverlay.classList.add('is-loading-in');
     }
   }
 
-  // Manequim 3D (viewer3d.js): projeta a estampa no lado em edição.
-  if (window.shirtViewer3D?.ready) {
-    window.shirtViewer3D.setPrint(print.file, print.blend || 'screen', activeSide);
-  }
+  // As três camadas são achatadas somente para a visualização. Os dados
+  // individuais continuam preservados para edição, preço e publicação.
+  syncSideCompositeToViewer(activeSide);
+  renderLayerControls();
+  if (Object.values(getLayerCounts()).some((count) => count > 1)) stopAutoRotate();
+  refreshHeroPriceNote();
 }
 
 // Coloca uma estampa em destaque na lateral direita (fila). Ela ainda
@@ -209,6 +392,9 @@ const PLAY_ICON_PATH = 'M8 5.5v13a1 1 0 0 0 1.52.86l10.2-6.5a1 1 0 0 0 0-1.72L9.
 function startAutoRotate() {
   stopAutoRotate();
   if (autoRotatePaused) return;
+  // Depois que o cliente monta uma composição, o carrossel não pode
+  // substituir silenciosamente a camada selecionada a cada quatro segundos.
+  if (Object.values(getLayerCounts()).some((count) => count > 1)) return;
   autoRotateTimer = setInterval(() => {
     rotateCarousel(queuedPrintIndex + 1);
   }, AUTO_ROTATE_INTERVAL_MS);
@@ -250,23 +436,33 @@ const printMoveRightBtn = document.getElementById('printMoveRight');
 const heroPriceNote = document.getElementById('heroPriceNote');
 
 function getSelectedSides() {
+  const counts = getLayerCounts();
   return {
     front: true,
-    back: sidePrintSelections.back !== null,
-    sleeveLeft: sidePrintSelections.sleeveLeft !== null,
-    sleeveRight: sidePrintSelections.sleeveRight !== null,
+    back: counts.back > 0,
+    sleeveLeft: counts.sleeveLeft > 0,
+    sleeveRight: counts.sleeveRight > 0,
   };
 }
 
 function getSelectedCoverage() {
   const sides = getSelectedSides();
-  const label = pricingStore?.describeShirtSides
-    ? pricingStore.describeShirtSides(sides)
-    : 'Frente';
-  const price = pricingStore?.getStandardShirtPrice
-    ? pricingStore.getStandardShirtPrice(sides)
-    : 49.9;
-  return { label, price, sides };
+  const layerCounts = getLayerCounts();
+  const parts = ['Frente'];
+  if (sides.back) parts.push('Costas');
+  const sleeveCount = Number(sides.sleeveLeft) + Number(sides.sleeveRight);
+  if (sleeveCount === 2) parts.push('2 mangas');
+  else if (sides.sleeveLeft) parts.push('Manga esquerda');
+  else if (sides.sleeveRight) parts.push('Manga direita');
+  const totalLayers = Object.values(layerCounts).reduce((sum, count) => sum + count, 0);
+  const label = `${parts.join(' + ')}${totalLayers > parts.length ? ` • ${totalLayers} camadas` : ''}`;
+  const sidePrices = { front: 49.9, back: 20, sleeveLeft: 7, sleeveRight: 7 };
+  const price = Number(Object.entries(sidePrices).reduce((total, [side, basePrice]) => {
+    if (side !== 'front' && !sides[side]) return total;
+    const count = Math.max(1, layerCounts[side] || 1);
+    return total + basePrice * (1 + Math.max(0, count - 1) * 0.2);
+  }, 0).toFixed(2));
+  return { label, price, sides, layerCounts };
 }
 
 function refreshHeroPriceNote() {
@@ -276,18 +472,11 @@ function refreshHeroPriceNote() {
 }
 
 function syncPrintTransform3D() {
-  if (window.shirtViewer3D?.ready) {
-    const t = sideTransforms[activeSide];
-    window.shirtViewer3D.setTransform({ scale: t.scale, offsetX: t.offsetX, offsetY: t.offsetY }, activeSide);
-  }
+  syncSideCompositeToViewer(activeSide);
 }
 
 function applyPrintScale() {
   const t = sideTransforms[activeSide];
-  if (activeSide === 'front' && shirtOverlay) {
-    shirtOverlay.style.width = `${(PRINT_BASE_WIDTH_PCT * t.scale).toFixed(1)}%`;
-    shirtOverlay.style.height = `${(PRINT_BASE_HEIGHT_PCT * t.scale).toFixed(1)}%`;
-  }
   syncPrintTransform3D();
   refreshHeroPriceNote();
 }
@@ -300,14 +489,6 @@ function updateActivePrintScale(nextScale) {
 
 function applyPrintOffset() {
   const t = sideTransforms[activeSide];
-  if (activeSide === 'front') {
-    const top = `${(PRINT_BASE_TOP_PCT + t.offsetY).toFixed(1)}%`;
-    const left = `${(PRINT_BASE_LEFT_PCT + t.offsetX).toFixed(1)}%`;
-    if (shirtOverlay) {
-      shirtOverlay.style.top = top;
-      shirtOverlay.style.left = left;
-    }
-  }
   syncPrintTransform3D();
   refreshHeroPriceNote();
 }
@@ -353,15 +534,7 @@ window.addEventListener('shirt3d-print-drag', (event) => {
   if (!t) return;
   t.offsetX = offsetX;
   t.offsetY = offsetY;
-
-  if (side === 'front') {
-    const top = `${(PRINT_BASE_TOP_PCT + offsetY).toFixed(1)}%`;
-    const left = `${(PRINT_BASE_LEFT_PCT + offsetX).toFixed(1)}%`;
-    if (shirtOverlay) {
-      shirtOverlay.style.top = top;
-      shirtOverlay.style.left = left;
-    }
-  }
+  syncSideCompositeToViewer(side);
   refreshHeroPriceNote();
 });
 
@@ -370,10 +543,7 @@ window.addEventListener('shirt3d-print-scale', (event) => {
   const t = sideTransforms[side];
   if (!t || typeof scale !== 'number') return;
   t.scale = scale;
-  if (side === 'front' && shirtOverlay) {
-    shirtOverlay.style.width = `${(PRINT_BASE_WIDTH_PCT * scale).toFixed(1)}%`;
-    shirtOverlay.style.height = `${(PRINT_BASE_HEIGHT_PCT * scale).toFixed(1)}%`;
-  }
+  syncSideCompositeToViewer(side);
   refreshHeroPriceNote();
 });
 
@@ -425,8 +595,9 @@ const SIDE_CAMERA_ANGLES = { front: 0, back: 180, sleeveLeft: 90, sleeveRight: -
 
 function setActiveSide(side, options = {}) {
   const { syncCamera = true } = options;
-  if (activeSide === side || !SIDE_BUTTONS[side]) return;
+  if (!SIDE_BUTTONS[side]) return;
   activeSide = side;
+  syncLegacyStateFromLayer(side);
 
   Object.entries(SIDE_BUTTONS).forEach(([key, btn]) => {
     btn?.classList.toggle('is-active', key === side);
@@ -437,8 +608,9 @@ function setActiveSide(side, options = {}) {
   }
 
   if (side !== 'front') setAutoRotatePaused(true);
-  applyPrintScale();
-  applyPrintOffset();
+  const layer = getActiveLayer(side);
+  if (layer?.printIndex !== null && layer?.printIndex !== undefined) setQueuedPrint(layer.printIndex);
+  renderLayerControls();
   refreshHeroPriceNote();
 }
 
@@ -539,6 +711,7 @@ window.addEventListener('resize', updateTrackPosition);
 
 renderPrintPicker();
 rotateCarousel(0); // camisa e lateral começam juntas na primeira arte
+renderLayerControls();
 startAutoRotate();
 
 /* ---------------------------------------------------------
@@ -689,7 +862,7 @@ function removeBlackBackground(file) {
   });
 }
 
-async function uploadCustomPrint(file, printName = 'Minha Arte', forcedBlend = null) {
+async function uploadCustomPrint(file, printName = 'Minha Arte', forcedBlend = null, layerDetails = {}) {
   if (!file.type.startsWith('image/')) {
     showUploadFeedback('Escolha um arquivo de imagem (JPG, PNG, etc).', true);
     return;
@@ -741,10 +914,11 @@ async function uploadCustomPrint(file, printName = 'Minha Arte', forcedBlend = n
     const currentSidePrint = currentSideIndex === null || currentSideIndex === undefined
       ? null
       : shirtPrints[currentSideIndex];
-    const sharedWithAnotherSide = Object.entries(sidePrintSelections).some(
-      ([side, index]) => side !== activeSide && index === currentSideIndex
+    const activeLayer = getActiveLayer(activeSide);
+    const sharedWithAnotherLayer = Object.entries(sideLayers).some(([side, layers]) =>
+      layers.some((layer) => layer !== activeLayer && layer.printIndex === currentSideIndex)
     );
-    const replaceableCustomIndex = currentSidePrint?.isCustom && !sharedWithAnotherSide
+    const replaceableCustomIndex = currentSidePrint?.isCustom && !sharedWithAnotherLayer
       ? currentSideIndex
       : -1;
     const customPrint = {
@@ -753,6 +927,8 @@ async function uploadCustomPrint(file, printName = 'Minha Arte', forcedBlend = n
       isCustom: true,
       blend,
       blackBackgroundRemoved: hasDarkBackground,
+      type: layerDetails.type || 'image',
+      textData: layerDetails.textData || null,
     };
 
     // A arte enviada entra em destaque na lateral e já veste a camisa
@@ -935,7 +1111,14 @@ applyTextPrintBtn?.addEventListener('click', async () => {
     const file = new File([blob], 'minha-frase.png', { type: 'image/png' });
 
     closeTextPrintModal();
-    await uploadCustomPrint(file, 'Minha Frase', 'normal');
+    await uploadCustomPrint(file, 'Minha Frase', 'normal', {
+      type: 'text',
+      textData: {
+        text: lines.join('\n'),
+        lines,
+        presetId: preset.id,
+      },
+    });
   } catch (error) {
     console.error('Erro ao gerar a estampa de texto:', error);
     if (textPrintNote) textPrintNote.textContent = 'Não foi possível gerar a estampa agora. Tente novamente.';
@@ -954,7 +1137,6 @@ renderTextStyleCards();
    não existem — isso é assunto das próximas fases.
    --------------------------------------------------------- */
 
-const shopStore = window.UrsoninhosStore;
 let cart = shopStore?.loadCart() || [];
 
 const cartToggleBtn = document.getElementById('cartToggleBtn');
@@ -1034,30 +1216,30 @@ function getSelectedPrintForSide(side) {
 }
 
 function getPrimaryEditedSide() {
-  if (sidePrintSelections.front !== null && sidePrintSelections.front !== undefined) return 'front';
-  if (sidePrintSelections.back !== null && sidePrintSelections.back !== undefined) return 'back';
-  if (sidePrintSelections.sleeveRight !== null && sidePrintSelections.sleeveRight !== undefined) return 'right';
-  if (sidePrintSelections.sleeveLeft !== null && sidePrintSelections.sleeveLeft !== undefined) return 'left';
+  if (getLayerPayload('front').length) return 'front';
+  if (getLayerPayload('back').length) return 'back';
+  if (getLayerPayload('sleeveRight').length) return 'right';
+  if (getLayerPayload('sleeveLeft').length) return 'left';
   return 'front';
 }
 
 function getPreferredPreviewSideForCart() {
-  if (activeSide === 'back' && sidePrintSelections.back !== null && sidePrintSelections.back !== undefined) return 'back';
-  if (activeSide === 'sleeveRight' && sidePrintSelections.sleeveRight !== null && sidePrintSelections.sleeveRight !== undefined) return 'right';
-  if (activeSide === 'sleeveLeft' && sidePrintSelections.sleeveLeft !== null && sidePrintSelections.sleeveLeft !== undefined) return 'left';
+  if (activeSide === 'back' && getLayerPayload('back').length) return 'back';
+  if (activeSide === 'sleeveRight' && getLayerPayload('sleeveRight').length) return 'right';
+  if (activeSide === 'sleeveLeft' && getLayerPayload('sleeveLeft').length) return 'left';
   return getPrimaryEditedSide();
 }
 
 function buildPrintsBySide() {
   const prints = {};
-  Object.keys(sidePrintSelections).forEach((side) => {
-    const print = getSelectedPrintForSide(side);
-    if (!print?.file) return;
+  Object.keys(sideLayers).forEach((side) => {
+    const firstLayer = getLayerPayload(side)[0];
+    if (!firstLayer?.url) return;
     prints[side] = {
-      name: print.name || 'Minha Arte',
-      file: print.file,
-      blend: print.blend || 'screen',
-      isCustom: Boolean(print.isCustom),
+      name: firstLayer.name || 'Minha Arte',
+      file: firstLayer.url,
+      blend: firstLayer.blend || 'normal',
+      isCustom: true,
     };
   });
   return prints;
@@ -1077,6 +1259,8 @@ function buildEditorState(size = '') {
       sleeveRight: { ...sideTransforms.sleeveRight },
     },
     printsBySide: buildPrintsBySide(),
+    layersBySide: getLayersModel(),
+    activeLayerIndexes: { ...activeLayerIndexes },
   };
 }
 
@@ -1093,42 +1277,20 @@ function ensurePrintAvailable(printData) {
     file: printData.file,
     blend: printData.blend || 'screen',
     isCustom: Boolean(printData.isCustom),
+    type: printData.type || (printData.textData ? 'text' : 'image'),
+    textData: printData.textData || null,
   });
   return shirtPrints.length - 1;
 }
 
 function syncAllSidePrintsToViewer() {
-  if (!window.shirtViewer3D?.ready) return;
-
-  Object.keys(sidePrintSelections).forEach((side) => {
-    const print = getSelectedPrintForSide(side);
-    const transform = sideTransforms[side];
-    if (print?.file) {
-      window.shirtViewer3D.setPrint(print.file, print.blend || 'screen', side);
-    } else {
-      window.shirtViewer3D.clearPrint?.(side);
-    }
-    window.shirtViewer3D.setTransform(
-      { scale: transform.scale, offsetX: transform.offsetX, offsetY: transform.offsetY },
-      side
-    );
-  });
+  return Promise.all(
+    Object.keys(sideLayers).map((side) => syncSideCompositeToViewer(side))
+  );
 }
 
 function syncFrontOverlayFromState() {
-  const frontPrint = getSelectedPrintForSide('front');
-  if (!shirtOverlay) return;
-
-  if (!frontPrint?.file) {
-    shirtOverlay.style.display = 'none';
-    return;
-  }
-
-  shirtOverlay.style.display = 'block';
-  shirtOverlay.style.backgroundImage = `url('${frontPrint.file}')`;
-  shirtOverlay.style.mixBlendMode = frontPrint.blend || 'screen';
-  applyPrintScale();
-  applyPrintOffset();
+  syncSideCompositeToViewer('front');
 }
 
 function restoreHeroEditorState(state) {
@@ -1138,14 +1300,39 @@ function restoreHeroEditorState(state) {
     ? state.printsBySide
     : {};
 
-  Object.keys(sidePrintSelections).forEach((side) => {
-    sidePrintSelections[side] = ensurePrintAvailable(printsBySide[side]);
-    const transform = state.transforms?.[side];
-    sideTransforms[side] = {
-      scale: Number(transform?.scale || 1),
-      offsetX: Number(transform?.offsetX || 0),
-      offsetY: Number(transform?.offsetY || 0),
-    };
+  Object.keys(sideLayers).forEach((side) => {
+    const savedLayers = Array.isArray(state.layersBySide?.[side])
+      ? state.layersBySide[side]
+      : printsBySide[side]
+        ? [{ ...printsBySide[side], url: printsBySide[side].file, transform: state.transforms?.[side] }]
+        : [];
+    sideLayers[side] = savedLayers.slice(0, 3).map((savedLayer, index) => {
+      const printIndex = ensurePrintAvailable({
+        name: savedLayer.name,
+        file: savedLayer.url || savedLayer.file,
+        blend: savedLayer.blend,
+        isCustom: true,
+        type: savedLayer.type,
+        textData: savedLayer.textData,
+      });
+      return {
+        id: savedLayer.id || `${side}-restored-${index + 1}`,
+        printIndex,
+        type: savedLayer.type || (savedLayer.textData ? 'text' : 'image'),
+        name: savedLayer.name || `Camada ${index + 1}`,
+        textData: savedLayer.textData || null,
+        transform: layerEngine?.normalizeTransform(savedLayer.transform) || {
+          scale: Number(savedLayer.transform?.scale || 1),
+          offsetX: Number(savedLayer.transform?.offsetX || 0),
+          offsetY: Number(savedLayer.transform?.offsetY || 0),
+        },
+      };
+    }).filter((layer) => layer.printIndex !== null);
+    activeLayerIndexes[side] = Math.min(
+      Number(state.activeLayerIndexes?.[side] || 0),
+      Math.max(0, sideLayers[side].length - 1)
+    );
+    syncLegacyStateFromLayer(side);
   });
 
   const frontIndex = sidePrintSelections.front;
@@ -1158,6 +1345,7 @@ function restoreHeroEditorState(state) {
   setQueuedPrint(queuedPrintIndex);
   syncFrontOverlayFromState();
   syncAllSidePrintsToViewer();
+  renderLayerControls();
   setActiveSide(state.activeSide && SIDE_BUTTONS[state.activeSide] ? state.activeSide : 'front');
 
   if (heroSizeSelect && state.size) {
@@ -1189,7 +1377,7 @@ async function generateHeroPreviewViews() {
   }
 
   const previousSide = activeSide;
-  syncAllSidePrintsToViewer();
+  await syncAllSidePrintsToViewer();
 
   const previewViews = {};
   const previewMap = [
@@ -1213,7 +1401,7 @@ async function generateHeroPreviewViews() {
 }
 
 async function generateFrontPreview() {
-  const frontPrint = shirtPrints[sidePrintSelections.front ?? shirtPrintIndex];
+  const frontLayers = getLayerPayload('front');
   const canvas = document.createElement('canvas');
   canvas.width = 900;
   canvas.height = 900;
@@ -1227,18 +1415,16 @@ async function generateFrontPreview() {
     const base = await loadImage('assets/img/camisa-modelo-card.jpg');
     ctx.drawImage(base, 0, 0, canvas.width, canvas.height);
 
-    if (frontPrint?.file) {
-      const printImage = await loadImage(frontPrint.file);
-      const scale = sideTransforms.front.scale || 1;
-      const offsetX = sideTransforms.front.offsetX || 0;
-      const offsetY = sideTransforms.front.offsetY || 0;
-      const printWidth = canvas.width * PRINT_SIZE * scale;
-      const printHeight = canvas.height * PRINT_SIZE * scale;
-      const x = canvas.width * PRINT_CENTER_X - printWidth / 2 + offsetX * 10;
-      const y = canvas.height * PRINT_TOP_Y + offsetY * 10;
-      // Artes com fundo preto chapado usam 'screen' (o preto some sobre a
-      // camisa preta); as demais ficam normais — mesmo critério do overlay.
-      ctx.globalCompositeOperation = (frontPrint.blend || 'screen') === 'screen' ? 'screen' : 'source-over';
+    if (frontLayers.length) {
+      const compositeUrl = layerEngine
+        ? await layerEngine.composeLayers(frontLayers)
+        : frontLayers[0].url;
+      const printImage = await loadImage(compositeUrl);
+      const printWidth = canvas.width * PRINT_SIZE;
+      const printHeight = canvas.height * PRINT_SIZE;
+      const x = canvas.width * PRINT_CENTER_X - printWidth / 2;
+      const y = canvas.height * PRINT_TOP_Y;
+      ctx.globalCompositeOperation = 'source-over';
       ctx.drawImage(printImage, x, y, printWidth, printHeight);
       ctx.globalCompositeOperation = 'source-over';
     }
@@ -1453,7 +1639,10 @@ mobileAddToCartBtn?.addEventListener('click', () => addToCartBtn?.click());
 addToCartBtn?.addEventListener('click', async () => {
   // Adiciona a estampa que está VESTIDA na camisa (mockup), que não é
   // necessariamente a que está em destaque na lateral (fila).
-  const print = shirtPrints[shirtPrintIndex];
+  const frontLayer = getLayerPayload('front')[0];
+  const print = frontLayer
+    ? { name: frontLayer.name, file: frontLayer.url, blend: frontLayer.blend }
+    : shirtPrints[shirtPrintIndex];
   const qty = normalizeHeroQty();
   const size = heroSizeSelect?.value || 'M';
   const coverage = getSelectedCoverage();
@@ -1474,13 +1663,16 @@ addToCartBtn?.addEventListener('click', async () => {
     metadata: {
       editorSource: 'home-customizer',
       preferredPreviewSide,
-      pricingMode: 'standard-shirt',
+      pricingMode: 'layered-shirt',
       sides: coverage.sides,
       coverage: coverage.label,
+      layerCounts: coverage.layerCounts,
       printName: print.name,
       frontPrintUrl: print.file || '',
       frontPrintBlend: print.blend || 'screen',
       printsBySide: buildPrintsBySide(),
+      layersBySide: getLayersModel(),
+      model: buildModelFromCurrentShirt(),
       editorState,
       transforms: {
         front: { ...sideTransforms.front },
@@ -1525,15 +1717,12 @@ function setPublishFeedback(message, isError = false) {
 // lado) no formato de "model" que a página do produto sabe reproduzir.
 function buildModelFromCurrentShirt() {
   const model = {};
-  Object.keys(sidePrintSelections).forEach((side) => {
-    const index = sidePrintSelections[side];
-    if (index === null || index === undefined) return;
-    const print = shirtPrints[index];
-    if (!print?.file) return;
-    model[side] = {
-      url: print.file,
-      blend: print.blend || 'screen',
-      transform: { ...sideTransforms[side] },
+  Object.keys(sideLayers).forEach((side) => {
+    const layers = getLayerPayload(side);
+    if (!layers.length) return;
+    model[side] = layerEngine?.serializeSide(layers) || {
+      ...layers[0],
+      layers,
     };
   });
   return model;
@@ -1550,8 +1739,8 @@ publishModelBtn?.addEventListener('click', async () => {
 
   const api = window.UrsoninhosApi;
   const store = window.UrsoninhosStore;
-  const frontIndex = sidePrintSelections.front ?? shirtPrintIndex;
-  const frontPrint = shirtPrints[frontIndex];
+  const frontLayer = getLayerPayload('front')[0];
+  const frontPrint = frontLayer ? { name: frontLayer.name, file: frontLayer.url } : null;
   if (!api || !store || !frontPrint) {
     setPublishFeedback('Escolha uma estampa para a frente antes de publicar.', true);
     return;
@@ -1575,6 +1764,7 @@ publishModelBtn?.addEventListener('click', async () => {
       catalogImage,
       views: { front: catalogImage },
       model: buildModelFromCurrentShirt(),
+      layerCounts: publishCoverage.layerCounts,
       // O backend atual ignora este campo; a versão nova (backend/
       // products.php) passa a persisti-lo. O marcador na descrição
       // garante o crédito nos dois casos.

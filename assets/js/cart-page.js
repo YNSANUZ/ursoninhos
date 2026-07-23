@@ -1,5 +1,6 @@
 (function () {
   const store = window.UrsoninhosStore;
+  const layerEngine = window.UrsoninhosLayers;
   if (!store) return;
 
   const PAYMENT_STORAGE_KEY = 'ursoninhos_checkout_payment';
@@ -236,8 +237,25 @@
 
   function hasBackPrint(item) {
     if (item.previewViews?.back) return true;
+    if (layerEngine?.normalizeSide(item.metadata?.layersBySide?.back || item.metadata?.model?.back).length) return true;
     const backFile = item.metadata?.printsBySide?.back?.file;
     return Boolean(backFile);
+  }
+
+  function getItemSideLayers(item, side) {
+    if (!layerEngine) return [];
+    return layerEngine.normalizeSide(
+      item.metadata?.layersBySide?.[side] ||
+      item.metadata?.model?.[side]
+    );
+  }
+
+  async function buildLayeredShirtMockup(item, side) {
+    const layers = getItemSideLayers(item, side);
+    if (!layers.length) return '';
+    const composite = await layerEngine.composeLayers(layers);
+    const baseUrl = side === 'back' ? CARD_MOCKUP_BACK_URL : CARD_MOCKUP_URL;
+    return buildShirtMockup(composite, {}, 'normal', baseUrl);
   }
 
   function getAvailableDetailViews(item) {
@@ -290,6 +308,8 @@
   async function resolveDetailViewPreview(item, view) {
     if (view === 'back') {
       if (isCustomShirt(item)) {
+        const layeredBack = await buildLayeredShirtMockup(item, 'back');
+        if (layeredBack) return layeredBack;
         const backPrintUrl = item.metadata?.printsBySide?.back?.file || '';
         const backTransform = item.metadata?.transforms?.back || {};
         const backBlend = item.metadata?.printsBySide?.back?.blend || 'screen';
@@ -300,6 +320,10 @@
       }
     }
 
+    if (isCustomShirt(item)) {
+      const layeredFront = await buildLayeredShirtMockup(item, 'front');
+      if (layeredFront) return layeredFront;
+    }
     if (isCustomShirt(item) && item.metadata?.frontPrintUrl) {
       const frontTransform = item.metadata?.transforms?.front || item.metadata?.frontTransform || {};
       const frontBlend = item.metadata?.frontPrintBlend || 'screen';
@@ -326,6 +350,8 @@
       item.previewImage ||
       'assets/img/banner-estatico.jpg';
     if (!isCustomShirt(item)) return preferredPreview;
+    const layeredFront = await buildLayeredShirtMockup(item, 'front');
+    if (layeredFront) return layeredFront;
     if (!item.metadata?.frontPrintUrl) return item.previewImage || preferredPreview;
 
     const printUrl = item.metadata.frontPrintUrl;

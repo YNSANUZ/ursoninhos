@@ -212,6 +212,13 @@ export async function createInteractiveViewer({ container, cameraDistance = 2.3 
     });
   };
 
+  const clearPrint = (side) => {
+    if (!state[side]) return;
+    state[side].url = null;
+    state[side].texture = null;
+    queueRebuild();
+  };
+
   const setTransform = (side, transform) => {
     if (!state[side]) return;
     state[side].scale = typeof transform.scale === 'number' ? transform.scale : state[side].scale;
@@ -293,6 +300,7 @@ export async function createInteractiveViewer({ container, cameraDistance = 2.3 
 
   return {
     setPrint,
+    clearPrint,
     setTransform,
     setCameraAngle,
     capturePng,

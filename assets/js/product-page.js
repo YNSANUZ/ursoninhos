@@ -2,6 +2,7 @@ import { createInteractiveViewer } from './interactive-viewer3d.js';
 
 const api = window.UrsoninhosApi;
 const store = window.UrsoninhosStore;
+const layerEngine = window.UrsoninhosLayers;
 
 const productTitle = document.getElementById('productTitle');
 const productDescription = document.getElementById('productDescription');
@@ -211,6 +212,12 @@ async function buildFlatMockup(printUrl, transform = {}, blend = 'screen') {
 
 async function resolvePrimaryPhoto(product) {
   const frontModel = product?.model?.front;
+  const frontLayers = layerEngine?.normalizeSide(frontModel) || [];
+  if (frontLayers.length) {
+    const composite = await layerEngine.composeLayers(frontLayers);
+    const mockup = await buildFlatMockup(composite, {}, 'normal');
+    if (mockup) return mockup;
+  }
   if (frontModel?.url) {
     const mockup = await buildFlatMockup(
       frontModel.url,
@@ -236,10 +243,16 @@ async function ensureViewer(product) {
   ];
 
   for (const [sideKey, sideState] of sides) {
-    if (!sideState?.url) continue;
-    await viewer.setPrint(sideKey, sideState.url, sideState.blend || 'normal');
-    if (sideState.transform) {
-      viewer.setTransform(sideKey, sideState.transform);
+    const layers = layerEngine?.normalizeSide(sideState) || [];
+    if (layers.length) {
+      const composite = await layerEngine.composeLayers(layers);
+      await viewer.setPrint(sideKey, composite, 'normal');
+      viewer.setTransform(sideKey, { scale: 1, offsetX: 0, offsetY: 0 });
+      continue;
+    }
+    if (sideState?.url) {
+      await viewer.setPrint(sideKey, sideState.url, sideState.blend || 'normal');
+      if (sideState.transform) viewer.setTransform(sideKey, sideState.transform);
     }
   }
 

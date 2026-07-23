@@ -6,7 +6,7 @@
 <title>Ursoninhos | Painel ADM</title>
 <meta name="description" content="Painel de teste para publicar modelos publicos da Ursoninhos.">
 <link rel="icon" type="image/webp" href="https://i.ibb.co/wrPpWWsf/ea990759-29d9-4e67-98ce-bb22e69f8e9e-Sem-T-tulo-1.webp">
-<link rel="stylesheet" href="assets/css/style.css?v=31">
+<link rel="stylesheet" href="assets/css/style.css?v=35">
 <script type="importmap">
 {
   "imports": {
@@ -149,18 +149,53 @@
           </div>
         </aside>
       </div>
+
+      <section class="checkout-panel admin-library" id="adminProductLibrary">
+        <div class="checkout-stage__head">
+          <div>
+            <h2>Produtos e estampas já criados</h2>
+            <p>Abra qualquer produto para trocar imagens, editar textos e organizar até três camadas em cada lado.</p>
+          </div>
+          <button type="button" class="btn btn--outline" id="refreshAdminLibraryBtn">Atualizar biblioteca</button>
+        </div>
+        <div class="admin-artwork-library" id="adminArtworkLibrary"></div>
+        <div class="admin-product-list" id="adminProductList">
+          <p>Carregando produtos...</p>
+        </div>
+        <form class="admin-layer-editor" id="adminLayerEditor" hidden>
+          <div class="admin-layer-editor__head">
+            <div>
+              <h3 id="adminEditingTitle">Editar produto</h3>
+              <p>Textos permanecem editáveis; imagens podem ser substituídas por outro endereço.</p>
+            </div>
+            <button type="button" class="btn btn--outline" id="closeAdminLayerEditorBtn">Fechar</button>
+          </div>
+          <div class="admin-layer-editor__meta">
+            <label class="form-field"><span>Título</span><input type="text" id="adminEditTitle" required></label>
+            <label class="form-field"><span>Preço</span><input type="number" id="adminEditPrice" min="0" max="500" step="0.01" required></label>
+            <label class="form-field admin-layer-editor__description"><span>Descrição</span><textarea id="adminEditDescription" rows="2"></textarea></label>
+          </div>
+          <div id="adminLayerSides"></div>
+          <div class="checkout-nav">
+            <button type="button" class="btn btn--outline" id="previewAdminLayersBtn">Visualizar no manequim</button>
+            <button type="submit" class="btn btn--gold">Salvar alterações no produto</button>
+          </div>
+          <p class="cart-drawer__note" id="adminLayerEditorNote"></p>
+        </form>
+      </section>
     </div>
   </main>
 
   <script src="assets/js/app-config.js?v=25"></script>
-  <script src="assets/js/shop-store.js?v=23"></script>
+  <script src="assets/js/shop-store.js?v=26"></script>
   <script src="assets/js/account-ui.js?v=22"></script>
   <script src="assets/js/sheet-products.js?v=3"></script>
-  <script src="assets/js/public-api.js?v=21"></script>
+  <script src="assets/js/public-api.js?v=22"></script>
   <!-- Motor de texto + frases: necessários para listar as camisas de
        frases na sincronização com a planilha Google. -->
-  <script src="assets/js/text-print-engine.js?v=19"></script>
+  <script src="assets/js/layer-engine.js?v=2"></script>
+  <script src="assets/js/text-print-engine.js?v=20"></script>
   <script src="assets/js/frases-data.js?v=19"></script>
-  <script type="module" src="assets/js/admin-models.js?v=23"></script>
+  <script type="module" src="assets/js/admin-models.js?v=24"></script>
 </body>
 </html>

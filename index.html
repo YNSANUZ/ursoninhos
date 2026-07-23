@@ -22,7 +22,7 @@
 <!-- O "?v=" força o navegador a baixar a versão nova do arquivo em vez
      de usar o cache. Sempre que CSS ou JS mudarem, aumente este número
      aqui e no <script> do final da página. -->
-<link rel="stylesheet" href="assets/css/style.css?v=34">
+<link rel="stylesheet" href="assets/css/style.css?v=35">
 <!-- three.js para o manequim 3D do hero (decal da estampa no tecido).
      O importmap precisa vir antes de qualquer script type="module". -->
 <script type="importmap">
@@ -312,6 +312,15 @@
             <button type="button" class="stage-side-btn" id="sideSleeveRightBtn" title="Manga direita (de quem veste)">Direita</button>
             <button type="button" class="stage-side-btn" id="sideSleeveLeftBtn" title="Manga esquerda (de quem veste)">Esquerda</button>
           </div>
+          <div class="stage-layer-control" id="stageLayerControl" aria-label="Camadas do lado em edição">
+            <div class="stage-layer-control__head">
+              <strong>Camadas</strong>
+              <span id="stageLayerPriceHint">até 3 por lado</span>
+            </div>
+            <div class="stage-layer-control__buttons" id="stageLayerButtons"></div>
+            <button type="button" class="stage-layer-remove" id="removeActiveLayerBtn">Remover camada selecionada</button>
+          </div>
+          <p class="stage-layer-price" id="heroPriceNote">Frente — R$ 49,90</p>
           <div class="stage-action-buttons">
             <button type="button" class="stage-action-btn" id="personalizarCamisaBtn">Inserir imagem</button>
             <button type="button" class="stage-action-btn" id="textPrintBtn">Inserir texto</button>
@@ -950,15 +959,16 @@
 
   <script src="assets/js/app-config.js?v=25"></script>
   <script src="assets/js/sheet-products.js?v=3"></script>
-  <script src="assets/js/shop-store.js?v=23"></script>
+  <script src="assets/js/shop-store.js?v=26"></script>
   <script src="assets/js/account-ui.js?v=23"></script>
   <script src="assets/js/notifications.js?v=1"></script>
   <script src="assets/js/public-api.js?v=21"></script>
   <!-- Motor dos estilos de texto (compartilhado com camisas-de-frases.html)
        e dados das frases: precisam vir ANTES do main.js. -->
-  <script src="assets/js/text-print-engine.js?v=19"></script>
+  <script src="assets/js/layer-engine.js?v=2"></script>
+  <script src="assets/js/text-print-engine.js?v=20"></script>
   <script src="assets/js/frases-data.js?v=19"></script>
-  <script src="assets/js/main.js?v=33"></script>
+  <script src="assets/js/main.js?v=39"></script>
   <script src="assets/js/public-catalog.js?v=21"></script>
   <script src="assets/js/header-search.js?v=1"></script>
   <!-- Manequim 3D ADIADO: three.js + modelo GLB somam ~3 MB e travavam

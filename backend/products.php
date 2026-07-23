@@ -1,6 +1,6 @@
 <?php
 /* =========================================================
-   Ursoninhos — products.php (versão 2)
+   Ursoninhos — products.php (versão 3)
    Substitui o products.php atual em
    _ursoninhos_backend/api/products.php na Hostinger.
 
@@ -10,6 +10,8 @@
          POST products.php?action=sale  body: {"id":"...","quantity":1}
      - DELETE products.php?id=...&key=CHAVE  (remoção de produtos;
        defina a chave abaixo antes de subir).
+     - Até 3 camadas independentes por lado, com texto editável.
+     - Atualização completa de produtos pelo painel ADM.
      - Teto de preço maior (R$ 500 em vez de R$ 50).
 
    O arquivo de dados continua sendo products.json na MESMA pasta
@@ -24,7 +26,7 @@ const PUBLIC_SHORT_ID_BASE = 8600;
 header('Content-Type: application/json; charset=utf-8');
 header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type');
+header('Access-Control-Allow-Headers: Content-Type, Authorization');
 
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     exit;
@@ -112,18 +114,88 @@ function ensureShortLinks($products, &$changed = false)
     return $products;
 }
 
+function normalizeTransform($transform)
+{
+    return [
+        'scale' => max(0.22, min(2.35, (float) ($transform['scale'] ?? 1))),
+        'offsetX' => max(-24, min(24, (float) ($transform['offsetX'] ?? 0))),
+        'offsetY' => max(-24, min(24, (float) ($transform['offsetY'] ?? 0))),
+    ];
+}
+
+function normalizeLayer($layer, $index = 0)
+{
+    if (!is_array($layer)) return null;
+    $url = trim((string) ($layer['url'] ?? $layer['file'] ?? ''));
+    if ($url === '') return null;
+    $transform = is_array($layer['transform'] ?? null) ? $layer['transform'] : [];
+    $textData = is_array($layer['textData'] ?? null) ? $layer['textData'] : null;
+    $lines = [];
+    if ($textData) {
+        $rawLines = is_array($textData['lines'] ?? null)
+            ? $textData['lines']
+            : preg_split('/\R/u', (string) ($textData['text'] ?? ''));
+        foreach (array_slice($rawLines, 0, 12) as $line) {
+            $clean = mb_substr(trim((string) $line), 0, 160);
+            if ($clean !== '') $lines[] = $clean;
+        }
+        $textData = [
+            'text' => implode("\n", $lines),
+            'lines' => $lines,
+            'presetId' => mb_substr((string) ($textData['presetId'] ?? 'statement'), 0, 80),
+        ];
+    }
+
+    return [
+        'id' => mb_substr((string) ($layer['id'] ?? ('layer-' . ($index + 1))), 0, 80),
+        'name' => mb_substr((string) ($layer['name'] ?? ($textData ? 'Texto' : 'Imagem')), 0, 120),
+        'type' => ($textData || ($layer['type'] ?? '') === 'text') ? 'text' : 'image',
+        'url' => $url,
+        'blend' => in_array($layer['blend'] ?? '', ['screen', 'normal'], true) ? $layer['blend'] : 'normal',
+        'transform' => normalizeTransform($transform),
+        'textData' => $textData,
+    ];
+}
+
 function normalizeSide($side)
 {
-    if (!is_array($side) || empty($side['url'])) return null;
-    $transform = is_array($side['transform'] ?? null) ? $side['transform'] : [];
+    if (!is_array($side)) return null;
+    $sourceLayers = is_array($side['layers'] ?? null) ? $side['layers'] : [$side];
+    $layers = [];
+    foreach (array_slice($sourceLayers, 0, 3) as $index => $sourceLayer) {
+        $layer = normalizeLayer($sourceLayer, $index);
+        if ($layer) $layers[] = $layer;
+    }
+    if (!$layers) return null;
+    $first = $layers[0];
     return [
-        'url' => (string) $side['url'],
-        'blend' => in_array($side['blend'] ?? '', ['screen', 'normal'], true) ? $side['blend'] : 'normal',
-        'transform' => [
-            'scale' => (float) ($transform['scale'] ?? 1),
-            'offsetX' => (float) ($transform['offsetX'] ?? 0),
-            'offsetY' => (float) ($transform['offsetY'] ?? 0),
-        ],
+        // Campos legados mantidos para páginas ainda em cache.
+        'url' => $first['url'],
+        'blend' => $first['blend'],
+        'transform' => $first['transform'],
+        'layers' => $layers,
+    ];
+}
+
+function normalizeViews($views, $catalogImage = '')
+{
+    $views = is_array($views) ? $views : [];
+    return [
+        'front' => (string) ($views['front'] ?? $catalogImage),
+        'back' => (string) ($views['back'] ?? ''),
+        'right' => (string) ($views['right'] ?? ''),
+        'left' => (string) ($views['left'] ?? ''),
+    ];
+}
+
+function normalizeModel($model)
+{
+    $model = is_array($model) ? $model : [];
+    return [
+        'front' => normalizeSide($model['front'] ?? null),
+        'back' => normalizeSide($model['back'] ?? null),
+        'sleeveRight' => normalizeSide($model['sleeveRight'] ?? null),
+        'sleeveLeft' => normalizeSide($model['sleeveLeft'] ?? null),
     ];
 }
 
@@ -162,6 +234,37 @@ if ($method === 'POST') {
         respond(['ok' => false, 'error' => 'Produto nao encontrado.'], 404);
     }
 
+    // Edição pelo painel ADM. Mantém id, link curto, vendas e criação.
+    if (($_GET['action'] ?? '') === 'update') {
+        $id = (string) ($_GET['id'] ?? '');
+        if ($id === '') respond(['ok' => false, 'error' => 'Produto obrigatorio.'], 400);
+        $products = loadProducts();
+        foreach ($products as $index => $existing) {
+            if (!matchesProductKey($existing, $id)) continue;
+            $title = trim((string) ($body['title'] ?? $existing['title'] ?? ''));
+            if ($title === '') respond(['ok' => false, 'error' => 'Titulo obrigatorio.'], 400);
+            $catalogImage = (string) ($body['catalogImage'] ?? $existing['catalogImage'] ?? '');
+            $products[$index] = array_merge($existing, [
+                'title' => mb_substr($title, 0, 120),
+                'description' => mb_substr(trim((string) ($body['description'] ?? $existing['description'] ?? '')), 0, 600),
+                'price' => min(MAX_PRICE, max(0, (float) ($body['price'] ?? $existing['price'] ?? 0))),
+                'catalogImage' => $catalogImage,
+                'creator' => mb_substr(trim((string) ($body['creator'] ?? $existing['creator'] ?? '')), 0, 80),
+                'creatorPhoto' => (string) ($body['creatorPhoto'] ?? $existing['creatorPhoto'] ?? ''),
+                'views' => array_key_exists('views', $body)
+                    ? normalizeViews($body['views'], $catalogImage)
+                    : ($existing['views'] ?? normalizeViews([], $catalogImage)),
+                'model' => array_key_exists('model', $body)
+                    ? normalizeModel($body['model'])
+                    : ($existing['model'] ?? normalizeModel([])),
+                'updatedAt' => date('c'),
+            ]);
+            saveProducts($products);
+            respond(['ok' => true, 'product' => $products[$index]]);
+        }
+        respond(['ok' => false, 'error' => 'Produto nao encontrado.'], 404);
+    }
+
     // Publicação de produto
     $title = trim((string) ($body['title'] ?? ''));
     if ($title === '') respond(['ok' => false, 'error' => 'Titulo obrigatorio.'], 400);
@@ -176,19 +279,10 @@ if ($method === 'POST') {
         'price' => min(MAX_PRICE, max(0, (float) ($body['price'] ?? 0))),
         'catalogImage' => (string) ($body['catalogImage'] ?? ''),
         'creator' => mb_substr(trim((string) ($body['creator'] ?? '')), 0, 80),
+        'creatorPhoto' => (string) ($body['creatorPhoto'] ?? ''),
         'sales' => 0,
-        'views' => [
-            'front' => (string) ($views['front'] ?? ($body['catalogImage'] ?? '')),
-            'back' => (string) ($views['back'] ?? ''),
-            'right' => (string) ($views['right'] ?? ''),
-            'left' => (string) ($views['left'] ?? ''),
-        ],
-        'model' => [
-            'front' => normalizeSide($model['front'] ?? null),
-            'back' => normalizeSide($model['back'] ?? null),
-            'sleeveRight' => normalizeSide($model['sleeveRight'] ?? null),
-            'sleeveLeft' => normalizeSide($model['sleeveLeft'] ?? null),
-        ],
+        'views' => normalizeViews($views, (string) ($body['catalogImage'] ?? '')),
+        'model' => normalizeModel($model),
         'createdAt' => date('c'),
         'status' => 'published',
     ];
