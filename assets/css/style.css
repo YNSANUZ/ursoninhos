@@ -747,9 +747,9 @@ ul {
   align-items: center;
   overflow: hidden;
   background:
-    radial-gradient(ellipse 70% 60% at 68% 45%, rgba(74, 51, 32, 0.4), transparent 70%),
-    radial-gradient(ellipse 50% 50% at 10% 20%, rgba(201, 143, 77, 0.08), transparent 60%),
-    linear-gradient(180deg, #140d08, #0d0906 75%);
+    radial-gradient(ellipse 70% 60% at 68% 45%, rgba(91, 54, 25, 0.38), transparent 70%),
+    radial-gradient(ellipse 50% 50% at 10% 20%, rgba(201, 143, 77, 0.1), transparent 60%),
+    linear-gradient(180deg, #2f1d10, #1b1009 82%);
 }
 
 .hero__inner {
