@@ -2,6 +2,7 @@
   const MAX_LAYERS_PER_SIDE = 3;
   const SIDES = ['front', 'back', 'sleeveRight', 'sleeveLeft'];
   const imageCache = new Map();
+  const blackKeyCache = new Map();
 
   function numberOr(value, fallback) {
     const parsed = Number(value);
@@ -33,12 +34,15 @@
     const url = String(layer.url || layer.file || '').trim();
     if (!url) return null;
     const textData = normalizeTextData(layer.textData || layer.text);
+    const isBuiltInBlackArtwork = /(?:^|\/)assets\/img\/prints\/[^/?#]+\.(?:jpe?g|webp)(?:[?#].*)?$/i.test(url);
     return {
       id: String(layer.id || `layer-${index + 1}`),
       name: String(layer.name || (textData ? 'Texto' : 'Imagem')),
       type: textData || layer.type === 'text' ? 'text' : 'image',
       url,
-      blend: ['screen', 'normal'].includes(layer.blend) ? layer.blend : 'normal',
+      blend: isBuiltInBlackArtwork
+        ? 'screen'
+        : ['screen', 'normal'].includes(layer.blend) ? layer.blend : 'normal',
       transform: normalizeTransform(layer.transform),
       textData,
     };
@@ -98,6 +102,44 @@
     return promise;
   }
 
+  /* O modo screen funciona quando a arte é desenhada diretamente sobre
+     a camisa, mas não quando primeiro juntamos várias camadas num PNG
+     transparente: nesse caso o preto voltaria a ser um retângulo opaco.
+     Para manter o mesmo resultado em 2D, 3D, carrinho e página do produto,
+     convertemos apenas as artes marcadas como screen para uma matriz com
+     transparência gradual. A imagem original nunca é modificada. */
+  function keyOutBlackBackground(image, cacheKey) {
+    if (blackKeyCache.has(cacheKey)) return blackKeyCache.get(cacheKey);
+
+    const canvas = document.createElement('canvas');
+    canvas.width = image.naturalWidth || image.width;
+    canvas.height = image.naturalHeight || image.height;
+    const ctx = canvas.getContext('2d', { willReadFrequently: true });
+    ctx.drawImage(image, 0, 0);
+
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const pixels = imageData.data;
+    const TRANSPARENT_AT = 10;
+    const OPAQUE_AT = 72;
+
+    for (let index = 0; index < pixels.length; index += 4) {
+      const brightness = Math.max(
+        pixels[index],
+        pixels[index + 1],
+        pixels[index + 2]
+      );
+      const matte = Math.max(
+        0,
+        Math.min(1, (brightness - TRANSPARENT_AT) / (OPAQUE_AT - TRANSPARENT_AT))
+      );
+      pixels[index + 3] = Math.round(pixels[index + 3] * matte);
+    }
+
+    ctx.putImageData(imageData, 0, 0);
+    blackKeyCache.set(cacheKey, canvas);
+    return canvas;
+  }
+
   async function composeLayers(layers, options = {}) {
     const normalized = normalizeSide(layers);
     if (!normalized.length) return '';
@@ -111,9 +153,12 @@
 
     for (const layer of normalized) {
       const image = await loadImage(layer.url);
+      const drawable = layer.blend === 'screen'
+        ? keyOutBlackBackground(image, layer.url)
+        : image;
       const transform = layer.transform;
       const box = size * baseRatio * transform.scale;
-      const ratio = (image.naturalWidth || image.width) / (image.naturalHeight || image.height) || 1;
+      const ratio = (drawable.naturalWidth || drawable.width) / (drawable.naturalHeight || drawable.height) || 1;
       let width = box;
       let height = box;
       if (ratio > 1) height = box / ratio;
@@ -121,8 +166,8 @@
 
       const centerX = size * (0.5 + transform.offsetX / 100);
       const centerY = size * (0.5 + transform.offsetY / 100);
-      ctx.globalCompositeOperation = layer.blend === 'screen' ? 'screen' : 'source-over';
-      ctx.drawImage(image, centerX - width / 2, centerY - height / 2, width, height);
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.drawImage(drawable, centerX - width / 2, centerY - height / 2, width, height);
     }
 
     ctx.globalCompositeOperation = 'source-over';

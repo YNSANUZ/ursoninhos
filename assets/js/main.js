@@ -40,12 +40,12 @@ if (navToggle && navList) {
    Os PNGs originais continuam na pasta ARTE CAMISA/ só como matriz
    de produção — o site não os carrega mais (eram ~6 MB no total). */
 const shirtPrints = [
-  { name: 'Coração', file: 'assets/img/prints/coracao.jpg', thumb: 'assets/img/prints/coracao-thumb.jpg' },
-  { name: 'Coração 2', file: 'assets/img/prints/coracao-2.jpg', thumb: 'assets/img/prints/coracao-2-thumb.jpg' },
-  { name: 'Dog', file: 'assets/img/prints/dog.jpg', thumb: 'assets/img/prints/dog-thumb.jpg' },
-  { name: 'Logo Ursoninhos', file: 'assets/img/prints/logo-ursoninhos.jpg', thumb: 'assets/img/prints/logo-ursoninhos-thumb.jpg' },
-  { name: 'Samurai', file: 'assets/img/prints/samurai.jpg', thumb: 'assets/img/prints/samurai-thumb.jpg' },
-  { name: 'Silene', file: 'assets/img/prints/silene.jpg', thumb: 'assets/img/prints/silene-thumb.jpg' },
+  { name: 'Coração', file: 'assets/img/prints/coracao.jpg', thumb: 'assets/img/prints/coracao-thumb.jpg', blend: 'screen' },
+  { name: 'Coração 2', file: 'assets/img/prints/coracao-2.jpg', thumb: 'assets/img/prints/coracao-2-thumb.jpg', blend: 'screen' },
+  { name: 'Dog', file: 'assets/img/prints/dog.jpg', thumb: 'assets/img/prints/dog-thumb.jpg', blend: 'screen' },
+  { name: 'Logo Ursoninhos', file: 'assets/img/prints/logo-ursoninhos.jpg', thumb: 'assets/img/prints/logo-ursoninhos-thumb.jpg', blend: 'screen' },
+  { name: 'Samurai', file: 'assets/img/prints/samurai.jpg', thumb: 'assets/img/prints/samurai-thumb.jpg', blend: 'screen' },
+  { name: 'Silene', file: 'assets/img/prints/silene.jpg', thumb: 'assets/img/prints/silene-thumb.jpg', blend: 'screen' },
 ];
 
 const shirtOverlay = document.getElementById('shirtPrintOverlay');
@@ -160,7 +160,7 @@ function getLayerPayload(side) {
         name: layer.name || print.name || `Camada ${index + 1}`,
         type: layer.type || (layer.textData ? 'text' : 'image'),
         url: print.file,
-        blend: print.blend || 'normal',
+        blend: print.blend || 'screen',
         transform: { ...layer.transform },
         textData: layer.textData || print.textData || null,
       };
