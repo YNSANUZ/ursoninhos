@@ -2335,16 +2335,24 @@ publishModelBtn?.addEventListener('click', async () => {
     const firstName = String(user.name || 'Cliente').split(' ')[0];
     const publishCoverage = getSelectedCoverage();
 
+    const publicModel = buildModelFromCurrentShirt();
+    const shirtTexts = layerEngine?.extractTextValues?.(publicModel) || [];
+    const textTitle = String(shirtTexts[0] || '').replace(/\s+/g, ' ').trim().slice(0, 52);
+    const automaticTitle = textTitle ? `Camisa ${textTitle}` : `Camisa ${frontPrint.name}`;
+    const baseDescription = `Modelo criado pela comunidade Ursoninhos com a estampa ${frontPrint.name}.`;
+    const searchableDescription = layerEngine?.addTextToDescription?.(baseDescription, publicModel)
+      || baseDescription;
     const product = await api.createProduct({
-      title: `Camisa ${frontPrint.name}`,
+      title: automaticTitle,
       description: store.embedCreator(
-        `Modelo criado pela comunidade Ursoninhos com a estampa ${frontPrint.name}.`,
+        searchableDescription,
         user.name
       ),
+      tags: shirtTexts,
       price: publishCoverage.price,
       catalogImage,
       views: { ...publicViews, front: catalogImage },
-      model: buildModelFromCurrentShirt(),
+      model: publicModel,
       layerCounts: publishCoverage.layerCounts,
       shirtColor: selectedShirtColor,
       // O backend atual ignora este campo; a versão nova (backend/

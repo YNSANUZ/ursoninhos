@@ -85,6 +85,14 @@
     return `produto.html?id=${encodeURIComponent(m.id || '')}`;
   }
 
+  function textoDoModelo(model) {
+    try {
+      return (window.UrsoninhosLayers?.extractTextValues?.(model) || []).join(' ');
+    } catch (error) {
+      return '';
+    }
+  }
+
   function render(termo) {
     const q = norm(termo).trim();
     if (!q) { results.hidden = true; results.innerHTML = ''; return; }
@@ -105,7 +113,12 @@
       }));
 
     modelos
-      .filter((m) => norm(m.title).includes(q))
+      .filter((m) => norm([
+        m.title,
+        m.description,
+        Array.isArray(m.tags) ? m.tags.join(' ') : m.tags,
+        textoDoModelo(m.model),
+      ].join(' ')).includes(q))
       .slice(0, 6)
       .forEach((m) => linhas.push({ label: m.title, sub: 'Modelo', href: pathDoModelo(m) }));
 

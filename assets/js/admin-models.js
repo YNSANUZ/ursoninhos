@@ -519,9 +519,13 @@ async function saveEditingProduct() {
     const frontLayers = layerEngine.normalizeSide(model.front);
     const frontComposite = frontLayers.length ? await layerEngine.composeLayers(frontLayers, { side: 'front' }) : '';
     const catalogImage = frontComposite ? await composeCardImage(frontComposite) : editingProduct.catalogImage;
+    const rawDescription = adminEditDescription.value.trim();
+    const searchableDescription = layerEngine.addTextToDescription?.(rawDescription, model)
+      || rawDescription;
     const payload = {
       title: adminEditTitle.value.trim(),
-      description: adminEditDescription.value.trim(),
+      description: searchableDescription,
+      tags: layerEngine.extractTextValues?.(model) || [],
       price: Number(adminEditPrice.value || 0),
       catalogImage,
       views: { ...(editingProduct.views || {}), front: catalogImage },

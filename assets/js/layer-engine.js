@@ -215,6 +215,37 @@
     }, {});
   }
 
+  function extractTextValues(model = {}) {
+    const seen = new Set();
+    const values = [];
+    const normalized = normalizeModel(model);
+    SIDES.forEach((side) => {
+      normalized[side].forEach((layer) => {
+        const lines = layer.textData?.lines?.length
+          ? layer.textData.lines
+          : String(layer.textData?.text || '').split('\n');
+        lines.map((line) => String(line).trim()).filter(Boolean).forEach((line) => {
+          const key = line.toLocaleLowerCase('pt-BR');
+          if (seen.has(key)) return;
+          seen.add(key);
+          values.push(line);
+        });
+      });
+    });
+    return values;
+  }
+
+  function addTextToDescription(description, model = {}) {
+    const base = String(description || '').trim();
+    const searchableBase = base.toLocaleLowerCase('pt-BR');
+    const missing = extractTextValues(model).filter(
+      (text) => !searchableBase.includes(text.toLocaleLowerCase('pt-BR'))
+    );
+    if (!missing.length) return base;
+    const label = missing.length === 1 ? 'Texto da camisa' : 'Textos da camisa';
+    return `${base}${base ? ' ' : ''}${label}: ${missing.join(' • ')}.`;
+  }
+
   window.UrsoninhosLayers = {
     MAX_LAYERS_PER_SIDE,
     SIDES,
@@ -226,5 +257,7 @@
     serializeModel,
     composeLayers,
     countLayersBySide,
+    extractTextValues,
+    addTextToDescription,
   };
 })();
