@@ -49,9 +49,11 @@
         ? layer.imageTreatment
         : 'original',
       darkBackgroundDetected: Boolean(layer.darkBackgroundDetected),
-      blend: isBuiltInBlackArtwork
-        ? 'screen'
-        : ['screen', 'normal'].includes(layer.blend) ? layer.blend : 'normal',
+      // Artes antigas da galeria usam screen como fallback, mas uma escolha
+      // explícita do cliente (ex.: "Cores originais") precisa prevalecer.
+      blend: ['screen', 'normal'].includes(layer.blend)
+        ? layer.blend
+        : isBuiltInBlackArtwork ? 'screen' : 'normal',
       transform: normalizeTransform(layer.transform),
       textData,
     };
@@ -155,6 +157,10 @@
 
     const size = Math.max(256, Number(options.size || 1024));
     const isBodySide = options.side === 'front' || options.side === 'back';
+    // Área transparente de segurança ao redor da impressão. O manequim
+    // amplia o decal pelo mesmo fator, então o tamanho físico não muda;
+    // a folga apenas impede que escala, movimento e rotação cortem a arte.
+    const workspaceScale = Math.max(1, Number(options.workspaceScale || 1));
     // Frente e costas usam a área real aproximada da prensa: um campo
     // vertical que vai de perto da gola até a região acima da barra.
     // Mangas continuam quadradas.
@@ -174,15 +180,15 @@
         ? keyOutBlackBackground(image, layer.url)
         : image;
       const transform = layer.transform;
-      const box = width * baseRatio * transform.scale;
+      const box = width * baseRatio * transform.scale / workspaceScale;
       const ratio = (drawable.naturalWidth || drawable.width) / (drawable.naturalHeight || drawable.height) || 1;
       let drawWidth = box;
       let drawHeight = box;
       if (ratio > 1) drawHeight = box / ratio;
       else drawWidth = box * ratio;
 
-      const centerX = width * (0.5 + (transform.offsetX / 100) * offsetXReach);
-      const centerY = height * (0.5 + (transform.offsetY / 100) * offsetYReach);
+      const centerX = width * (0.5 + (transform.offsetX / 100) * offsetXReach / workspaceScale);
+      const centerY = height * (0.5 + (transform.offsetY / 100) * offsetYReach / workspaceScale);
       ctx.globalCompositeOperation = 'source-over';
       if (transform.rotation) {
         // Gira em torno do CENTRO da estampa, sem mover a posição.

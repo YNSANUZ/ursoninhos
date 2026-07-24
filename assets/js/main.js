@@ -117,6 +117,7 @@ const activeLayerIndexes = {
   sleeveRight: 0,
 };
 const sideCompositeTokens = { front: 0, back: 0, sleeveLeft: 0, sleeveRight: 0 };
+const PRINT_COMPOSITE_WORKSPACE_SCALE = 4;
 const stageLayerButtons = document.getElementById('stageLayerButtons');
 const removeActiveLayerBtn = document.getElementById('removeActiveLayerBtn');
 const stageLayerPriceHint = document.getElementById('stageLayerPriceHint');
@@ -217,20 +218,27 @@ async function syncSideCompositeToViewer(side, options = {}) {
 
   try {
     const composite = layerEngine
-      ? await layerEngine.composeLayers(layers, { side })
+      ? await layerEngine.composeLayers(layers, {
+          side,
+          workspaceScale: PRINT_COMPOSITE_WORKSPACE_SCALE,
+        })
       : layers[0].url;
     if (token !== sideCompositeTokens[side]) return '';
 
     if (window.shirtViewer3D?.ready) {
       window.shirtViewer3D.setPrint(composite, 'normal', side);
-      window.shirtViewer3D.setTransform({ scale: 1, offsetX: 0, offsetY: 0 }, side);
+      window.shirtViewer3D.setTransform({
+        scale: PRINT_COMPOSITE_WORKSPACE_SCALE,
+        offsetX: 0,
+        offsetY: 0,
+      }, side);
     }
     if (side === 'front' && updateOverlay && shirtOverlay) {
       shirtOverlay.style.backgroundImage = `url('${composite}')`;
       shirtOverlay.style.mixBlendMode = 'normal';
       shirtOverlay.style.display = 'block';
-      shirtOverlay.style.width = '30%';
-      shirtOverlay.style.height = '30%';
+      shirtOverlay.style.width = `${30 * PRINT_COMPOSITE_WORKSPACE_SCALE}%`;
+      shirtOverlay.style.height = `${30 * PRINT_COMPOSITE_WORKSPACE_SCALE}%`;
       shirtOverlay.style.left = '50%';
       shirtOverlay.style.top = '46%';
     }
@@ -1283,22 +1291,21 @@ async function restoreActiveImageOriginal() {
   if (!layer || !print) return;
 
   const originalUrl = print.originalFile || print.file;
-  const originalBlend = print.originalBlend || (
-    print.darkBackgroundDetected || print.blend === 'screen' ? 'screen' : 'normal'
-  );
   layer.printOverride = {
     ...print,
     file: originalUrl,
     originalFile: originalUrl,
-    originalBlend,
-    blend: originalBlend,
+    originalBlend: 'normal',
+    // "Cores originais" mostra os pixels reais da imagem, sem screen,
+    // inversão ou remoção automática de tons escuros.
+    blend: 'normal',
     imageTreatment: 'original',
   };
 
   stopAutoRotate();
   await syncSideCompositeToViewer(activeSide);
   renderLayerControls();
-  setImageTreatmentStatus('Imagem original restaurada.');
+  setImageTreatmentStatus('Cores originais restauradas, sem mesclagem.');
 }
 
 async function applyImageTreatment(treatment) {
