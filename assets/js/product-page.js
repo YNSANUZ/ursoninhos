@@ -56,6 +56,9 @@ const productEditorCancelBtn = document.getElementById('productEditorCancelBtn')
 const productEditorNote = document.getElementById('productEditorNote');
 const productThumbs = document.querySelector('.public-product-thumbs');
 const productPriceNote = document.querySelector('.public-product-price__note');
+const productCustomizeLink = document.getElementById('productCustomizeLink');
+const productChecklist = document.querySelector('.public-product-checklist');
+const productBenefits = document.querySelector('.pf-benefits');
 
 let viewer = null;
 let currentProduct = null;
@@ -263,7 +266,7 @@ async function buildProtectedStlPreview(file) {
 
   let previewGeometry = geometry;
   if (originalVertices > 6000) {
-    const removeCount = Math.floor(originalVertices * 0.58);
+    const removeCount = Math.floor(originalVertices * 0.28);
     previewGeometry = new SimplifyModifier().modify(geometry, removeCount);
     geometry.dispose();
   }
@@ -296,7 +299,7 @@ async function uploadProtectedModel() {
     currentProductMeta = payload.meta;
     renderModelStatus();
     renderProductGallery(currentProduct, productImage?.src || currentProduct.catalogImage);
-    setEditorNote(`Prévia 3D protegida publicada com ${preview.triangles.toLocaleString('pt-BR')} triângulos.`);
+    setEditorNote(`Prévia 3D protegida publicada com ${Number(payload.meta?.modelTriangles || preview.triangles).toLocaleString('pt-BR')} triângulos.`);
   } catch (error) {
     setEditorNote(error.message || 'Não foi possível preparar o modelo 3D.', true);
   } finally {
@@ -579,10 +582,26 @@ async function renderProductInfo(product) {
 
   const isPhysical = product?.productType === 'produto-3d-fisico' || product?.requiresSize === false;
   if (productSizeField) productSizeField.hidden = isPhysical;
+  if (productCustomizeLink) productCustomizeLink.hidden = isPhysical;
   if (productPriceNote) {
     productPriceNote.textContent = isPhysical
       ? 'Produto físico pronto para compra, com fotos reais e produção sob demanda.'
       : 'Camisa pronta para compra com visual 3D e produção sob demanda.';
+  }
+  if (productChecklist && isPhysical) {
+    productChecklist.innerHTML = `
+      <li>Produto físico produzido sob demanda</li>
+      <li>${currentProductMeta.hasModel ? 'Visualização 3D interativa disponível' : 'Fotos reais do produto disponíveis'}</li>
+      <li>Quantidade ajustável antes da compra</li>
+      <li>Envio para todo o Brasil</li>
+    `;
+  }
+  if (productBenefits && isPhysical) {
+    productBenefits.innerHTML = `
+      <div class="pf-benefit"><div><strong>Envio para todo o Brasil</strong><span>Receba com segurança</span></div></div>
+      <div class="pf-benefit"><div><strong>${currentProductMeta.hasModel ? 'Prévia 3D disponível' : 'Fotos reais do produto'}</strong><span>Confira antes de comprar</span></div></div>
+      <div class="pf-benefit"><div><strong>Produção Ursoninhos</strong><span>Acabamento pronto para vender</span></div></div>
+    `;
   }
 }
 

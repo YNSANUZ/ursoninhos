@@ -3103,6 +3103,12 @@ ul {
   font-size: 0.85rem;
 }
 
+.pf-thumb[hidden],
+.public-product-field[hidden],
+.pf-customize-link[hidden] {
+  display: none !important;
+}
+
 .product-payment-info {
   display: grid;
   gap: 7px;
