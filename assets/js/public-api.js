@@ -1,6 +1,9 @@
 (function () {
   const config = window.URSONINHOS_APP_CONFIG || {};
   const baseUrl = config.backendBaseUrl || '';
+  const publicProductShortPaths = {
+    'bebedouro-para-aves-pequenas-em-garrafa-pet-6-bocas-galinhas-pintinhos-codornas-e-p-ssaros-55e66092': '/55e66092/',
+  };
 
   async function readJson(response) {
     const payload = await response.json();
@@ -40,10 +43,12 @@
     if (productOrKey && typeof productOrKey === 'object') {
       if (productOrKey.shortPath) return productOrKey.shortPath;
       if (productOrKey.shortId) return `/${encodeURIComponent(productOrKey.shortId)}/`;
+      if (publicProductShortPaths[productOrKey.id]) return publicProductShortPaths[productOrKey.id];
       if (productOrKey.id) return `produto.html?id=${encodeURIComponent(productOrKey.id)}`;
     }
 
     const key = String(productOrKey || '').trim();
+    if (publicProductShortPaths[key]) return publicProductShortPaths[key];
     if (/^\d{4}$/.test(key)) return `/${encodeURIComponent(key)}/`;
     return `produto.html?id=${encodeURIComponent(key)}`;
   }
