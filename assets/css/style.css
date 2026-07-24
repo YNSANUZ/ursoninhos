@@ -6162,6 +6162,32 @@ html[data-theme="light"] #paymentBrick_container {
 }
 
 /* Pedidos e publicação de produtos físicos */
+.topbar__adm-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 32px;
+  padding: 6px 12px;
+  margin-right: 8px;
+  border: 1px solid rgba(223, 173, 85, .75);
+  border-radius: 999px;
+  color: #211207;
+  background: var(--accent);
+  font-size: .75rem;
+  font-weight: 900;
+  letter-spacing: .08em;
+  text-decoration: none;
+}
+
+.topbar__adm-btn:hover {
+  filter: brightness(1.08);
+}
+
+.account-chip {
+  display: flex;
+  align-items: center;
+}
+
 .admin-orders__header-actions,
 .admin-order__actions {
   display: flex;

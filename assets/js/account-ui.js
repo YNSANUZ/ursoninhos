@@ -38,8 +38,12 @@
     }
 
     const firstName = String(user.name || 'Cliente').split(' ')[0];
+    const adminButton = user.role === 'admin'
+      ? '<a href="/adm" class="topbar__adm-btn" aria-label="Abrir área administrativa">ADM</a>'
+      : '';
     slot.innerHTML = `
       <div class="account-chip">
+        ${adminButton}
         <a href="meu-perfil.html" class="account-chip__trigger">
           ${buildAvatarMarkup(user)}
           <span class="account-chip__name">${firstName}</span>

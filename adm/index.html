@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<base href="/">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ursoninhos | Painel ADM</title>
+<meta name="description" content="Painel de teste para publicar modelos publicos da Ursoninhos.">
+<link rel="icon" type="image/webp" href="https://i.ibb.co/wrPpWWsf/ea990759-29d9-4e67-98ce-bb22e69f8e9e-Sem-T-tulo-1.webp">
+<script src="assets/js/theme-toggle.js?v=1"></script>
+<link rel="stylesheet" href="assets/css/style.css?v=56">
+<script type="importmap">
+{
+  "imports": {
+    "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+    "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+  }
+}
+</script>
+</head>
+<body class="checkout-page">
+  <div class="topbar">
+    <div class="container topbar__inner">
+      <ul class="topbar__perks">
+        <li>Painel ADM de teste</li>
+        <li>Sem login nesta fase</li>
+        <li>Publicacao com backend</li>
+      </ul>
+      <ul class="topbar__actions">
+        <li><a href="index.html">Voltar ao site</a></li>
+        <li><a href="carrinho.html">Ver carrinho</a></li>
+        <li class="topbar__account" id="topbarAccount"></li>
+      </ul>
+    </div>
+  </div>
+
+  <header class="header">
+    <div class="container header__inner">
+      <a href="index.html" class="brand">
+        <span class="brand__icon">
+          <img src="https://i.ibb.co/wrPpWWsf/ea990759-29d9-4e67-98ce-bb22e69f8e9e-Sem-T-tulo-1.webp" alt="Logo Ursoninhos">
+        </span>
+        <span class="brand__text">
+          <span class="brand__name">Ursoninhos</span>
+          <span class="brand__tagline">Painel ADM</span>
+        </span>
+      </a>
+      <div class="admin-orders__header-actions">
+        <a href="pedidos-admin.html" class="btn btn--gold">Ver pedidos</a>
+        <a href="index.html#destaques" class="btn btn--outline">Ver modelos publicados</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="checkout-shell">
+    <div class="container">
+      <div class="checkout-head">
+        <h1>Painel ADM de modelos públicos</h1>
+        <p>Publique camisas personalizadas ou produtos físicos impressos em 3D no catálogo da Ursoninhos.</p>
+      </div>
+
+      <section class="checkout-panel admin-physical-product">
+        <div class="checkout-stage__head">
+          <div>
+            <h2>Publicar produto físico / impressão 3D</h2>
+            <p>Envie até cinco fotos. A estrela define a capa; os endereços do ImgBB ficam ocultos.</p>
+          </div>
+        </div>
+        <form class="checkout-form" id="adminPhysicalProductForm">
+          <div class="admin-physical-product__fields">
+            <label class="form-field">
+              <span>Nome do produto</span>
+              <input type="text" id="physicalProductTitle" maxlength="120" required>
+            </label>
+            <label class="form-field">
+              <span>Valor</span>
+              <input type="number" id="physicalProductPrice" min="0.01" max="10000" step="0.01" required>
+            </label>
+            <label class="form-field admin-physical-product__description">
+              <span>Descrição</span>
+              <textarea id="physicalProductDescription" rows="4" maxlength="2000" required></textarea>
+            </label>
+            <label class="form-field admin-physical-product__images">
+              <span>Fotos do produto (até 5)</span>
+              <input type="file" id="physicalProductImages" accept="image/*" multiple required>
+              <small>As fotos serão enviadas ao ImgBB e aparecerão aqui como miniaturas.</small>
+            </label>
+          </div>
+          <div class="admin-product-gallery-editor" id="physicalProductGallery"></div>
+          <div class="checkout-nav">
+            <button type="button" class="btn btn--outline" id="clearPhysicalProductImages">Limpar fotos</button>
+            <button type="submit" class="btn btn--gold" id="publishPhysicalProductBtn">Publicar produto e sincronizar planilha</button>
+          </div>
+          <p class="cart-drawer__note" id="physicalProductNote"></p>
+        </form>
+      </section>
+
+      <div class="admin-layout">
+        <section class="checkout-panel">
+          <div class="checkout-stage__head">
+            <div>
+              <h2>Modelo 3D do produto</h2>
+              <p>O modelo já inicia com a logo padrão na frente, no verso e nas duas mangas.</p>
+            </div>
+          </div>
+
+          <div class="admin-viewer-wrap">
+            <div class="admin-viewer" id="adminViewer"></div>
+            <div class="admin-viewer-actions">
+              <button type="button" class="btn btn--outline" data-camera="0">Frente</button>
+              <button type="button" class="btn btn--outline" data-camera="180">Verso</button>
+              <button type="button" class="btn btn--outline" data-camera="-90">Manga dir.</button>
+              <button type="button" class="btn btn--outline" data-camera="90">Manga esq.</button>
+            </div>
+          </div>
+
+          <div class="admin-preview-strip" id="adminPreviewStrip">
+            <div class="admin-preview-card">
+              <strong>Frente</strong>
+              <img id="previewFront" alt="Preview frontal">
+            </div>
+            <div class="admin-preview-card">
+              <strong>Verso</strong>
+              <img id="previewBack" alt="Preview traseiro">
+            </div>
+            <div class="admin-preview-card">
+              <strong>Lado direito</strong>
+              <img id="previewRight" alt="Preview lado direito">
+            </div>
+            <div class="admin-preview-card">
+              <strong>Lado esquerdo</strong>
+              <img id="previewLeft" alt="Preview lado esquerdo">
+            </div>
+          </div>
+        </section>
+
+        <aside class="checkout-summary">
+          <h3>Publicar modelo</h3>
+          <p>Ao publicar, o produto entra na home com imagem, descricao, valor aleatorio e pagina propria.</p>
+
+          <form class="checkout-form" id="adminPublishForm">
+            <label class="form-field">
+              <span>Titulo do produto</span>
+              <input type="text" id="adminTitleInput" value="Camisa Ursoninhos Logo 4 lados" required>
+            </label>
+
+            <label class="form-field">
+              <span>Descricao curta</span>
+              <input type="text" id="adminDescriptionInput" value="Modelo publico com a logo Ursoninhos aplicada em todos os lados.">
+            </label>
+
+            <label class="form-field">
+              <span>Imagem da frente</span>
+              <input type="url" id="adminFrontUrl">
+            </label>
+
+            <label class="form-field">
+              <span>Imagem do verso</span>
+              <input type="url" id="adminBackUrl">
+            </label>
+
+            <label class="form-field">
+              <span>Imagem da manga direita</span>
+              <input type="url" id="adminRightUrl">
+            </label>
+
+            <label class="form-field">
+              <span>Imagem da manga esquerda</span>
+              <input type="url" id="adminLeftUrl">
+            </label>
+
+            <div class="checkout-nav">
+              <button type="button" class="btn btn--outline" id="applyDefaultLogoBtn">Reaplicar logo padrão</button>
+              <button type="button" class="btn btn--outline" id="refreshPreviewBtn">Atualizar previews</button>
+            </div>
+
+            <button type="submit" class="btn btn--gold">Adicionar modelo ao site público</button>
+            <p class="cart-drawer__note" id="adminPublishNote"></p>
+          </form>
+
+          <!-- Controle de produtos na planilha Google: manda TODOS os
+               produtos do site (camisas de frases + modelos públicos)
+               para a planilha, com id, nome, preço e link únicos.
+               Precisa do Web App configurado (backend/google-apps-script.gs). -->
+          <div class="checkout-form" style="margin-top: 18px;">
+            <h3>Planilha de produtos</h3>
+            <p>Envia todos os produtos do site para a planilha Google (id, nome, preço e link). Preços editados na planilha são preservados.</p>
+            <button type="button" class="btn btn--outline" id="sheetSyncBtn">Sincronizar planilha</button>
+            <p class="cart-drawer__note" id="sheetSyncNote"></p>
+          </div>
+        </aside>
+      </div>
+
+      <section class="checkout-panel admin-library" id="adminProductLibrary">
+        <div class="checkout-stage__head">
+          <div>
+            <h2>Produtos e estampas já criados</h2>
+            <p>Abra qualquer produto para trocar imagens, editar textos e organizar até três camadas em cada lado.</p>
+          </div>
+          <button type="button" class="btn btn--outline" id="refreshAdminLibraryBtn">Atualizar biblioteca</button>
+        </div>
+        <div class="admin-artwork-library" id="adminArtworkLibrary"></div>
+        <div class="admin-product-list" id="adminProductList">
+          <p>Carregando produtos...</p>
+        </div>
+        <form class="admin-layer-editor" id="adminLayerEditor" hidden>
+          <div class="admin-layer-editor__head">
+            <div>
+              <h3 id="adminEditingTitle">Editar produto</h3>
+              <p>Textos permanecem editáveis; imagens podem ser substituídas por outro endereço.</p>
+            </div>
+            <button type="button" class="btn btn--outline" id="closeAdminLayerEditorBtn">Fechar</button>
+          </div>
+          <div class="admin-layer-editor__meta">
+            <label class="form-field"><span>Título</span><input type="text" id="adminEditTitle" required></label>
+            <label class="form-field"><span>Preço</span><input type="number" id="adminEditPrice" min="0" max="500" step="0.01" required></label>
+            <label class="form-field admin-layer-editor__description"><span>Descrição</span><textarea id="adminEditDescription" rows="2"></textarea></label>
+          </div>
+          <div id="adminLayerSides"></div>
+          <div class="checkout-nav">
+            <button type="button" class="btn btn--outline" id="previewAdminLayersBtn">Visualizar no manequim</button>
+            <button type="button" class="btn btn--gold" id="adminSaveProductBtn">Salvar alterações no produto</button>
+          </div>
+          <p class="cart-drawer__note" id="adminLayerEditorNote"></p>
+        </form>
+      </section>
+    </div>
+  </main>
+
+  <script src="assets/js/app-config.js?v=25"></script>
+  <script src="assets/js/shop-store.js?v=26"></script>
+  <script src="assets/js/account-ui.js?v=24"></script>
+  <script src="assets/js/admin-order-alerts.js?v=1"></script>
+  <script src="assets/js/sheet-products.js?v=3"></script>
+  <script src="assets/js/public-api.js?v=23"></script>
+  <!-- Motor de texto + frases: necessários para listar as camisas de
+       frases na sincronização com a planilha Google. -->
+  <script src="assets/js/layer-engine.js?v=15"></script>
+  <script src="assets/js/text-print-engine.js?v=22"></script>
+  <script src="assets/js/frases-data.js?v=19"></script>
+  <script type="module" src="assets/js/admin-models.js?v=28"></script>
+</body>
+</html>
