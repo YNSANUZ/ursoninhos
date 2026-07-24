@@ -47,6 +47,19 @@
     return payload.product || null;
   }
 
+  async function createPhysicalProduct(product) {
+    const response = await fetch(`${baseUrl}/products.php?action=create-physical`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        ...(window.UrsoninhosStore?.getAuthHeaders() || {}),
+      },
+      body: JSON.stringify(product),
+    });
+    const payload = await readJson(response);
+    return payload.product || null;
+  }
+
   async function updateProduct(id, product) {
     const response = await fetch(`${baseUrl}/products.php?action=update&id=${encodeURIComponent(id)}`, {
       method: 'POST',
@@ -86,6 +99,7 @@
     listProducts,
     getProduct,
     createProduct,
+    createPhysicalProduct,
     updateProduct,
     deleteProduct,
     getProductPath,

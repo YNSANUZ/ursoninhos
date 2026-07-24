@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Ursoninhos | Pedidos</title>
+  <meta name="description" content="Painel administrativo de pedidos e produção da Ursoninhos.">
+  <link rel="icon" type="image/webp" href="https://i.ibb.co/wrPpWWsf/ea990759-29d9-4e67-98ce-bb22e69f8e9e-Sem-T-tulo-1.webp">
+  <script src="assets/js/theme-toggle.js?v=1"></script>
+  <link rel="stylesheet" href="assets/css/style.css?v=55">
+</head>
+<body class="checkout-page admin-orders-page">
+  <header class="header">
+    <div class="container header__inner">
+      <a href="index.html" class="brand">
+        <span class="brand__icon"><img src="https://i.ibb.co/wrPpWWsf/ea990759-29d9-4e67-98ce-bb22e69f8e9e-Sem-T-tulo-1.webp" alt="Logo Ursoninhos"></span>
+        <span class="brand__text">
+          <span class="brand__name">Ursoninhos</span>
+          <span class="brand__tagline">Pedidos e produção</span>
+        </span>
+      </a>
+      <div class="admin-orders__header-actions">
+        <button type="button" class="btn btn--gold" id="enableOrderAlertsBtn">🔔 Ativar alarme</button>
+        <button type="button" class="btn btn--outline" id="refreshOrdersBtn">Atualizar</button>
+        <a href="meu-perfil.html" class="btn btn--outline">Meu perfil</a>
+      </div>
+    </div>
+  </header>
+
+  <main class="checkout-shell">
+    <div class="container">
+      <section class="admin-orders__intro">
+        <div>
+          <p class="eyebrow">Operação da loja</p>
+          <h1>Pedidos</h1>
+          <p>Prepare somente pedidos com pagamento aprovado. As artes e dados de produção ficam anexados ao pedido.</p>
+        </div>
+        <div class="admin-orders__connection" id="ordersConnectionStatus">Conectando…</div>
+      </section>
+
+      <section class="admin-orders__summary" aria-label="Resumo dos pedidos">
+        <article><strong id="ordersNewCount">0</strong><span>Novos pagos</span></article>
+        <article><strong id="ordersProductionCount">0</strong><span>Em produção</span></article>
+        <article><strong id="ordersShippedCount">0</strong><span>Enviados</span></article>
+        <article><strong id="ordersPendingCount">0</strong><span>Aguardando pagamento</span></article>
+      </section>
+
+      <section class="admin-orders__toolbar">
+        <label>
+          <span>Filtrar</span>
+          <select id="ordersFilter">
+            <option value="all">Todos</option>
+            <option value="new">Novos pagos</option>
+            <option value="production">Em produção</option>
+            <option value="shipped">Enviados</option>
+            <option value="pending">Aguardando pagamento</option>
+            <option value="test">Somente testes</option>
+          </select>
+        </label>
+        <label>
+          <span>Buscar pedido ou cliente</span>
+          <input type="search" id="ordersSearch" placeholder="URS-…, nome, e-mail ou telefone">
+        </label>
+      </section>
+
+      <p class="admin-orders__notice" id="ordersNotice" hidden></p>
+      <section class="admin-orders__list" id="adminOrdersList" aria-live="polite">
+        <p class="catalog-placeholder">Carregando pedidos…</p>
+      </section>
+    </div>
+  </main>
+
+  <script src="assets/js/app-config.js?v=25"></script>
+  <script src="assets/js/shop-store.js?v=26"></script>
+  <script src="assets/js/account-ui.js?v=23"></script>
+  <script src="assets/js/admin-order-alerts.js?v=1"></script>
+  <script src="assets/js/admin-orders.js?v=1"></script>
+</body>
+</html>

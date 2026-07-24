@@ -11,6 +11,7 @@ const productViewerEl = document.getElementById('productViewer');
 const productPageCartCount = document.getElementById('productPageCartCount');
 const productPageCartBtn = document.getElementById('productPageCartBtn');
 const productSizeSelect = document.getElementById('productSizeSelect');
+const productSizeField = document.getElementById('productSizeField');
 const productQtyInput = document.getElementById('productQtyInput');
 const productQtyDecrease = document.getElementById('productQtyDecrease');
 const productQtyIncrease = document.getElementById('productQtyIncrease');
@@ -40,6 +41,8 @@ const productEditorCatalogImage = document.getElementById('productEditorCatalogI
 const productEditorDescription = document.getElementById('productEditorDescription');
 const productEditorCancelBtn = document.getElementById('productEditorCancelBtn');
 const productEditorNote = document.getElementById('productEditorNote');
+const productThumbs = document.querySelector('.public-product-thumbs');
+const productPriceNote = document.querySelector('.public-product-price__note');
 
 let viewer = null;
 let currentProduct = null;
@@ -163,6 +166,44 @@ function setPhotoPreview(src, title) {
   if (productImageLoading) productImageLoading.hidden = true;
   if (productThumbPhotoLoading) productThumbPhotoLoading.hidden = true;
   productThumbPhoto.innerHTML = `<img src="${finalSrc}" alt="${title ? `Miniatura ${title}` : 'Miniatura do produto'}">`;
+}
+
+function renderProductGallery(product, fallbackPhoto) {
+  if (!productThumbs || !productThumbPhoto || !productThumb3d) return;
+  productThumbs.querySelectorAll('[data-gallery-photo]').forEach((item) => item.remove());
+
+  const gallery = Array.isArray(product?.gallery)
+    ? product.gallery.filter((url) => /^https:\/\//i.test(String(url || ''))).slice(0, 5)
+    : [];
+  const coverIndex = Math.min(Math.max(Number(product?.coverIndex || 0), 0), Math.max(gallery.length - 1, 0));
+  const photos = gallery.length ? gallery : [fallbackPhoto].filter(Boolean);
+
+  if (photos.length) {
+    setPhotoPreview(photos[coverIndex] || photos[0], product.title);
+  }
+
+  photos.forEach((url, index) => {
+    if (index === coverIndex) return;
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'pf-thumb';
+    button.dataset.galleryPhoto = String(index);
+    button.setAttribute('aria-label', `Ver foto ${index + 1}`);
+    const image = document.createElement('img');
+    image.src = url;
+    image.alt = `Miniatura ${index + 1} de ${product.title || 'produto'}`;
+    button.appendChild(image);
+    button.addEventListener('click', () => {
+      setPhotoPreview(url, product.title);
+      showPhotoMedia();
+      productThumbs.querySelectorAll('.pf-thumb').forEach((thumb) => thumb.classList.remove('is-active'));
+      button.classList.add('is-active');
+    });
+    productThumbs.insertBefore(button, productThumb3d);
+  });
+
+  const isPhysical = product?.productType === 'produto-3d-fisico' || product?.requiresSize === false;
+  productThumb3d.hidden = isPhysical;
 }
 
 function loadImage(src) {
@@ -294,22 +335,35 @@ async function renderProductInfo(product) {
 
   const photoSrc = await resolvePrimaryPhoto(product);
   setPhotoPreview(photoSrc, product.title);
+  renderProductGallery(product, photoSrc);
+
+  const isPhysical = product?.productType === 'produto-3d-fisico' || product?.requiresSize === false;
+  if (productSizeField) productSizeField.hidden = isPhysical;
+  if (productPriceNote) {
+    productPriceNote.textContent = isPhysical
+      ? 'Produto físico pronto para compra, com fotos reais e produção sob demanda.'
+      : 'Camisa pronta para compra com visual 3D e produção sob demanda.';
+  }
 }
 
 function addCurrentProductToCart() {
   if (!currentProduct || !store) return;
 
   const quantity = normalizeQty();
-  const size = productSizeSelect?.value || 'M';
+  const isPhysical = currentProduct?.productType === 'produto-3d-fisico' || currentProduct?.requiresSize === false;
+  const size = isPhysical ? '' : (productSizeSelect?.value || 'M');
+  const gallery = Array.isArray(currentProduct.gallery) ? currentProduct.gallery : [];
+  const coverIndex = Math.min(Math.max(Number(currentProduct.coverIndex || 0), 0), Math.max(gallery.length - 1, 0));
+  const previewImage = gallery[coverIndex] || currentProduct.catalogImage || currentProduct.views?.front || '';
 
   store.addCartItem({
     productId: `publico::${currentProduct.id}`,
     title: currentProduct.title,
-    variantLabel: 'Modelo publico',
+    variantLabel: isPhysical ? 'Produto físico 3D' : 'Modelo público',
     price: Number(currentProduct.price || 0),
     size,
     quantity,
-    previewImage: currentProduct.catalogImage || currentProduct.views?.front || '',
+    previewImage,
     previewViews: {
       front: currentProduct.views?.front || currentProduct.catalogImage || '',
       back: currentProduct.views?.back || '',
@@ -319,6 +373,7 @@ function addCurrentProductToCart() {
     metadata: {
       productId: currentProduct.id,
       source: 'public-model',
+      productType: currentProduct.productType || 'camisa-3d',
       productPath: api.getProductPath(currentProduct),
     },
   });

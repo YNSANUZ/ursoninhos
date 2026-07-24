@@ -40,6 +40,13 @@ const previewAdminLayersBtn = document.getElementById('previewAdminLayersBtn');
 const adminSaveProductBtn = document.getElementById('adminSaveProductBtn');
 const ADMIN_EMAILS = ['ynsanuz@gmail.com', 'obstruir#gmail.com'];
 const IMGBB_API_KEY = 'b7150269142e0e38166f3e528598d051';
+const physicalProductForm = document.getElementById('adminPhysicalProductForm');
+const physicalProductImages = document.getElementById('physicalProductImages');
+const physicalProductGallery = document.getElementById('physicalProductGallery');
+const physicalProductNote = document.getElementById('physicalProductNote');
+const publishPhysicalProductBtn = document.getElementById('publishPhysicalProductBtn');
+let physicalGalleryUrls = [];
+let physicalCoverIndex = 0;
 
 const CAMERA_BY_SIDE = {
   front: 0,
@@ -70,6 +77,7 @@ const ADMIN_SIDE_LABELS = {
 };
 
 function isAuthorizedAdmin(user) {
+  if (user?.role === 'admin') return true;
   const email = String(user?.email || '').trim().toLowerCase();
   return ADMIN_EMAILS.includes(email);
 }
@@ -246,6 +254,98 @@ async function uploadAdminArtwork(file) {
   }
   return url;
 }
+
+function setPhysicalProductNote(message, isError = false) {
+  if (!physicalProductNote) return;
+  physicalProductNote.textContent = message;
+  physicalProductNote.style.color = isError ? '#e08a7a' : '';
+}
+
+function renderPhysicalGallery() {
+  if (!physicalProductGallery) return;
+  physicalProductGallery.innerHTML = physicalGalleryUrls.map((url, index) => `
+    <article class="admin-product-gallery-editor__item${index === physicalCoverIndex ? ' is-cover' : ''}">
+      <img src="${escapeHtml(url)}" alt="Foto ${index + 1} do produto">
+      <button type="button" data-cover-image="${index}" title="Usar como foto de capa" aria-label="Usar foto ${index + 1} como capa">★</button>
+      <button type="button" data-remove-image="${index}" title="Remover foto" aria-label="Remover foto ${index + 1}">×</button>
+      <span>${index === physicalCoverIndex ? 'Capa' : `Foto ${index + 1}`}</span>
+    </article>
+  `).join('');
+  physicalProductGallery.querySelectorAll('[data-cover-image]').forEach((button) => {
+    button.addEventListener('click', () => {
+      physicalCoverIndex = Number(button.dataset.coverImage || 0);
+      renderPhysicalGallery();
+    });
+  });
+  physicalProductGallery.querySelectorAll('[data-remove-image]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const index = Number(button.dataset.removeImage || 0);
+      physicalGalleryUrls.splice(index, 1);
+      physicalCoverIndex = Math.min(physicalCoverIndex, Math.max(0, physicalGalleryUrls.length - 1));
+      renderPhysicalGallery();
+    });
+  });
+}
+
+physicalProductImages?.addEventListener('change', async () => {
+  const files = Array.from(physicalProductImages.files || []);
+  if (!files.length) return;
+  if (files.length + physicalGalleryUrls.length > 5) {
+    setPhysicalProductNote('Escolha no máximo cinco fotos.', true);
+    physicalProductImages.value = '';
+    return;
+  }
+  try {
+    physicalProductImages.disabled = true;
+    for (let index = 0; index < files.length; index += 1) {
+      setPhysicalProductNote(`Enviando foto ${index + 1} de ${files.length}…`);
+      physicalGalleryUrls.push(await uploadAdminArtwork(files[index]));
+      renderPhysicalGallery();
+    }
+    setPhysicalProductNote('Fotos enviadas. Toque na estrela para escolher a capa.');
+  } catch (error) {
+    setPhysicalProductNote(error.message || 'Não foi possível enviar as fotos.', true);
+  } finally {
+    physicalProductImages.disabled = false;
+    physicalProductImages.value = '';
+  }
+});
+
+document.getElementById('clearPhysicalProductImages')?.addEventListener('click', () => {
+  physicalGalleryUrls = [];
+  physicalCoverIndex = 0;
+  renderPhysicalGallery();
+  setPhysicalProductNote('');
+});
+
+physicalProductForm?.addEventListener('submit', async (event) => {
+  event.preventDefault();
+  if (physicalGalleryUrls.length < 1) {
+    setPhysicalProductNote('Envie pelo menos uma foto do produto.', true);
+    return;
+  }
+  try {
+    publishPhysicalProductBtn.disabled = true;
+    setPhysicalProductNote('Publicando produto e sincronizando a planilha…');
+    const product = await api.createPhysicalProduct({
+      title: document.getElementById('physicalProductTitle').value.trim(),
+      description: document.getElementById('physicalProductDescription').value.trim(),
+      price: Number(document.getElementById('physicalProductPrice').value || 0),
+      gallery: physicalGalleryUrls,
+      coverIndex: physicalCoverIndex,
+    });
+    setPhysicalProductNote(`Produto publicado: ${product.title}. O valor foi enviado à planilha.`);
+    physicalProductForm.reset();
+    physicalGalleryUrls = [];
+    physicalCoverIndex = 0;
+    renderPhysicalGallery();
+    await loadAdminLibrary();
+  } catch (error) {
+    setPhysicalProductNote(error.message || 'Não foi possível publicar o produto.', true);
+  } finally {
+    publishPhysicalProductBtn.disabled = false;
+  }
+});
 
 function renderAdminLayerSides() {
   if (!adminLayerSides) return;
@@ -652,9 +752,11 @@ async function init() {
   await store?.refreshSession();
   if (!isAuthorizedAdmin(store?.getCurrentUser())) {
     adminPublishForm?.querySelectorAll('input, textarea, button').forEach((control) => { control.disabled = true; });
+    physicalProductForm?.querySelectorAll('input, textarea, button').forEach((control) => { control.disabled = true; });
     if (refreshAdminLibraryBtn) refreshAdminLibraryBtn.disabled = true;
     if (adminProductList) adminProductList.innerHTML = '<p>Entre com a conta Gestor administradora para editar produtos.</p>';
     setNote('Acesso restrito aos administradores autorizados.', true);
+    setPhysicalProductNote('Acesso restrito aos administradores autorizados.', true);
     return;
   }
   await loadAdminLibrary();
