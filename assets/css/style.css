@@ -3122,6 +3122,39 @@ ul {
   line-height: 1.45;
 }
 
+.product-taxonomy {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.product-taxonomy span {
+  padding: 5px 10px;
+  border: 1px solid rgba(217, 167, 92, .28);
+  border-radius: 999px;
+  color: var(--gold);
+  background: rgba(217, 167, 92, .06);
+  font-size: .72rem;
+  font-weight: 700;
+}
+
+.public-product-model-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 12px;
+  border: 1px solid rgba(217, 167, 92, .18);
+  border-radius: var(--radius-s);
+  color: var(--text-muted);
+  font-size: .8rem;
+}
+
+.public-product-model-status .btn {
+  flex: 0 0 auto;
+}
+
 .pf-lead {
   margin: 14px 0 0;
   color: var(--text-muted);

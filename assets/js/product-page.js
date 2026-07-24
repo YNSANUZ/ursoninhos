@@ -1,4 +1,9 @@
 import { createInteractiveViewer } from './interactive-viewer3d.js?v=6';
+import { createProductStlViewer } from './product-stl-viewer.js?v=1';
+import * as THREE from 'three';
+import { STLLoader } from 'three/addons/loaders/STLLoader.js';
+import { STLExporter } from 'three/addons/exporters/STLExporter.js';
+import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
 
 const api = window.UrsoninhosApi;
 const store = window.UrsoninhosStore;
@@ -41,6 +46,12 @@ const productEditorCatalogImage = document.getElementById('productEditorCatalogI
 const productEditorImages = document.getElementById('productEditorImages');
 const productEditorGallery = document.getElementById('productEditorGallery');
 const productEditorDescription = document.getElementById('productEditorDescription');
+const productEditorCategories = document.getElementById('productEditorCategories');
+const productEditorTags = document.getElementById('productEditorTags');
+const productEditorModel = document.getElementById('productEditorModel');
+const productEditorModelStatus = document.getElementById('productEditorModelStatus');
+const productEditorDeleteModel = document.getElementById('productEditorDeleteModel');
+const productTaxonomy = document.getElementById('productTaxonomy');
 const productEditorCancelBtn = document.getElementById('productEditorCancelBtn');
 const productEditorNote = document.getElementById('productEditorNote');
 const productThumbs = document.querySelector('.public-product-thumbs');
@@ -52,7 +63,9 @@ let viewerReady = false;
 let editorOpen = false;
 let editorGalleryUrls = [];
 let editorCoverIndex = 0;
+let currentProductMeta = { categories: [], tags: [], hasModel: false, modelUrl: '', modelTriangles: 0 };
 const IMGBB_API_KEY = 'b7150269142e0e38166f3e528598d051';
+const PRODUCT_META_URL = `${window.URSONINHOS_APP_CONFIG?.backendBaseUrl || 'https://primusdf.com.br/_ursoninhos_backend/api'}/product-meta.php`;
 const CARD_MOCKUP_URL = 'assets/img/camisa-modelo-card.jpg';
 const PREVIEW_CANVAS_SIZE = 900;
 const PREVIEW_PRINT_CENTER_X = 0.478;
@@ -159,6 +172,9 @@ function fillEditor(product) {
   }
   editorCoverIndex = Math.min(Math.max(Number(product.coverIndex || 0), 0), Math.max(editorGalleryUrls.length - 1, 0));
   renderEditorGallery();
+  if (productEditorCategories) productEditorCategories.value = (currentProductMeta.categories || []).join(', ');
+  if (productEditorTags) productEditorTags.value = (currentProductMeta.tags || []).join(', ');
+  renderModelStatus();
 }
 
 function toggleEditor(force) {
@@ -179,6 +195,137 @@ function setPhotoPreview(src, title) {
   if (productImageLoading) productImageLoading.hidden = true;
   if (productThumbPhotoLoading) productThumbPhotoLoading.hidden = true;
   productThumbPhoto.innerHTML = `<img src="${finalSrc}" alt="${title ? `Miniatura ${title}` : 'Miniatura do produto'}">`;
+}
+
+function splitTerms(value) {
+  return [...new Set(String(value || '')
+    .split(/[,;\n]+/)
+    .map((term) => term.trim().toLocaleLowerCase('pt-BR'))
+    .filter(Boolean))];
+}
+
+function renderTaxonomy() {
+  if (!productTaxonomy) return;
+  const terms = [...(currentProductMeta.categories || []), ...(currentProductMeta.tags || [])];
+  productTaxonomy.innerHTML = terms.map((term) => `<span>${term}</span>`).join('');
+  productTaxonomy.hidden = terms.length === 0;
+}
+
+function renderModelStatus() {
+  if (!productEditorModelStatus) return;
+  const label = productEditorModelStatus.querySelector('span');
+  if (label) {
+    label.textContent = currentProductMeta.hasModel
+      ? `Prévia 3D protegida publicada (${Number(currentProductMeta.modelTriangles || 0).toLocaleString('pt-BR')} triângulos).`
+      : 'Nenhum modelo 3D publicado.';
+  }
+  if (productEditorDeleteModel) productEditorDeleteModel.hidden = !currentProductMeta.hasModel;
+}
+
+async function readProductMeta(productId) {
+  try {
+    const response = await fetch(`${PRODUCT_META_URL}?id=${encodeURIComponent(productId)}`, { cache: 'no-store' });
+    const payload = await response.json();
+    if (response.ok && payload?.meta) currentProductMeta = payload.meta;
+  } catch (error) {
+    console.warn('Metadados do produto indisponíveis:', error);
+  }
+  renderTaxonomy();
+  renderModelStatus();
+}
+
+async function saveProductMeta() {
+  const response = await fetch(`${PRODUCT_META_URL}?id=${encodeURIComponent(currentProduct.id)}`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      ...(store.getAuthHeaders?.() || {}),
+    },
+    body: JSON.stringify({
+      categories: splitTerms(productEditorCategories?.value),
+      tags: splitTerms(productEditorTags?.value),
+    }),
+  });
+  const payload = await response.json();
+  if (!response.ok || !payload?.ok) throw new Error(payload?.error || 'Não foi possível salvar categorias e tags.');
+  currentProductMeta = payload.meta;
+  renderTaxonomy();
+}
+
+async function buildProtectedStlPreview(file) {
+  if (!file || !/\.stl$/i.test(file.name)) throw new Error('Selecione um arquivo STL.');
+  if (file.size > 15 * 1024 * 1024) throw new Error('O STL original deve ter no máximo 15 MB.');
+
+  const geometry = new STLLoader().parse(await file.arrayBuffer());
+  geometry.computeVertexNormals();
+  const originalVertices = geometry.attributes.position?.count || 0;
+  if (originalVertices < 9) throw new Error('O STL não possui geometria válida.');
+
+  let previewGeometry = geometry;
+  if (originalVertices > 6000) {
+    const removeCount = Math.floor(originalVertices * 0.58);
+    previewGeometry = new SimplifyModifier().modify(geometry, removeCount);
+    geometry.dispose();
+  }
+  previewGeometry.computeVertexNormals();
+  const mesh = new THREE.Mesh(previewGeometry, new THREE.MeshStandardMaterial({ color: 0xffffff }));
+  const binary = new STLExporter().parse(mesh, { binary: true });
+  const blob = new Blob([binary.buffer], { type: 'model/stl' });
+  const triangles = Math.max(0, Math.floor((previewGeometry.attributes.position?.count || 0) / 3));
+  mesh.material.dispose();
+  previewGeometry.dispose();
+  return { blob, triangles };
+}
+
+async function uploadProtectedModel() {
+  const file = productEditorModel?.files?.[0];
+  if (!file || !currentProduct) return;
+  try {
+    productEditorModel.disabled = true;
+    setEditorNote('Criando uma prévia simplificada e protegida do STL...');
+    const preview = await buildProtectedStlPreview(file);
+    const form = new FormData();
+    form.append('model', preview.blob, 'visualizacao-3d.stl');
+    const response = await fetch(`${PRODUCT_META_URL}?action=model&id=${encodeURIComponent(currentProduct.id)}`, {
+      method: 'POST',
+      headers: { ...(store.getAuthHeaders?.() || {}) },
+      body: form,
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload?.ok) throw new Error(payload?.error || 'Não foi possível publicar a prévia 3D.');
+    currentProductMeta = payload.meta;
+    renderModelStatus();
+    renderProductGallery(currentProduct, productImage?.src || currentProduct.catalogImage);
+    setEditorNote(`Prévia 3D protegida publicada com ${preview.triangles.toLocaleString('pt-BR')} triângulos.`);
+  } catch (error) {
+    setEditorNote(error.message || 'Não foi possível preparar o modelo 3D.', true);
+  } finally {
+    productEditorModel.disabled = false;
+    productEditorModel.value = '';
+  }
+}
+
+async function deleteProtectedModel() {
+  if (!currentProductMeta.hasModel || !currentProduct) return;
+  try {
+    setEditorNote('Removendo prévia 3D...');
+    const response = await fetch(`${PRODUCT_META_URL}?action=delete-model&id=${encodeURIComponent(currentProduct.id)}`, {
+      method: 'POST',
+      headers: { ...(store.getAuthHeaders?.() || {}) },
+    });
+    const payload = await response.json();
+    if (!response.ok || !payload?.ok) throw new Error(payload?.error || 'Não foi possível remover o modelo.');
+    currentProductMeta = payload.meta;
+    viewer?.dispose?.();
+    viewer = null;
+    viewerReady = false;
+    renderModelStatus();
+    renderProductGallery(currentProduct, productImage?.src || currentProduct.catalogImage);
+    showPhotoMedia();
+    setEditorNote('Modelo 3D removido.');
+  } catch (error) {
+    setEditorNote(error.message || 'Não foi possível remover o modelo.', true);
+  }
 }
 
 function renderEditorGallery() {
@@ -279,7 +426,8 @@ function renderProductGallery(product, fallbackPhoto) {
   });
 
   const isPhysical = product?.productType === 'produto-3d-fisico' || product?.requiresSize === false;
-  productThumb3d.hidden = isPhysical;
+  const hasShirtViewer = !isPhysical && Object.values(product?.model || {}).some(Boolean);
+  productThumb3d.hidden = !(currentProductMeta.hasModel || hasShirtViewer);
 }
 
 function loadImage(src) {
@@ -350,6 +498,22 @@ async function resolvePrimaryPhoto(product) {
 
 async function ensureViewer(product) {
   if (viewerReady || !productViewerEl) return;
+
+  if (currentProductMeta.hasModel && currentProductMeta.modelUrl) {
+    viewer = await createProductStlViewer({
+      container: productViewerEl,
+      url: `${currentProductMeta.modelUrl}${currentProductMeta.modelUrl.includes('?') ? '&' : '?'}v=${encodeURIComponent(currentProductMeta.updatedAt || Date.now())}`,
+    });
+    viewerReady = true;
+    if (productViewerLoading) productViewerLoading.hidden = true;
+    if (productViewerHint) productViewerHint.hidden = false;
+    document.querySelectorAll('[data-product-camera]').forEach((button) => {
+      const angle = Number(button.dataset.productCamera || 0);
+      if (angle === -90) button.textContent = 'Lado dir.';
+      if (angle === 90) button.textContent = 'Lado esq.';
+    });
+    return;
+  }
 
   viewer = await createInteractiveViewer({ container: productViewerEl, cameraDistance: 2.15 });
 
@@ -524,6 +688,7 @@ async function saveAdminEdits(event) {
   try {
     setEditorNote('Salvando alterações...');
     currentProduct = await api.updateProduct(currentProduct.id, payload);
+    await saveProductMeta();
     const sheetResult = await window.UrsoninhosSheet?.push?.([currentProduct]);
     await renderProductInfo(currentProduct);
     toggleEditor(false);
@@ -582,6 +747,8 @@ function bindControls() {
   productEditToggleBtn?.addEventListener('click', () => toggleEditor());
   productEditorCancelBtn?.addEventListener('click', () => toggleEditor(false));
   productEditorImages?.addEventListener('change', handleEditorImages);
+  productEditorModel?.addEventListener('change', uploadProtectedModel);
+  productEditorDeleteModel?.addEventListener('click', deleteProtectedModel);
   productEditorForm?.addEventListener('submit', saveAdminEdits);
   productDeleteBtn?.addEventListener('click', deleteCurrentProduct);
 }
@@ -646,6 +813,7 @@ async function init() {
 
   currentProduct = await api.getProduct(productKey);
   syncShortUrl(currentProduct);
+  await readProductMeta(currentProduct.id);
 
   try {
     const linhas = await window.UrsoninhosSheet?.load();

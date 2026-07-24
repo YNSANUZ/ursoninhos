@@ -117,6 +117,7 @@
         m.title,
         m.description,
         Array.isArray(m.tags) ? m.tags.join(' ') : m.tags,
+        Array.isArray(m.categories) ? m.categories.join(' ') : m.categories,
         textoDoModelo(m.model),
       ].join(' ')).includes(q))
       .slice(0, 6)

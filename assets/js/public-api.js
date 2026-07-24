@@ -13,13 +13,27 @@
   async function listProducts() {
     const response = await fetch(`${baseUrl}/products.php`, { cache: 'no-store' });
     const payload = await readJson(response);
-    return payload.products || [];
+    const products = payload.products || [];
+    try {
+      const metaResponse = await fetch(`${baseUrl}/product-meta.php`, { cache: 'no-store' });
+      const metaPayload = await readJson(metaResponse);
+      const metadata = metaPayload.products || {};
+      products.forEach((product) => Object.assign(product, metadata[product.id] || {}));
+    } catch (error) { /* backend antigo: produtos continuam disponíveis */ }
+    return products;
   }
 
   async function getProduct(id) {
     const response = await fetch(`${baseUrl}/products.php?id=${encodeURIComponent(id)}`, { cache: 'no-store' });
     const payload = await readJson(response);
-    return payload.product || null;
+    const product = payload.product || null;
+    if (!product) return null;
+    try {
+      const metaResponse = await fetch(`${baseUrl}/product-meta.php?id=${encodeURIComponent(product.id)}`, { cache: 'no-store' });
+      const metaPayload = await readJson(metaResponse);
+      Object.assign(product, metaPayload.meta || {});
+    } catch (error) { /* metadados opcionais */ }
+    return product;
   }
 
   function getProductPath(productOrKey) {
