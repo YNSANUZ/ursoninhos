@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { RoomEnvironment } from 'three/addons/environments/RoomEnvironment.js';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 
 export async function createProductStlViewer({ container, url }) {
   if (!container || !url) throw new Error('Modelo 3D não informado.');
@@ -29,7 +30,9 @@ export async function createProductStlViewer({ container, url }) {
   fill.position.set(-4, 2, -3);
   scene.add(fill);
 
-  const geometry = await new STLLoader().loadAsync(url);
+  let geometry = await new STLLoader().loadAsync(url);
+  geometry = mergeVertices(geometry, 0.00001);
+  geometry.deleteAttribute('normal');
   geometry.computeVertexNormals();
   geometry.center();
   const material = new THREE.MeshStandardMaterial({

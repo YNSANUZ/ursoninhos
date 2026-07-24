@@ -1,9 +1,10 @@
 import { createInteractiveViewer } from './interactive-viewer3d.js?v=6';
-import { createProductStlViewer } from './product-stl-viewer.js?v=1';
+import { createProductStlViewer } from './product-stl-viewer.js?v=2';
 import * as THREE from 'three';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
 import { STLExporter } from 'three/addons/exporters/STLExporter.js';
 import { SimplifyModifier } from 'three/addons/modifiers/SimplifyModifier.js';
+import { mergeVertices } from 'three/addons/utils/BufferGeometryUtils.js';
 
 const api = window.UrsoninhosApi;
 const store = window.UrsoninhosStore;
@@ -259,17 +260,22 @@ async function buildProtectedStlPreview(file) {
   if (!file || !/\.stl$/i.test(file.name)) throw new Error('Selecione um arquivo STL.');
   if (file.size > 15 * 1024 * 1024) throw new Error('O STL original deve ter no máximo 15 MB.');
 
-  const geometry = new STLLoader().parse(await file.arrayBuffer());
+  let geometry = new STLLoader().parse(await file.arrayBuffer());
+  geometry = mergeVertices(geometry, 0.00001);
   geometry.computeVertexNormals();
   const originalVertices = geometry.attributes.position?.count || 0;
   if (originalVertices < 9) throw new Error('O STL não possui geometria válida.');
 
   let previewGeometry = geometry;
   if (originalVertices > 6000) {
-    const removeCount = Math.floor(originalVertices * 0.28);
+    const removeCount = Math.min(
+      Math.floor(originalVertices * 0.05),
+      Math.max(0, originalVertices - 6000),
+    );
     previewGeometry = new SimplifyModifier().modify(geometry, removeCount);
     geometry.dispose();
   }
+  previewGeometry = mergeVertices(previewGeometry, 0.00001);
   previewGeometry.computeVertexNormals();
   const mesh = new THREE.Mesh(previewGeometry, new THREE.MeshStandardMaterial({ color: 0xffffff }));
   const binary = new STLExporter().parse(mesh, { binary: true });
