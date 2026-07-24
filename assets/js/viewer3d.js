@@ -41,10 +41,12 @@ const SHIRT_COLORS = { black: 0x181818, white: 0xf2f2f2 };
 // Rótulo da gola: etiqueta da marca estampada por padrão na parte
 // INTERNA da nuca (como numa camisa de verdade). É um decal projetado
 // na superfície de dentro das costas, logo abaixo da gola.
-const NECK_LABEL_URL = 'assets/3d/rotulo-gola.png';
-// O centro precisa ficar dentro da abertura da gola. Em 0,86 o rótulo
-// era projetado abaixo da borda frontal e ficava escondido pelo tecido.
-const NECK_LABEL_HEIGHT_FRACTION = 0.935;
+const NECK_LABEL_URL = 'assets/3d/rotulo-gola.png?v=2';
+// Procura automaticamente o ponto mais alto que ainda pertence ao tecido
+// interno da gola. Assim a etiqueta encosta no limite superior sem sumir
+// acima da malha em modelos ou tamanhos de tela diferentes.
+const NECK_LABEL_MAX_HEIGHT_FRACTION = 0.985;
+const NECK_LABEL_MIN_HEIGHT_FRACTION = 0.9;
 const NECK_LABEL_WIDTH = 0.085;          // ~8,5 cm de largura no tecido
 // A arte do rótulo é clara (feita para tecido escuro); na camisa
 // branca ela é escurecida para continuar legível.
@@ -241,10 +243,17 @@ function buildNeckLabel() {
   }
 
   const box = new THREE.Box3().setFromObject(mannequinMesh);
-  const labelY = box.min.y + (box.max.y - box.min.y) * NECK_LABEL_HEIGHT_FRACTION;
   const raycaster = new THREE.Raycaster();
-  raycaster.set(new THREE.Vector3(0, labelY, 0), new THREE.Vector3(0, 0, -1));
-  const hit = raycaster.intersectObject(mannequinMesh, true)[0];
+  let hit = null;
+  for (
+    let fraction = NECK_LABEL_MAX_HEIGHT_FRACTION;
+    fraction >= NECK_LABEL_MIN_HEIGHT_FRACTION && !hit;
+    fraction -= 0.005
+  ) {
+    const labelY = box.min.y + (box.max.y - box.min.y) * fraction;
+    raycaster.set(new THREE.Vector3(0, labelY, 0), new THREE.Vector3(0, 0, -1));
+    hit = raycaster.intersectObject(mannequinMesh, true)[0] || null;
+  }
   if (!hit) return;
 
   const material = new THREE.MeshStandardMaterial({
@@ -463,7 +472,7 @@ const DRAG_LIMIT_X_PCT = 70;
 const DRAG_LIMIT_Y_PCT = 100;
 // Passos menores permitem encontrar tamanhos intermediários da arte com
 // precisão, especialmente em mouses que enviam pulsos grandes de scroll.
-const SCALE_WHEEL_STEP = 0.03;
+const SCALE_WHEEL_STEP = 0.01;
 const SCALE_MIN = 0.22;
 const SCALE_MAX = 2.35;
 
@@ -738,7 +747,9 @@ function init() {
 
   controls = new OrbitControls(camera, interactionSurface);
   controls.enableZoom = true; // roda do mouse / pinça aproxima e afasta
-  controls.zoomSpeed = 0.35;
+  // Zoom deliberadamente fino: cada pulso do scroll percorre uma fração
+  // pequena da distância, oferecendo muitos níveis intermediários.
+  controls.zoomSpeed = 0.12;
   controls.enablePan = true;
   controls.screenSpacePanning = true;
   controls.zoomToCursor = true;
@@ -751,8 +762,11 @@ function init() {
   controls.touches.TWO = THREE.TOUCH.DOLLY_PAN;
   controls.enableDamping = true;
   controls.dampingFactor = 0.08;
-  controls.minPolarAngle = Math.PI * 0.28;
-  controls.maxPolarAngle = Math.PI * 0.6;
+  // Arco vertical amplo para admirar a peça: quase vista superior total
+  // e quase vista inferior total, sem ultrapassar os polos e inverter os
+  // comandos da câmera.
+  controls.minPolarAngle = Math.PI * 0.08;
+  controls.maxPolarAngle = Math.PI * 0.92;
 
   const dracoLoader = new DRACOLoader();
   dracoLoader.setDecoderPath(DRACO_DECODER_URL);
