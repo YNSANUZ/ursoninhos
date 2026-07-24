@@ -73,8 +73,8 @@ if ($method === 'GET' && $action === 'model') {
     $file = PRODUCT_MODEL_DIR . '/' . basename((string) ($entry['modelFile'] ?? ''));
     if (!is_file($file)) send_json(['ok' => false, 'error' => 'Modelo nao encontrado.'], 404);
     header_remove('Content-Type');
-    header('Content-Type: model/stl');
-    header('Content-Disposition: inline; filename="visualizacao-3d.stl"');
+    header('Content-Type: application/octet-stream');
+    header('Content-Disposition: inline; filename="preview-3d.bin"');
     header('Cache-Control: public, max-age=86400');
     header('X-Robots-Tag: noindex, noarchive');
     header('Content-Length: ' . filesize($file));
