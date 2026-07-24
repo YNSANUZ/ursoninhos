@@ -117,7 +117,7 @@ const activeLayerIndexes = {
   sleeveRight: 0,
 };
 const sideCompositeTokens = { front: 0, back: 0, sleeveLeft: 0, sleeveRight: 0 };
-const PRINT_COMPOSITE_WORKSPACE_SCALE = 4;
+const PRINT_COMPOSITE_WORKSPACE_SCALE = 6;
 const stageLayerButtons = document.getElementById('stageLayerButtons');
 const removeActiveLayerBtn = document.getElementById('removeActiveLayerBtn');
 const stageLayerPriceHint = document.getElementById('stageLayerPriceHint');
@@ -514,8 +514,8 @@ const PRINT_SCALE_MIN = 0.22;
 const PRINT_SCALE_MAX = 2.35;
 const PRINT_BASE_LEFT_PCT = 50;
 const PRINT_MOVE_STEP_PCT = 2;
-const PRINT_MOVE_LIMIT_PCT = 42;
-const PRINT_MOVE_LIMIT_X_PCT = 22;
+const PRINT_MOVE_LIMIT_PCT = 100;
+const PRINT_MOVE_LIMIT_X_PCT = 70;
 const PRINT_PINCH_SCALE_FACTOR = 0.006;
 
 const printSizeUpBtn = document.getElementById('printSizeUp');

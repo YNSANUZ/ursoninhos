@@ -145,14 +145,13 @@ function emitVisibleSideChange(force = false) {
   }));
 }
 
-// A etiqueta fica na parte interna da nuca. Alguns ângulos oblíquos do
-// verso conseguiam enxergar o verso do decal através da malha fina da
-// camisa; ocultá-la no hemisfério traseiro mantém o efeito físico correto.
+// A etiqueta fica na parte interna da nuca. Ela deve permanecer visível
+// mesmo quando a câmera chega bem perto da gola; por isso verificamos
+// somente o hemisfério observado, sem uma margem mínima de distância.
 function updateNeckLabelVisibility() {
   if (!neckLabelMesh || !camera || !controls) return;
   const frontDepth = camera.position.z - controls.target.z;
-  const safeMargin = (modelSize?.y || 1) * 0.04;
-  neckLabelMesh.visible = frontDepth > safeMargin;
+  neckLabelMesh.visible = frontDepth > 0;
 }
 
 // Mantém a navegação livre o suficiente para inspecionar gola e mangas,
@@ -328,7 +327,15 @@ function rebuildDecals(sides = Object.keys(SIDE_CONFIG)) {
       height = boxSide;
       width = boxSide / sideState.aspect;
     }
-    const size = new THREE.Vector3(width, height, config.depth);
+    // Frente e costas alcançam até o centro da espessura do tronco.
+    // Assim uma arte deslocada para a borda acompanha a curva lateral
+    // da camisa, sem atravessar o volume inteiro e duplicar no lado oposto.
+    const projectionDepth = (
+      (sideKey === 'front' || sideKey === 'back') && modelSize
+    )
+      ? Math.max(config.depth, modelSize.z * 1.05)
+      : config.depth;
+    const size = new THREE.Vector3(width, height, projectionDepth);
 
     // "screen" (artes em fundo preto): material SEM iluminação + blend
     // aditivo — o preto soma zero e desaparece no tecido, como o
@@ -452,9 +459,11 @@ function computeAnchors(model) {
    da arte gira o manequim normalmente. O movimento é relativo ao
    ponto onde o dedo pegou a arte, então ela não "pula" no clique.
    Os limites espelham os das setas no main.js. */
-const DRAG_LIMIT_X_PCT = 22;
-const DRAG_LIMIT_Y_PCT = 42;
-const SCALE_WHEEL_STEP = 0.08;
+const DRAG_LIMIT_X_PCT = 70;
+const DRAG_LIMIT_Y_PCT = 100;
+// Passos menores permitem encontrar tamanhos intermediários da arte com
+// precisão, especialmente em mouses que enviam pulsos grandes de scroll.
+const SCALE_WHEEL_STEP = 0.03;
 const SCALE_MIN = 0.22;
 const SCALE_MAX = 2.35;
 
@@ -729,6 +738,7 @@ function init() {
 
   controls = new OrbitControls(camera, interactionSurface);
   controls.enableZoom = true; // roda do mouse / pinça aproxima e afasta
+  controls.zoomSpeed = 0.35;
   controls.enablePan = true;
   controls.screenSpacePanning = true;
   controls.zoomToCursor = true;
