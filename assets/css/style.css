@@ -882,11 +882,28 @@ ul {
   inset: 0;
   z-index: 0;
   background:
-    radial-gradient(ellipse 46% 10% at 50% 87%, rgba(240, 190, 120, 0.6), rgba(150, 100, 52, 0.2) 55%, transparent 78%),
-    linear-gradient(180deg, transparent 70%, rgba(64, 42, 22, 0.55) 85%, rgba(24, 14, 7, 0.94) 100%),
-    radial-gradient(ellipse 82% 70% at 50% 34%, #4a3018 0%, #34200e 42%, #180e07 76%, #0d0906 100%);
+    radial-gradient(ellipse 48% 9% at 50% 88%, rgba(230, 171, 98, 0.42), rgba(135, 87, 43, 0.14) 56%, transparent 80%),
+    linear-gradient(180deg, #3c2513 0%, #2e1b0d 58%, #170d07 100%);
   -webkit-mask-image: linear-gradient(90deg, transparent 0%, black 12%, black 88%, transparent 100%);
   mask-image: linear-gradient(90deg, transparent 0%, black 12%, black 88%, transparent 100%);
+  overflow: hidden;
+}
+
+.hero__stage-backdrop::before {
+  content: "";
+  position: absolute;
+  inset: -8% -18% 2%;
+  background: linear-gradient(
+    180deg,
+    rgba(239, 188, 119, 0.44) 0%,
+    rgba(205, 143, 77, 0.24) 48%,
+    rgba(168, 105, 53, 0.08) 78%,
+    transparent 100%
+  );
+  clip-path: polygon(43% 0, 57% 0, 78% 100%, 22% 100%);
+  filter: blur(15px);
+  opacity: 0.9;
+  pointer-events: none;
 }
 
 /* --- Manequim 3D (three.js) ---
@@ -5590,6 +5607,63 @@ ul {
   background: linear-gradient(180deg, #e8b878, var(--caramel));
   border-color: transparent;
   color: #2a1c11;
+}
+
+.stage-view-tools {
+  position: absolute;
+  top: 184px;
+  left: 23px;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+}
+
+.stage-zoom-control {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px;
+  color: var(--gold);
+}
+
+.stage-zoom-control input[type="range"] {
+  width: 24px;
+  height: 145px;
+  margin: 0;
+  writing-mode: vertical-lr;
+  direction: rtl;
+  accent-color: var(--gold);
+  cursor: ns-resize;
+}
+
+.stage-zoom-control__icon {
+  font-size: 0.78rem;
+  line-height: 1;
+  font-weight: 700;
+}
+
+.stage-view-tools__play {
+  width: 36px;
+  height: 36px;
+}
+
+@media (max-width: 900px) {
+  .stage-view-tools {
+    top: 176px;
+    left: 24px;
+    gap: 8px;
+  }
+
+  .stage-zoom-control input[type="range"] {
+    height: 105px;
+  }
+
+  .stage-view-tools__play {
+    width: 32px;
+    height: 32px;
+  }
 }
 
 /* Puxador da folha (bottom-sheet) — só no celular. */

@@ -33,7 +33,7 @@
      de usar o cache. Sempre que CSS ou JS mudarem, aumente este número
      aqui e no <script> do final da página. -->
 <script src="assets/js/theme-toggle.js?v=1"></script>
-  <link rel="stylesheet" href="assets/css/style.css?v=52">
+<link rel="stylesheet" href="assets/css/style.css?v=53">
 <!-- three.js para o manequim 3D do hero (decal da estampa no tecido).
      O importmap precisa vir antes de qualquer script type="module". -->
 <script type="importmap">
@@ -269,6 +269,18 @@
             <p class="stage-intro__tip">Use as abas <b>Imagem, Texto e Camadas</b> para criar. Depois, <b>Centralizar visão</b> volta ao enquadramento inicial.</p>
             <p class="stage-intro__timer" id="stageIntroTimer" aria-label="Tempo restante do tutorial">20</p>
           </div>
+          <div class="stage-view-tools" aria-label="Controles de visualização">
+            <label class="stage-zoom-control" for="stageZoomRange">
+              <span class="stage-zoom-control__icon" aria-hidden="true">+</span>
+              <input type="range" id="stageZoomRange" min="0" max="100" step="1" value="50" aria-label="Zoom da visualização 3D">
+              <span class="stage-zoom-control__icon" aria-hidden="true">−</span>
+            </label>
+            <button type="button" class="stage-play-toggle stage-view-tools__play" data-auto-rotate-toggle aria-label="Pausar troca automática de estampas">
+              <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
+                <path class="auto-rotate-toggle-icon" d="M6.5 5h3.4v14H6.5zM14.1 5h3.4v14h-3.4z"/>
+              </svg>
+            </button>
+          </div>
           <button type="button" class="stage-tutorial-btn" id="stageTutorialBtn" aria-controls="stageIntro">
             Tutorial
           </button>
@@ -397,10 +409,10 @@
 
               <p class="print-picker__active-name" id="activePrintName"></p>
               <div class="print-picker__foot">
-                <button type="button" class="stage-play-toggle" id="autoRotateToggle" aria-label="Pausar troca automática de estampas">
+                <button type="button" class="stage-play-toggle" id="autoRotateToggle" data-auto-rotate-toggle aria-label="Pausar troca automática de estampas">
                   <!-- Um único ícone: o main.js troca o desenho (pause <-> play) -->
                   <svg viewBox="0 0 24 24" width="15" height="15" fill="currentColor" aria-hidden="true">
-                    <path id="autoRotateToggleIcon" d="M6.5 5h3.4v14H6.5zM14.1 5h3.4v14h-3.4z"/>
+                    <path id="autoRotateToggleIcon" class="auto-rotate-toggle-icon" d="M6.5 5h3.4v14H6.5zM14.1 5h3.4v14h-3.4z"/>
                   </svg>
                 </button>
                 <span class="print-picker__hint">Deslize ou clique para trocar a estampa</span>
@@ -1150,7 +1162,7 @@
   <script src="assets/js/layer-engine.js?v=12"></script>
   <script src="assets/js/text-print-engine.js?v=22"></script>
   <script src="assets/js/frases-data.js?v=19"></script>
-  <script src="assets/js/main.js?v=54"></script>
+  <script src="assets/js/main.js?v=55"></script>
   <script src="assets/js/public-catalog.js?v=21"></script>
   <script src="assets/js/header-search.js?v=1"></script>
   <!-- Manequim 3D ADIADO: three.js + modelo GLB somam ~3 MB e travavam
@@ -1290,7 +1302,7 @@
       started = true;
       events.forEach(([target, name]) => target.removeEventListener(name, load3d));
       showLoading();
-      import('./assets/js/viewer3d.js?v=39')
+      import('./assets/js/viewer3d.js?v=40')
         .catch((error) => {
           console.warn('Manequim 3D indisponível, mantendo o palco 2D:', error);
           finishLoading(false);

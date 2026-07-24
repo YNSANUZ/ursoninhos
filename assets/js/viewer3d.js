@@ -107,6 +107,7 @@ let lastVisibleSide = null;
 let modelSize = null;
 let defaultCameraPosition = null;
 let defaultCameraTarget = null;
+let lastZoomPercent = null;
 
 const textureLoader = new THREE.TextureLoader();
 textureLoader.setCrossOrigin('anonymous');
@@ -837,6 +838,7 @@ function init() {
       controls.minDistance = size.y * 0.24;
       controls.maxDistance = size.y * EDITOR_CAMERA_MAX_DISTANCE;
       controls.update();
+      emitZoomChange(true);
       defaultCameraPosition = camera.position.clone();
       defaultCameraTarget = controls.target.clone();
       emitVisibleSideChange(true);
@@ -877,8 +879,39 @@ function init() {
     clampCameraTarget();
     updateNeckLabelVisibility();
     emitVisibleSideChange();
+    emitZoomChange();
     renderer.render(scene, camera);
   });
+}
+
+function getZoomPercent() {
+  if (!camera || !controls) return 50;
+  const minDistance = Number(controls.minDistance || 0);
+  const maxDistance = Number(controls.maxDistance || minDistance + 1);
+  const span = Math.max(0.001, maxDistance - minDistance);
+  const distance = camera.position.distanceTo(controls.target);
+  return clamp(((maxDistance - distance) / span) * 100, 0, 100);
+}
+
+function emitZoomChange(force = false) {
+  const percent = Math.round(getZoomPercent());
+  if (!force && percent === lastZoomPercent) return;
+  lastZoomPercent = percent;
+  window.dispatchEvent(new CustomEvent('shirt3d-zoom-change', {
+    detail: { percent },
+  }));
+}
+
+function setZoomPercent(percent) {
+  if (!camera || !controls) return;
+  const normalized = clamp(Number(percent) || 0, 0, 100);
+  const minDistance = Number(controls.minDistance || 0);
+  const maxDistance = Number(controls.maxDistance || minDistance + 1);
+  const distance = maxDistance - (normalized / 100) * (maxDistance - minDistance);
+  const direction = camera.position.clone().sub(controls.target).normalize();
+  camera.position.copy(controls.target).add(direction.multiplyScalar(distance));
+  controls.update();
+  emitZoomChange(true);
 }
 
 // Gira a câmera ao redor do manequim (0 = frente, 180 = costas).
@@ -961,6 +994,8 @@ window.shirtViewer3D = {
   setTransform,
   clearPrint,
   setCameraAngle,
+  setZoomPercent,
+  getZoomPercent,
   setShirtColor,
   resetView,
   capturePng,

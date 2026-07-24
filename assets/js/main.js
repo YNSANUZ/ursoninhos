@@ -473,8 +473,9 @@ let autoRotateTimer = null;
 // clique em card, nem upload — só o próprio botão de play.
 let autoRotatePaused = false;
 
-const autoRotateToggle = document.getElementById('autoRotateToggle');
-const autoRotateToggleIcon = document.getElementById('autoRotateToggleIcon');
+const autoRotateToggles = document.querySelectorAll('[data-auto-rotate-toggle]');
+const autoRotateToggleIcons = document.querySelectorAll('.auto-rotate-toggle-icon');
+const stageZoomRange = document.getElementById('stageZoomRange');
 
 // Desenhos do ícone único do botão: barras de pause e triângulo de play.
 const PAUSE_ICON_PATH = 'M6.5 5h3.4v14H6.5zM14.1 5h3.4v14h-3.4z';
@@ -875,14 +876,18 @@ window.addEventListener('shirt3d-visible-side-change', (event) => {
 // chave FRENTE/VERSO, que pausa o giro ao editar o verso).
 function setAutoRotatePaused(paused) {
   autoRotatePaused = paused;
-  autoRotateToggle?.classList.toggle('is-paused', paused);
-  autoRotateToggle?.setAttribute(
-    'aria-label',
-    paused ? 'Retomar troca automática de estampas' : 'Pausar troca automática de estampas'
-  );
+  autoRotateToggles.forEach((button) => {
+    button.classList.toggle('is-paused', paused);
+    button.setAttribute(
+      'aria-label',
+      paused ? 'Retomar troca automática de estampas' : 'Pausar troca automática de estampas'
+    );
+  });
 
   // Troca o desenho do ícone único: girando mostra pause, pausado mostra play.
-  autoRotateToggleIcon?.setAttribute('d', paused ? PLAY_ICON_PATH : PAUSE_ICON_PATH);
+  autoRotateToggleIcons.forEach((icon) => {
+    icon.setAttribute('d', paused ? PLAY_ICON_PATH : PAUSE_ICON_PATH);
+  });
 
   if (paused) {
     stopAutoRotate();
@@ -891,7 +896,18 @@ function setAutoRotatePaused(paused) {
   }
 }
 
-autoRotateToggle?.addEventListener('click', () => setAutoRotatePaused(!autoRotatePaused));
+autoRotateToggles.forEach((button) => {
+  button.addEventListener('click', () => setAutoRotatePaused(!autoRotatePaused));
+});
+
+stageZoomRange?.addEventListener('input', () => {
+  window.shirtViewer3D?.setZoomPercent?.(Number(stageZoomRange.value));
+});
+
+window.addEventListener('shirt3d-zoom-change', (event) => {
+  if (!stageZoomRange || event.detail?.percent === undefined) return;
+  stageZoomRange.value = String(Math.round(event.detail.percent));
+});
 
 printPrevBtn?.addEventListener('click', () => {
   rotateCarousel(queuedPrintIndex - 1);
