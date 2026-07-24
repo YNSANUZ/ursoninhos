@@ -10,7 +10,7 @@
   const paymentCopy = {
     mercadopago: {
       title: 'Checkout transparente Mercado Pago',
-      text: 'Escolha Pix, cartao ou boleto abaixo sem sair do Ursoninhos.',
+      text: 'Escolha Pix, boleto, cartão de crédito, débito ou pré-pago sem sair do Ursoninhos.',
     },
   };
 
@@ -1201,7 +1201,7 @@
           onReady: () => {
             paymentBrickLoading = false;
             if (paymentVisualTitle) paymentVisualTitle.textContent = 'Pagamento seguro Mercado Pago';
-            if (paymentVisualText) paymentVisualText.textContent = 'Escolha Pix, cartao ou boleto para concluir seu pedido com seguranca.';
+            if (paymentVisualText) paymentVisualText.textContent = 'Escolha Pix, boleto, cartão de crédito, débito ou pré-pago para concluir com segurança.';
           },
           onSubmit: async ({ selectedPaymentMethod, formData }) => {
             try {

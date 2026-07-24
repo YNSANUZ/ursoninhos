@@ -2318,6 +2318,14 @@ ul {
   text-decoration: underline;
 }
 
+.product-card__installments {
+  display: block;
+  margin-top: 10px;
+  color: var(--caramel);
+  font-size: .8rem;
+  font-weight: 800;
+}
+
 .public-product-card .product-card__actions {
   margin-top: auto;
   padding-top: 16px;
@@ -3032,6 +3040,25 @@ ul {
   margin: 2px 0 0;
   color: var(--text-muted);
   font-size: 0.85rem;
+}
+
+.product-payment-info {
+  display: grid;
+  gap: 7px;
+  margin-top: 12px;
+}
+
+.product-payment-info img {
+  width: min(100%, 330px);
+  height: auto;
+  object-fit: contain;
+  object-position: left center;
+}
+
+.product-payment-info span {
+  color: var(--text-muted);
+  font-size: .78rem;
+  line-height: 1.45;
 }
 
 .pf-lead {

@@ -105,6 +105,7 @@
           <button type="button" class="product-card__details-link" data-action="details">Mais detalhes...</button>
           <p class="product-card__creator">Criado por <strong>${creator || 'Loja Ursoninhos'}</strong></p>
           ${sales >= 1 ? `<span class="product-card__sales">${sales} ${sales === 1 ? 'venda' : 'vendas'}</span>` : ''}
+          <strong class="product-card__installments">Em até 12x</strong>
           <div class="product-card__actions">
             <button type="button" class="product-card__add" data-action="add">
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M1 1h3l2.6 12.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L22 6H6"/></svg>

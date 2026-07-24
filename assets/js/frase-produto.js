@@ -114,7 +114,18 @@
     const priceEl = document.getElementById('pfPrice');
     if (priceEl) priceEl.textContent = store.formatBRL(produto.preco);
     const installmentsEl = document.getElementById('pfInstallments');
-    if (installmentsEl) installmentsEl.textContent = `ou 3x de ${store.formatBRL(produto.preco / 3)} sem juros`;
+    if (installmentsEl) installmentsEl.textContent = 'Em até 12x no cartão, conforme as opções do Mercado Pago.';
+    const priceBox = document.querySelector('.pf-price');
+    if (priceBox && !document.getElementById('pfPaymentMethods')) {
+      const paymentInfo = document.createElement('div');
+      paymentInfo.className = 'product-payment-info';
+      paymentInfo.id = 'pfPaymentMethods';
+      paymentInfo.innerHTML = `
+        <img src="assets/img/bandeiras-pagamento.png" alt="Pix, Visa, Mastercard, Elo e boleto">
+        <span>Pix, boleto e cartões processados com segurança pelo Mercado Pago.</span>
+      `;
+      priceBox.appendChild(paymentInfo);
+    }
 
     const styleEl = document.getElementById('pfStyleName');
     if (styleEl) styleEl.textContent = produto.presetName;
