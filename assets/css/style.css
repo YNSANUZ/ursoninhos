@@ -2260,7 +2260,7 @@ ul {
   color: var(--text-muted);
 }
 
-.product-grid--dynamic {
+.product-grid.product-grid--dynamic {
   grid-template-columns: repeat(auto-fit, minmax(290px, 320px));
   justify-content: center;
   margin-bottom: 34px;
@@ -2353,7 +2353,7 @@ ul {
 }
 
 @media (max-width: 640px) {
-  .product-grid--dynamic {
+  .product-grid.product-grid--dynamic {
     grid-template-columns: minmax(0, 320px);
   }
 }
