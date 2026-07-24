@@ -162,9 +162,15 @@
                 <input type="url" id="productEditorCreatorPhoto" placeholder="https://...">
               </label>
               <label class="form-field public-product-editor__wide">
-                <span>Imagem principal</span>
+                <span>URL da imagem principal (opcional)</span>
                 <input type="url" id="productEditorCatalogImage" placeholder="https://... ou data:image/...">
               </label>
+              <label class="form-field public-product-editor__wide">
+                <span>Adicionar fotos (até 5 no total)</span>
+                <input type="file" id="productEditorImages" accept="image/*" multiple>
+                <small>Use a estrela para escolher a capa e × para excluir uma foto.</small>
+              </label>
+              <div class="admin-product-gallery-editor public-product-editor__wide" id="productEditorGallery"></div>
               <label class="form-field public-product-editor__wide">
                 <span>Descrição</span>
                 <textarea id="productEditorDescription" rows="4" maxlength="600"></textarea>
@@ -258,6 +264,6 @@
   <script src="assets/js/layer-engine.js?v=15"></script>
   <script src="assets/js/account-ui.js?v=24"></script>
   <script src="assets/js/public-api.js?v=23"></script>
-  <script type="module" src="assets/js/product-page.js?v=26"></script>
+  <script type="module" src="assets/js/product-page.js?v=27"></script>
 </body>
 </html>

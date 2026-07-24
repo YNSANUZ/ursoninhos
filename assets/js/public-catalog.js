@@ -48,6 +48,11 @@
         addProductToCart(product, 1);
       });
 
+      card.querySelector('[data-action="edit"]')?.addEventListener('click', (event) => {
+        event.stopPropagation();
+        window.location.href = `${api.getProductPath(product)}${api.getProductPath(product).includes('?') ? '&' : '?'}edit=1`;
+      });
+
     });
   }
 
@@ -90,8 +95,12 @@
       grid.innerHTML = products.map((product) => {
         const { creator } = store.parseCreator(product.description);
         const sales = getDisplaySales(product);
+        const adminEdit = store.getCurrentUser?.()?.role === 'admin'
+          ? '<button type="button" class="product-card__admin-edit" data-action="edit" aria-label="Editar produto" title="Editar produto">✎</button>'
+          : '';
         return `
         <article class="product-card public-product-card" data-product-id="${product.id}">
+          ${adminEdit}
           <button type="button" class="product-card__thumb product-card__thumb--catalog" data-action="details">
             <img src="${product.catalogImage}" alt="${product.title}" loading="lazy">
           </button>
@@ -121,5 +130,6 @@
   // atualizar a vitrine logo após publicar.
   window.UrsoninhosCatalog = { refresh: renderPublicProducts };
 
+  window.addEventListener('ursoninhos-auth-changed', renderPublicProducts);
   renderPublicProducts();
 })();

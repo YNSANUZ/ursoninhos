@@ -38,6 +38,8 @@ const productEditorPrice = document.getElementById('productEditorPrice');
 const productEditorCreator = document.getElementById('productEditorCreator');
 const productEditorCreatorPhoto = document.getElementById('productEditorCreatorPhoto');
 const productEditorCatalogImage = document.getElementById('productEditorCatalogImage');
+const productEditorImages = document.getElementById('productEditorImages');
+const productEditorGallery = document.getElementById('productEditorGallery');
 const productEditorDescription = document.getElementById('productEditorDescription');
 const productEditorCancelBtn = document.getElementById('productEditorCancelBtn');
 const productEditorNote = document.getElementById('productEditorNote');
@@ -48,6 +50,9 @@ let viewer = null;
 let currentProduct = null;
 let viewerReady = false;
 let editorOpen = false;
+let editorGalleryUrls = [];
+let editorCoverIndex = 0;
+const IMGBB_API_KEY = 'b7150269142e0e38166f3e528598d051';
 const CARD_MOCKUP_URL = 'assets/img/camisa-modelo-card.jpg';
 const PREVIEW_CANVAS_SIZE = 900;
 const PREVIEW_PRINT_CENTER_X = 0.478;
@@ -146,6 +151,14 @@ function fillEditor(product) {
   productEditorCreatorPhoto.value = product.creatorPhoto || '';
   productEditorCatalogImage.value = product.catalogImage || '';
   productEditorDescription.value = store.parseCreator(product.description).description || '';
+  editorGalleryUrls = Array.isArray(product.gallery)
+    ? product.gallery.filter((url) => /^https:\/\//i.test(String(url || ''))).slice(0, 5)
+    : [];
+  if (!editorGalleryUrls.length && /^https:\/\//i.test(String(product.catalogImage || ''))) {
+    editorGalleryUrls = [product.catalogImage];
+  }
+  editorCoverIndex = Math.min(Math.max(Number(product.coverIndex || 0), 0), Math.max(editorGalleryUrls.length - 1, 0));
+  renderEditorGallery();
 }
 
 function toggleEditor(force) {
@@ -166,6 +179,69 @@ function setPhotoPreview(src, title) {
   if (productImageLoading) productImageLoading.hidden = true;
   if (productThumbPhotoLoading) productThumbPhotoLoading.hidden = true;
   productThumbPhoto.innerHTML = `<img src="${finalSrc}" alt="${title ? `Miniatura ${title}` : 'Miniatura do produto'}">`;
+}
+
+function renderEditorGallery() {
+  if (!productEditorGallery) return;
+  productEditorGallery.innerHTML = editorGalleryUrls.map((url, index) => `
+    <article class="admin-product-gallery-editor__item${index === editorCoverIndex ? ' is-cover' : ''}">
+      <img src="${url}" alt="Foto ${index + 1} do produto">
+      <button type="button" data-editor-cover="${index}" aria-label="Usar foto ${index + 1} como capa">★</button>
+      <button type="button" data-editor-remove="${index}" aria-label="Excluir foto ${index + 1}">×</button>
+      <span>${index === editorCoverIndex ? 'Capa' : `Foto ${index + 1}`}</span>
+    </article>
+  `).join('');
+
+  productEditorGallery.querySelectorAll('[data-editor-cover]').forEach((button) => {
+    button.addEventListener('click', () => {
+      editorCoverIndex = Number(button.dataset.editorCover || 0);
+      renderEditorGallery();
+    });
+  });
+  productEditorGallery.querySelectorAll('[data-editor-remove]').forEach((button) => {
+    button.addEventListener('click', () => {
+      editorGalleryUrls.splice(Number(button.dataset.editorRemove || 0), 1);
+      editorCoverIndex = Math.min(editorCoverIndex, Math.max(editorGalleryUrls.length - 1, 0));
+      renderEditorGallery();
+    });
+  });
+}
+
+async function uploadEditorPhoto(file) {
+  const form = new FormData();
+  form.append('image', file);
+  const response = await fetch(`https://api.imgbb.com/1/upload?key=${encodeURIComponent(IMGBB_API_KEY)}`, {
+    method: 'POST',
+    body: form,
+  });
+  const payload = await response.json();
+  const url = payload?.data?.display_url || payload?.data?.url;
+  if (!response.ok || !payload?.success || !url) {
+    throw new Error(payload?.error?.message || 'Não foi possível enviar a foto.');
+  }
+  return url;
+}
+
+async function handleEditorImages() {
+  const files = Array.from(productEditorImages?.files || []);
+  if (!files.length) return;
+  if (files.length + editorGalleryUrls.length > 5) {
+    setEditorNote('O produto pode ter no máximo cinco fotos.', true);
+    productEditorImages.value = '';
+    return;
+  }
+  try {
+    productEditorImages.disabled = true;
+    setEditorNote('Enviando fotos...');
+    for (const file of files) editorGalleryUrls.push(await uploadEditorPhoto(file));
+    renderEditorGallery();
+    setEditorNote('Fotos prontas. Clique em “Salvar alterações” para atualizar o produto.');
+  } catch (error) {
+    setEditorNote(error.message || 'Não foi possível enviar as fotos.', true);
+  } finally {
+    productEditorImages.disabled = false;
+    productEditorImages.value = '';
+  }
 }
 
 function renderProductGallery(product, fallbackPhoto) {
@@ -415,12 +491,16 @@ async function saveAdminEdits(event) {
 
   const creatorName = String(productEditorCreator?.value || '').trim() || 'Loja Ursoninhos';
   const plainDescription = String(productEditorDescription?.value || '').trim();
+  const coverIndex = Math.min(Math.max(editorCoverIndex, 0), Math.max(editorGalleryUrls.length - 1, 0));
+  const coverImage = editorGalleryUrls[coverIndex] || String(productEditorCatalogImage?.value || '').trim();
   const payload = {
     title: String(productEditorTitle?.value || '').trim(),
     price: Number(productEditorPrice?.value || 0),
     creator: creatorName,
     creatorPhoto: String(productEditorCreatorPhoto?.value || '').trim(),
-    catalogImage: String(productEditorCatalogImage?.value || '').trim(),
+    catalogImage: coverImage,
+    gallery: editorGalleryUrls,
+    coverIndex,
     description: store.embedCreator(plainDescription, creatorName),
   };
 
@@ -494,6 +574,7 @@ function bindControls() {
 
   productEditToggleBtn?.addEventListener('click', () => toggleEditor());
   productEditorCancelBtn?.addEventListener('click', () => toggleEditor(false));
+  productEditorImages?.addEventListener('change', handleEditorImages);
   productEditorForm?.addEventListener('submit', saveAdminEdits);
   productDeleteBtn?.addEventListener('click', deleteCurrentProduct);
 }
@@ -543,6 +624,7 @@ function setupAdminUi() {
 
 async function init() {
   const productKey = getProductKey();
+  const shouldOpenEditor = new URLSearchParams(window.location.search).get('edit') === '1';
   if (!productKey || !api || !store) {
     if (productTitle) productTitle.textContent = 'Produto nao encontrado';
     if (productDescription) productDescription.textContent = 'Abra um produto a partir da home para ver os detalhes.';
@@ -567,6 +649,11 @@ async function init() {
 
   await renderProductInfo(currentProduct);
   showPhotoMedia();
+
+  if (isAdminUser() && shouldOpenEditor) {
+    toggleEditor(true);
+    productEditorForm?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 
   const allProducts = await api.listProducts();
   renderRelatedProducts(allProducts);

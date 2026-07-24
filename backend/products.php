@@ -188,6 +188,17 @@ function normalizeViews($views, $catalogImage = '')
     ];
 }
 
+function normalizeGallery($gallery)
+{
+    if (!is_array($gallery)) return [];
+    $normalized = [];
+    foreach (array_slice($gallery, 0, 5) as $url) {
+        $url = trim((string) $url);
+        if (preg_match('/^https:\\/\\//i', $url)) $normalized[] = $url;
+    }
+    return $normalized;
+}
+
 function normalizeModel($model)
 {
     $model = is_array($model) ? $model : [];
@@ -244,11 +255,20 @@ if ($method === 'POST') {
             $title = trim((string) ($body['title'] ?? $existing['title'] ?? ''));
             if ($title === '') respond(['ok' => false, 'error' => 'Titulo obrigatorio.'], 400);
             $catalogImage = (string) ($body['catalogImage'] ?? $existing['catalogImage'] ?? '');
+            $gallery = array_key_exists('gallery', $body)
+                ? normalizeGallery($body['gallery'])
+                : ($existing['gallery'] ?? []);
+            $coverIndex = min(
+                max(0, (int) ($body['coverIndex'] ?? $existing['coverIndex'] ?? 0)),
+                max(0, count($gallery) - 1)
+            );
             $products[$index] = array_merge($existing, [
                 'title' => mb_substr($title, 0, 120),
                 'description' => mb_substr(trim((string) ($body['description'] ?? $existing['description'] ?? '')), 0, 600),
                 'price' => min(MAX_PRICE, max(0, (float) ($body['price'] ?? $existing['price'] ?? 0))),
                 'catalogImage' => $catalogImage,
+                'gallery' => $gallery,
+                'coverIndex' => $coverIndex,
                 'creator' => mb_substr(trim((string) ($body['creator'] ?? $existing['creator'] ?? '')), 0, 80),
                 'creatorPhoto' => (string) ($body['creatorPhoto'] ?? $existing['creatorPhoto'] ?? ''),
                 'views' => array_key_exists('views', $body)
@@ -278,6 +298,8 @@ if ($method === 'POST') {
         'description' => mb_substr(trim((string) ($body['description'] ?? '')), 0, 600),
         'price' => min(MAX_PRICE, max(0, (float) ($body['price'] ?? 0))),
         'catalogImage' => (string) ($body['catalogImage'] ?? ''),
+        'gallery' => normalizeGallery($body['gallery'] ?? []),
+        'coverIndex' => max(0, (int) ($body['coverIndex'] ?? 0)),
         'creator' => mb_substr(trim((string) ($body['creator'] ?? '')), 0, 80),
         'creatorPhoto' => (string) ($body['creatorPhoto'] ?? ''),
         'sales' => 0,
