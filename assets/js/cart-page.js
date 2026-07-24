@@ -1110,8 +1110,19 @@
     };
   }
 
+  async function waitForMercadoPagoDeviceId(timeoutMs = 3000) {
+    const startedAt = Date.now();
+    while (Date.now() - startedAt < timeoutMs) {
+      const deviceId = String(window.MP_DEVICE_SESSION_ID || '').trim();
+      if (deviceId) return deviceId;
+      await new Promise((resolve) => window.setTimeout(resolve, 100));
+    }
+    return String(window.MP_DEVICE_SESSION_ID || '').trim();
+  }
+
   async function processBrickPayment(formData, selectedPaymentMethod) {
     const session = await createCheckoutSession();
+    const deviceId = await waitForMercadoPagoDeviceId();
     const response = await fetch(`${paymentApiBaseUrl()}/process-payment.php`, {
       method: 'POST',
       headers: {
@@ -1122,7 +1133,7 @@
         orderId: session.id,
         formData,
         selectedPaymentMethod,
-        deviceId: window.MP_DEVICE_SESSION_ID || '',
+        deviceId,
       }),
     });
     const payload = await readApiJson(response);
