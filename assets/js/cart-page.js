@@ -1111,13 +1111,19 @@
   }
 
   async function waitForMercadoPagoDeviceId(timeoutMs = 3000) {
+    const readDeviceId = () => String(
+      window.MP_DEVICE_SESSION_ID
+      || window.deviceId
+      || document.getElementById('deviceId')?.value
+      || ''
+    ).trim();
     const startedAt = Date.now();
     while (Date.now() - startedAt < timeoutMs) {
-      const deviceId = String(window.MP_DEVICE_SESSION_ID || '').trim();
+      const deviceId = readDeviceId();
       if (deviceId) return deviceId;
       await new Promise((resolve) => window.setTimeout(resolve, 100));
     }
-    return String(window.MP_DEVICE_SESSION_ID || '').trim();
+    return readDeviceId();
   }
 
   async function processBrickPayment(formData, selectedPaymentMethod) {
