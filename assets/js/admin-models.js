@@ -324,13 +324,20 @@ physicalProductForm?.addEventListener('submit', async (event) => {
     setPhysicalProductNote('Envie pelo menos uma foto do produto.', true);
     return;
   }
+  const priceInput = document.getElementById('physicalProductPrice');
+  const price = Number(String(priceInput?.value || '').replace(',', '.'));
+  if (!Number.isFinite(price) || price <= 0) {
+    setPhysicalProductNote('Informe um valor válido para o produto.', true);
+    priceInput?.focus();
+    return;
+  }
   try {
     publishPhysicalProductBtn.disabled = true;
     setPhysicalProductNote('Publicando produto e sincronizando a planilha…');
     const product = await api.createPhysicalProduct({
       title: document.getElementById('physicalProductTitle').value.trim(),
       description: document.getElementById('physicalProductDescription').value.trim(),
-      price: Number(document.getElementById('physicalProductPrice').value || 0),
+      price,
       gallery: physicalGalleryUrls,
       coverIndex: physicalCoverIndex,
     });
