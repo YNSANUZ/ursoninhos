@@ -516,7 +516,7 @@ const PRINT_SCALE_MAX = 2.35;
 const PRINT_BASE_LEFT_PCT = 50;
 const PRINT_MOVE_STEP_PCT = 2;
 const PRINT_MOVE_LIMIT_PCT = 100;
-const PRINT_MOVE_LIMIT_X_PCT = 70;
+const PRINT_MOVE_LIMIT_X_PCT = 100;
 const PRINT_PINCH_SCALE_FACTOR = 0.006;
 
 const printSizeUpBtn = document.getElementById('printSizeUp');

@@ -895,14 +895,15 @@ ul {
   inset: -8% -18% 2%;
   background: linear-gradient(
     180deg,
-    rgba(239, 188, 119, 0.44) 0%,
-    rgba(205, 143, 77, 0.24) 48%,
-    rgba(168, 105, 53, 0.08) 78%,
+    rgba(239, 188, 119, 0.32) 0%,
+    rgba(205, 143, 77, 0.18) 45%,
+    rgba(168, 105, 53, 0.06) 76%,
     transparent 100%
   );
-  clip-path: polygon(43% 0, 57% 0, 78% 100%, 22% 100%);
-  filter: blur(15px);
-  opacity: 0.9;
+  clip-path: polygon(41% 0, 59% 0, 82% 100%, 18% 100%);
+  filter: blur(30px);
+  opacity: 0.72;
+  transform: scaleX(0.94);
   pointer-events: none;
 }
 

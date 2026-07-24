@@ -47,7 +47,7 @@ const NECK_LABEL_URL = 'assets/3d/rotulo-gola.png?v=2';
 // acima da malha em modelos ou tamanhos de tela diferentes.
 const NECK_LABEL_MAX_HEIGHT_FRACTION = 0.985;
 const NECK_LABEL_MIN_HEIGHT_FRACTION = 0.9;
-const NECK_LABEL_WIDTH = 0.085;          // ~8,5 cm de largura no tecido
+const NECK_LABEL_WIDTH = 0.11;           // ~11 cm para o texto continuar legível
 // A arte do rótulo é clara (feita para tecido escuro); na camisa
 // branca ela é escurecida para continuar legível.
 const NECK_LABEL_TINT = { black: 0xffffff, white: 0x555555 };
@@ -245,28 +245,36 @@ function buildNeckLabel() {
 
   const box = new THREE.Box3().setFromObject(mannequinMesh);
   const raycaster = new THREE.Raycaster();
-  let hit = null;
+  let highestHit = null;
   for (
     let fraction = NECK_LABEL_MAX_HEIGHT_FRACTION;
-    fraction >= NECK_LABEL_MIN_HEIGHT_FRACTION && !hit;
+    fraction >= NECK_LABEL_MIN_HEIGHT_FRACTION && !highestHit;
     fraction -= 0.005
   ) {
     const labelY = box.min.y + (box.max.y - box.min.y) * fraction;
     raycaster.set(new THREE.Vector3(0, labelY, 0), new THREE.Vector3(0, 0, -1));
-    hit = raycaster.intersectObject(mannequinMesh, true)[0] || null;
+    highestHit = raycaster.intersectObject(mannequinMesh, true)[0] || null;
   }
+  if (!highestHit) return;
+
+  // highestHit representa o LIMITE superior do tecido. A etiqueta precisa
+  // começar ali, não ter o centro ali; descemos meio rótulo e buscamos
+  // novamente a superfície interna para que a imagem inteira fique visível.
+  const labelCenterY = highestHit.point.y - NECK_LABEL_WIDTH * 0.52;
+  raycaster.set(new THREE.Vector3(0, labelCenterY, 0), new THREE.Vector3(0, 0, -1));
+  const hit = raycaster.intersectObject(mannequinMesh, true)[0] || null;
   if (!hit) return;
 
-  const material = new THREE.MeshStandardMaterial({
+  // Material básico não depende da iluminação: o interior escuro da gola
+  // não apaga as cores e os textos da etiqueta.
+  const material = new THREE.MeshBasicMaterial({
     map: neckLabelTexture,
     color: NECK_LABEL_TINT[shirtColor],
     transparent: true,
     depthWrite: false,
     polygonOffset: true,
-    polygonOffsetFactor: -4,
-    roughness: 0.85,
-    metalness: 0,
-    side: THREE.BackSide,
+    polygonOffsetFactor: -8,
+    side: THREE.DoubleSide,
   });
 
   const size = new THREE.Vector3(NECK_LABEL_WIDTH, NECK_LABEL_WIDTH, 0.04);
@@ -469,7 +477,7 @@ function computeAnchors(model) {
    da arte gira o manequim normalmente. O movimento é relativo ao
    ponto onde o dedo pegou a arte, então ela não "pula" no clique.
    Os limites espelham os das setas no main.js. */
-const DRAG_LIMIT_X_PCT = 70;
+const DRAG_LIMIT_X_PCT = 100;
 const DRAG_LIMIT_Y_PCT = 100;
 // Passos menores permitem encontrar tamanhos intermediários da arte com
 // precisão, especialmente em mouses que enviam pulsos grandes de scroll.
@@ -545,9 +553,10 @@ function setupDecalDrag() {
     }));
   };
 
-  const emitDrag = () => {
+  const emitDrag = (side = dragSide) => {
+    if (!side || !state[side]) return;
     window.dispatchEvent(new CustomEvent('shirt3d-print-drag', {
-      detail: { side: dragSide, offsetX: state[dragSide]?.offsetX, offsetY: state[dragSide]?.offsetY },
+      detail: { side, offsetX: state[side].offsetX, offsetY: state[side].offsetY },
     }));
   };
 
@@ -599,9 +608,9 @@ function setupDecalDrag() {
       decal.position.set(dx * slideX, -slideY, dz * slideX);
     }
 
-    // Mantém o main.js em dia: setas, overlay 2D e preview do carrinho
-    // continuam coerentes com a posição arrastada.
-    emitDrag();
+    // O estado do main.js é sincronizado somente ao SOLTAR. Recompor a
+    // textura em cada pixel fazia respostas assíncronas antigas chegarem
+    // depois e puxarem a arte de volta para uma posição anterior.
   };
 
   interactionSurface.addEventListener('pointerdown', (event) => {
@@ -687,6 +696,7 @@ function setupDecalDrag() {
     }
     if (!dragSide || event.pointerId !== activePointerId) return;
     const releasedSide = dragSide;
+    emitDrag(releasedSide);
     dragSide = null;
     activePointerId = null;
     if (controls) controls.enabled = true;
@@ -886,7 +896,12 @@ function init() {
 
 function getZoomPercent() {
   if (!camera || !controls) return 50;
-  const minDistance = Number(controls.minDistance || 0);
+  // A barra não deve colocar a câmera dentro da malha. O OrbitControls
+  // mantém um mínimo menor para gestos manuais de inspeção, enquanto o
+  // controle visual usa este limite seguro de close-up.
+  const minDistance = modelSize
+    ? Math.max(Number(controls.minDistance || 0), modelSize.y * 0.72)
+    : Number(controls.minDistance || 0);
   const maxDistance = Number(controls.maxDistance || minDistance + 1);
   const span = Math.max(0.001, maxDistance - minDistance);
   const distance = camera.position.distanceTo(controls.target);
@@ -905,7 +920,9 @@ function emitZoomChange(force = false) {
 function setZoomPercent(percent) {
   if (!camera || !controls) return;
   const normalized = clamp(Number(percent) || 0, 0, 100);
-  const minDistance = Number(controls.minDistance || 0);
+  const minDistance = modelSize
+    ? Math.max(Number(controls.minDistance || 0), modelSize.y * 0.72)
+    : Number(controls.minDistance || 0);
   const maxDistance = Number(controls.maxDistance || minDistance + 1);
   const distance = maxDistance - (normalized / 100) * (maxDistance - minDistance);
   const direction = camera.position.clone().sub(controls.target).normalize();
