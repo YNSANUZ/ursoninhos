@@ -524,9 +524,13 @@ async function saveAdminEdits(event) {
   try {
     setEditorNote('Salvando alterações...');
     currentProduct = await api.updateProduct(currentProduct.id, payload);
+    const sheetResult = await window.UrsoninhosSheet?.push?.([currentProduct]);
+    if (sheetResult && sheetResult.ok === false && !sheetResult.skipped) {
+      throw new Error(sheetResult.error || 'O produto foi salvo, mas a planilha não foi atualizada.');
+    }
     await renderProductInfo(currentProduct);
     toggleEditor(false);
-    setActionNote('Produto atualizado com sucesso.');
+    setActionNote('Produto e planilha atualizados com sucesso.');
   } catch (error) {
     setEditorNote(error.message || 'Nao foi possivel salvar agora.', true);
   }
