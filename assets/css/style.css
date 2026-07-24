@@ -2306,6 +2306,20 @@ ul {
   -webkit-line-clamp: 3;
 }
 
+.product-card__title-link {
+  padding: 0;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.product-card__title-link:hover {
+  color: var(--gold);
+}
+
 .public-product-card .product-card__meta {
   display: -webkit-box;
   min-height: 4.65em;

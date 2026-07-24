@@ -95,9 +95,8 @@
           <button type="button" class="product-card__thumb product-card__thumb--catalog" data-action="details">
             <img src="${product.catalogImage}" alt="${product.title}" loading="lazy">
           </button>
-          <h3>${product.title}</h3>
+          <h3><button type="button" class="product-card__title-link" data-action="details">${product.title}</button></h3>
           <p class="product-card__price">${store.formatBRL(product.price)}</p>
-          <button type="button" class="product-card__details-link" data-action="details">Mais detalhes...</button>
           <p class="product-card__creator">Criado por <strong>${creator || 'Loja Ursoninhos'}</strong></p>
           ${sales >= 1 ? `<span class="product-card__sales">${sales} ${sales === 1 ? 'venda' : 'vendas'}</span>` : ''}
           <div class="product-card__actions">
