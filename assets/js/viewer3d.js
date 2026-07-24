@@ -453,7 +453,7 @@ function computeAnchors(model) {
    ponto onde o dedo pegou a arte, então ela não "pula" no clique.
    Os limites espelham os das setas no main.js. */
 const DRAG_LIMIT_X_PCT = 22;
-const DRAG_LIMIT_Y_PCT = 24;
+const DRAG_LIMIT_Y_PCT = 42;
 const SCALE_WHEEL_STEP = 0.08;
 const SCALE_MIN = 0.22;
 const SCALE_MAX = 2.35;
@@ -473,6 +473,7 @@ function setupDecalDrag() {
   let wheelRebuildTimer = null;
   let pinchState = null;
   const activePointers = new Map();
+  const hitCanvasByImage = new WeakMap();
 
   const setRayFromEvent = (event) => {
     const rect = renderer.domElement.getBoundingClientRect();
@@ -481,10 +482,41 @@ function setupDecalDrag() {
     raycaster.setFromCamera(pointerNdc, camera);
   };
 
+  // O decal inclui uma margem transparente para permitir ampliar, girar e
+  // mover a arte sem cortes. O raycaster enxerga toda essa geometria; por
+  // isso conferimos o alpha do pixel clicado e só capturamos a interação
+  // quando há imagem realmente visível naquele ponto.
+  const hitHasVisiblePixel = (hit) => {
+    const texture = hit?.object?.material?.map;
+    const image = texture?.image;
+    const uv = hit?.uv;
+    if (!image || !uv) return false;
+
+    try {
+      let hitCanvas = hitCanvasByImage.get(image);
+      if (!hitCanvas) {
+        hitCanvas = document.createElement('canvas');
+        hitCanvas.width = image.naturalWidth || image.videoWidth || image.width;
+        hitCanvas.height = image.naturalHeight || image.videoHeight || image.height;
+        const context = hitCanvas.getContext('2d', { willReadFrequently: true });
+        context.drawImage(image, 0, 0, hitCanvas.width, hitCanvas.height);
+        hitCanvasByImage.set(image, hitCanvas);
+      }
+
+      const x = clamp(Math.floor(uv.x * hitCanvas.width), 0, hitCanvas.width - 1);
+      const y = clamp(Math.floor((1 - uv.y) * hitCanvas.height), 0, hitCanvas.height - 1);
+      return hitCanvas.getContext('2d').getImageData(x, y, 1, 1).data[3] > 20;
+    } catch (error) {
+      // Se uma imagem externa impedir a leitura por CORS, mantém o
+      // comportamento anterior em vez de bloquear completamente a edição.
+      return true;
+    }
+  };
+
   const decalSideAt = (event) => {
     if (!camera || !decals.length) return null;
     setRayFromEvent(event);
-    const hit = raycaster.intersectObjects(decals, false)[0];
+    const hit = raycaster.intersectObjects(decals, false).find(hitHasVisiblePixel);
     return hit ? hit.object.userData.side : null;
   };
 
