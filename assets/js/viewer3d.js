@@ -749,7 +749,10 @@ function init() {
   controls.enableZoom = true; // roda do mouse / pinça aproxima e afasta
   // Zoom deliberadamente fino: cada pulso do scroll percorre uma fração
   // pequena da distância, oferecendo muitos níveis intermediários.
-  controls.zoomSpeed = 0.12;
+  // Alguns mouses enviam vários eventos para um único movimento da roda.
+  // Uma velocidade bem baixa evita que esses pulsos acumulados lancem a
+  // câmera de muito perto para muito longe.
+  controls.zoomSpeed = 0.04;
   controls.enablePan = true;
   controls.screenSpacePanning = true;
   controls.zoomToCursor = true;
