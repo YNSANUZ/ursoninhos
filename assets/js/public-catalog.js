@@ -75,6 +75,7 @@
       const linhas = await window.UrsoninhosSheet?.load();
       if (!linhas) return;
       products.forEach((product) => {
+        if (product.updatedAt) return;
         const row = linhas[product.id];
         if (row?.preco > 0) product.price = row.preco;
         if (row?.nome) product.title = row.nome;

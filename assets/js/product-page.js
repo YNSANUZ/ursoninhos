@@ -525,12 +525,11 @@ async function saveAdminEdits(event) {
     setEditorNote('Salvando alterações...');
     currentProduct = await api.updateProduct(currentProduct.id, payload);
     const sheetResult = await window.UrsoninhosSheet?.push?.([currentProduct]);
-    if (sheetResult && sheetResult.ok === false && !sheetResult.skipped) {
-      throw new Error(sheetResult.error || 'O produto foi salvo, mas a planilha não foi atualizada.');
-    }
     await renderProductInfo(currentProduct);
     toggleEditor(false);
-    setActionNote('Produto e planilha atualizados com sucesso.');
+    setActionNote(sheetResult?.ok === false && !sheetResult.skipped
+      ? 'Produto atualizado. A planilha não confirmou a sincronização, então os dados do ADM terão prioridade.'
+      : 'Produto e planilha atualizados com sucesso.');
   } catch (error) {
     setEditorNote(error.message || 'Nao foi possivel salvar agora.', true);
   }
@@ -651,8 +650,10 @@ async function init() {
   try {
     const linhas = await window.UrsoninhosSheet?.load();
     const row = linhas?.[currentProduct.id];
-    if (row?.preco > 0) currentProduct.price = row.preco;
-    if (row?.nome) currentProduct.title = row.nome;
+    if (!currentProduct.updatedAt) {
+      if (row?.preco > 0) currentProduct.price = row.preco;
+      if (row?.nome) currentProduct.title = row.nome;
+    }
   } catch (error) { /* segue com os dados do backend */ }
 
   await renderProductInfo(currentProduct);
