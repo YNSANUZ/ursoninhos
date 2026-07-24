@@ -48,10 +48,6 @@
         addProductToCart(product, 1);
       });
 
-      card.querySelector('[data-action="plus"]')?.addEventListener('click', (event) => {
-        event.stopPropagation();
-        addProductToCart(product, 1);
-      });
     });
   }
 
@@ -92,7 +88,7 @@
       }
 
       grid.innerHTML = products.map((product) => {
-        const { description, creator } = store.parseCreator(product.description);
+        const { creator } = store.parseCreator(product.description);
         const sales = getDisplaySales(product);
         return `
         <article class="product-card public-product-card" data-product-id="${product.id}">
@@ -101,17 +97,15 @@
           </button>
           <h3>${product.title}</h3>
           <p class="product-card__price">${store.formatBRL(product.price)}</p>
-          <p class="product-card__meta">${description}</p>
           <button type="button" class="product-card__details-link" data-action="details">Mais detalhes...</button>
           <p class="product-card__creator">Criado por <strong>${creator || 'Loja Ursoninhos'}</strong></p>
           ${sales >= 1 ? `<span class="product-card__sales">${sales} ${sales === 1 ? 'venda' : 'vendas'}</span>` : ''}
-          <strong class="product-card__installments">Em até 12x</strong>
           <div class="product-card__actions">
             <button type="button" class="product-card__add" data-action="add">
               <svg viewBox="0 0 24 24" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2"><circle cx="9" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M1 1h3l2.6 12.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L22 6H6"/></svg>
               Adicionar x1
             </button>
-            <button type="button" class="product-card__quick-add" data-action="plus" aria-label="Adicionar mais uma unidade">+1</button>
+            <strong class="product-card__installments">Em até 12x</strong>
           </div>
         </article>
       `;
