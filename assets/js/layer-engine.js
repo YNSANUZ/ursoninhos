@@ -12,9 +12,9 @@
   function normalizeTransform(transform = {}) {
     return {
       scale: Math.max(0.22, Math.min(2.35, numberOr(transform.scale, 1))),
-      offsetX: Math.max(-100, Math.min(100, numberOr(transform.offsetX, 0))),
+      offsetX: Math.max(-140, Math.min(140, numberOr(transform.offsetX, 0))),
       // Todos os lados usam a área criativa completa, inclusive mangas.
-      offsetY: Math.max(-100, Math.min(100, numberOr(transform.offsetY, 0))),
+      offsetY: Math.max(-140, Math.min(140, numberOr(transform.offsetY, 0))),
       // Rotação da estampa em graus (-180 a 180). Aplicada aqui, na
       // composição 2D — o decal 3D projeta a imagem já rotacionada, sem
       // precisar mexer no motor three.js.

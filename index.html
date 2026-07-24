@@ -1159,10 +1159,10 @@
   <script src="assets/js/public-api.js?v=21"></script>
   <!-- Motor dos estilos de texto (compartilhado com camisas-de-frases.html)
        e dados das frases: precisam vir ANTES do main.js. -->
-  <script src="assets/js/layer-engine.js?v=13"></script>
+  <script src="assets/js/layer-engine.js?v=14"></script>
   <script src="assets/js/text-print-engine.js?v=22"></script>
   <script src="assets/js/frases-data.js?v=19"></script>
-  <script src="assets/js/main.js?v=56"></script>
+  <script src="assets/js/main.js?v=57"></script>
   <script src="assets/js/public-catalog.js?v=21"></script>
   <script src="assets/js/header-search.js?v=1"></script>
   <!-- Manequim 3D ADIADO: three.js + modelo GLB somam ~3 MB e travavam
@@ -1302,7 +1302,7 @@
       started = true;
       events.forEach(([target, name]) => target.removeEventListener(name, load3d));
       showLoading();
-      import('./assets/js/viewer3d.js?v=43')
+      import('./assets/js/viewer3d.js?v=44')
         .catch((error) => {
           console.warn('Manequim 3D indisponível, mantendo o palco 2D:', error);
           finishLoading(false);

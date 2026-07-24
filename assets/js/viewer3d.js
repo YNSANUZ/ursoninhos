@@ -477,8 +477,12 @@ function computeAnchors(model) {
    da arte gira o manequim normalmente. O movimento é relativo ao
    ponto onde o dedo pegou a arte, então ela não "pula" no clique.
    Os limites espelham os das setas no main.js. */
-const DRAG_LIMIT_X_PCT = 100;
-const DRAG_LIMIT_Y_PCT = 100;
+const DRAG_LIMIT_X_PCT = 140;
+const DRAG_LIMIT_Y_PCT = 140;
+// O palco termina próximo à barra da camisa. Multiplicar a distância do
+// ponteiro permite levar imagens e textos até além das costuras sem exigir
+// que o usuário arraste o mouse para fora da área interativa.
+const DRAG_DISTANCE_MULTIPLIER = 1.85;
 // Passos menores permitem encontrar tamanhos intermediários da arte com
 // precisão, especialmente em mouses que enviam pulsos grandes de scroll.
 const SCALE_WHEEL_STEP = 0.01;
@@ -594,8 +598,8 @@ function setupDecalDrag() {
     const config = SIDE_CONFIG[dragSide];
     if (!sideState || !config) return;
 
-    const deltaX = ((event.clientX - startClientX) * worldPerPixel) / OFFSET_X_M_PER_PCT;
-    const deltaY = ((event.clientY - startClientY) * worldPerPixel) / OFFSET_Y_M_PER_PCT;
+    const deltaX = ((event.clientX - startClientX) * worldPerPixel * DRAG_DISTANCE_MULTIPLIER) / OFFSET_X_M_PER_PCT;
+    const deltaY = ((event.clientY - startClientY) * worldPerPixel * DRAG_DISTANCE_MULTIPLIER) / OFFSET_Y_M_PER_PCT;
 
     sideState.offsetX = clamp(startOffsetX + deltaX, -DRAG_LIMIT_X_PCT, DRAG_LIMIT_X_PCT);
     sideState.offsetY = clamp(startOffsetY + deltaY, -DRAG_LIMIT_Y_PCT, DRAG_LIMIT_Y_PCT);
