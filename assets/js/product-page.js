@@ -491,8 +491,12 @@ async function saveAdminEdits(event) {
 
   const creatorName = String(productEditorCreator?.value || '').trim() || 'Loja Ursoninhos';
   const plainDescription = String(productEditorDescription?.value || '').trim();
+  const manualImage = String(productEditorCatalogImage?.value || '').trim();
+  if (/^https:\/\//i.test(manualImage) && !editorGalleryUrls.includes(manualImage) && editorGalleryUrls.length < 5) {
+    editorGalleryUrls.push(manualImage);
+  }
   const coverIndex = Math.min(Math.max(editorCoverIndex, 0), Math.max(editorGalleryUrls.length - 1, 0));
-  const coverImage = editorGalleryUrls[coverIndex] || String(productEditorCatalogImage?.value || '').trim();
+  const coverImage = editorGalleryUrls[coverIndex] || manualImage;
   const payload = {
     title: String(productEditorTitle?.value || '').trim(),
     price: Number(productEditorPrice?.value || 0),
