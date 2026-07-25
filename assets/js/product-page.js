@@ -68,12 +68,15 @@ let viewerReady = false;
 let editorOpen = false;
 let editorGalleryUrls = [];
 let editorCoverIndex = 0;
+let autoOpen3dTimer = null;
 const HERO_EDITOR_RESUME_KEY = 'ursoninhos_resume_editor';
 const PRINT_COMPOSITE_WORKSPACE_SCALE = 6;
 let currentProductMeta = { categories: [], tags: [], hasModel: false, modelUrl: '', modelTriangles: 0 };
 const IMGBB_API_KEY = 'b7150269142e0e38166f3e528598d051';
 const PRODUCT_META_URL = `${window.URSONINHOS_APP_CONFIG?.backendBaseUrl || 'https://primusdf.com.br/_ursoninhos_backend/api'}/product-meta.php`;
 const CARD_MOCKUP_URL = 'assets/img/camisa-modelo-card.jpg';
+const CARD_MOCKUP_BACK_URL = 'assets/img/camisa-modelo-card-back.jpg';
+const AUTO_OPEN_3D_DELAY_MS = 6000;
 const PREVIEW_CANVAS_SIZE = 900;
 const PREVIEW_PRINT_CENTER_X = 0.478;
 const PREVIEW_PRINT_TOP_Y = 0.30;
@@ -438,41 +441,56 @@ async function handleEditorImages() {
   }
 }
 
-function renderProductGallery(product, fallbackPhoto) {
+function renderProductGallery(product, fallbackPhoto, backHangingPhoto = '') {
   if (!productThumbs || !productThumbPhoto || !productThumb3d) return;
   productThumbs.querySelectorAll('[data-gallery-photo]').forEach((item) => item.remove());
 
+  const isPhysical = product?.productType === 'produto-3d-fisico' || product?.requiresSize === false;
   const gallery = Array.isArray(product?.gallery)
     ? product.gallery.filter((url) => /^https:\/\//i.test(String(url || ''))).slice(0, 5)
     : [];
   const coverIndex = Math.min(Math.max(Number(product?.coverIndex || 0), 0), Math.max(gallery.length - 1, 0));
-  const photos = gallery.length ? gallery : [fallbackPhoto].filter(Boolean);
+  const photos = isPhysical
+    ? (gallery.length ? gallery : [fallbackPhoto].filter(Boolean)).map((url, index) => ({
+        url,
+        label: `Ver foto ${index + 1}`,
+      }))
+    : [
+        fallbackPhoto ? { url: fallbackPhoto, label: 'Ver frente no cabide' } : null,
+        backHangingPhoto ? { url: backHangingPhoto, label: 'Ver costas no cabide' } : null,
+        ...gallery
+          .filter((url) => url !== fallbackPhoto && url !== backHangingPhoto)
+          .map((url, index) => ({ url, label: `Ver foto adicional ${index + 1}` })),
+      ].filter(Boolean);
 
   if (photos.length) {
-    const coverPhoto = photos[coverIndex] || photos[0];
-    setPhotoPreview(coverPhoto, product.title);
-    productThumbPhoto.innerHTML = `<img src="${coverPhoto}" alt="${product.title ? `Miniatura ${product.title}` : 'Miniatura do produto'}">`;
+    const primaryIndex = isPhysical ? coverIndex : 0;
+    const coverPhoto = photos[primaryIndex] || photos[0];
+    setPhotoPreview(coverPhoto.url, product.title);
+    productThumbPhoto.setAttribute('aria-label', coverPhoto.label);
+    productThumbPhoto.innerHTML = `<img src="${coverPhoto.url}" alt="${product.title ? `Miniatura ${product.title}` : 'Miniatura do produto'}">`;
     productThumbPhoto.onclick = () => {
-      setPhotoPreview(coverPhoto, product.title);
+      setPhotoPreview(coverPhoto.url, product.title);
       showPhotoMedia();
       productThumbs.querySelectorAll('.pf-thumb').forEach((thumb) => thumb.classList.remove('is-active'));
       productThumbPhoto.classList.add('is-active');
     };
   }
 
-  photos.forEach((url, index) => {
-    if (index === coverIndex) return;
+  photos.forEach((photo, index) => {
+    const primaryIndex = isPhysical ? coverIndex : 0;
+    if (index === primaryIndex) return;
     const button = document.createElement('button');
     button.type = 'button';
     button.className = 'pf-thumb';
     button.dataset.galleryPhoto = String(index);
-    button.setAttribute('aria-label', `Ver foto ${index + 1}`);
+    button.setAttribute('aria-label', photo.label);
     const image = document.createElement('img');
-    image.src = url;
-    image.alt = `Miniatura ${index + 1} de ${product.title || 'produto'}`;
+    image.src = photo.url;
+    image.alt = `${photo.label} de ${product.title || 'produto'}`;
     button.appendChild(image);
     button.addEventListener('click', () => {
-      setPhotoPreview(url, product.title);
+      setPhotoPreview(photo.url, product.title);
       showPhotoMedia();
       productThumbs.querySelectorAll('.pf-thumb').forEach((thumb) => thumb.classList.remove('is-active'));
       button.classList.add('is-active');
@@ -480,7 +498,6 @@ function renderProductGallery(product, fallbackPhoto) {
     productThumbs.insertBefore(button, productThumb3d);
   });
 
-  const isPhysical = product?.productType === 'produto-3d-fisico' || product?.requiresSize === false;
   const hasShirtViewer = !isPhysical && Object.values(product?.model || {}).some(Boolean);
   productThumb3d.hidden = !hasShirtViewer;
 }
@@ -495,10 +512,10 @@ function loadImage(src) {
   });
 }
 
-async function buildFlatMockup(printUrl, transform = {}, blend = 'screen') {
+async function buildFlatMockup(printUrl, transform = {}, blend = 'screen', mockupUrl = CARD_MOCKUP_URL) {
   if (!printUrl) return '';
 
-  const cacheKey = JSON.stringify({ printUrl, transform, blend });
+  const cacheKey = JSON.stringify({ printUrl, transform, blend, mockupUrl });
   if (previewCache.has(cacheKey)) return previewCache.get(cacheKey);
 
   const promise = (async () => {
@@ -507,7 +524,7 @@ async function buildFlatMockup(printUrl, transform = {}, blend = 'screen') {
     canvas.height = PREVIEW_CANVAS_SIZE;
     const ctx = canvas.getContext('2d');
 
-    const base = await loadImage(CARD_MOCKUP_URL);
+    const base = await loadImage(mockupUrl);
     ctx.drawImage(base, 0, 0, canvas.width, canvas.height);
 
     const printImage = await loadImage(printUrl);
@@ -529,6 +546,18 @@ async function buildFlatMockup(printUrl, transform = {}, blend = 'screen') {
 
   previewCache.set(cacheKey, promise);
   return promise;
+}
+
+async function resolveBackHangingPhoto(product) {
+  const backLayers = layerEngine?.normalizeSide(product?.model?.back) || [];
+  if (!backLayers.length) return '';
+  try {
+    const composite = await layerEngine.composeLayers(backLayers, { side: 'back' });
+    return await buildFlatMockup(composite, {}, 'normal', CARD_MOCKUP_BACK_URL);
+  } catch (error) {
+    console.warn('Não foi possível gerar o cabide traseiro:', error);
+    return '';
+  }
 }
 
 async function resolvePrimaryPhoto(product) {
@@ -650,8 +679,9 @@ async function renderProductInfo(product) {
   }
 
   const photoSrc = await resolvePrimaryPhoto(product);
+  const backHangingPhoto = await resolveBackHangingPhoto(product);
   setPhotoPreview(photoSrc, product.title);
-  renderProductGallery(product, photoSrc);
+  renderProductGallery(product, photoSrc, backHangingPhoto);
 
   const isPhysical = product?.productType === 'produto-3d-fisico' || product?.requiresSize === false;
   if (productSizeField) productSizeField.hidden = isPhysical;
@@ -676,6 +706,22 @@ async function renderProductInfo(product) {
       <div class="pf-benefit"><div><strong>Produção Ursoninhos</strong><span>Acabamento pronto para vender</span></div></div>
     `;
   }
+}
+
+function scheduleAutomatic3dReveal(product) {
+  clearTimeout(autoOpen3dTimer);
+  const isPhysical = product?.productType === 'produto-3d-fisico' || product?.requiresSize === false;
+  const hasShirtViewer = !isPhysical && Object.values(product?.model || {}).some(Boolean);
+  if (!hasShirtViewer) return;
+
+  autoOpen3dTimer = setTimeout(async () => {
+    try {
+      await ensureViewer(product);
+      showViewerMedia();
+    } catch (error) {
+      console.warn('Visualização 3D automática indisponível:', error);
+    }
+  }, AUTO_OPEN_3D_DELAY_MS);
 }
 
 function addCurrentProductToCart() {
@@ -924,6 +970,7 @@ async function init() {
 
   await renderProductInfo(currentProduct);
   showPhotoMedia();
+  scheduleAutomatic3dReveal(currentProduct);
 
   if (isAdminUser() && shouldOpenEditor) {
     toggleEditor(true);
