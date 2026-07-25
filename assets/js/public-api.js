@@ -43,10 +43,18 @@
 
   async function getProduct(id) {
     await loadShortPaths();
-    const response = await fetch(`${baseUrl}/products.php?id=${encodeURIComponent(id)}`, { cache: 'no-store' });
+    const requestedKey = String(id || '');
+    const mappedId = /^\d{4}$/.test(requestedKey)
+      ? Object.keys(publicProductShortPaths).find((productId) => publicProductShortPaths[productId] === `/${requestedKey}/`)
+      : requestedKey;
+    const response = await fetch(`${baseUrl}/products.php?id=${encodeURIComponent(mappedId || requestedKey)}`, { cache: 'no-store' });
     const payload = await readJson(response);
     const product = payload.product || null;
     if (!product) return null;
+    if (publicProductShortPaths[product.id]) {
+      product.shortPath = publicProductShortPaths[product.id];
+      product.shortId = product.shortPath.replace(/\D/g, '');
+    }
     try {
       const metaResponse = await fetch(`${baseUrl}/product-meta.php?id=${encodeURIComponent(product.id)}`, { cache: 'no-store' });
       const metaPayload = await readJson(metaResponse);

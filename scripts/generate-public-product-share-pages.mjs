@@ -35,7 +35,7 @@ function allocateShortId(used) {
   return candidate;
 }
 
-function pageHtml(product, shortId) {
+function pageHtml(product, shortId, productTemplate) {
   const title = cleanText(product.title || 'Produto Ursoninhos', 120);
   const price = Number(product.price || 0).toLocaleString('pt-BR', {
     style: 'currency',
@@ -46,15 +46,7 @@ function pageHtml(product, shortId) {
   const coverIndex = Math.min(Math.max(Number(product.coverIndex || 0), 0), Math.max(gallery.length - 1, 0));
   const image = gallery[coverIndex] || product.catalogImage || product.views?.front || `${SITE_URL}/assets/img/icon-512.png`;
   const canonical = `${SITE_URL}/${shortId}/`;
-  const destination = `/produto.html?id=${encodeURIComponent(product.id)}`;
-
-  return `<!doctype html>
-<html lang="pt-BR">
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>${escapeHtml(title)} | Ursoninhos</title>
-  <meta name="description" content="${escapeHtml(description)}">
+  const socialMeta = `
   <link rel="canonical" href="${canonical}">
   <meta property="og:type" content="product">
   <meta property="og:site_name" content="Ursoninhos">
@@ -70,21 +62,22 @@ function pageHtml(product, shortId) {
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:title" content="${escapeHtml(title)} | Ursoninhos">
   <meta name="twitter:description" content="${escapeHtml(description)}">
-  <meta name="twitter:image" content="${escapeHtml(image)}">
-  <meta http-equiv="refresh" content="0;url=${escapeHtml(destination)}">
-  <script>window.location.replace(${JSON.stringify(destination)});</script>
-</head>
-<body>
-  <p><a href="${escapeHtml(destination)}">Abrir produto Ursoninhos</a></p>
-</body>
-</html>
-`;
+  <meta name="twitter:image" content="${escapeHtml(image)}">`;
+
+  return productTemplate
+    .replace('<head>', '<head>\n<base href="/">')
+    .replace(/<title>[^<]*<\/title>/, `<title>${escapeHtml(title)} | Ursoninhos</title>`)
+    .replace(
+      /<meta name="description" content="[^"]*">/,
+      `<meta name="description" content="${escapeHtml(description)}">${socialMeta}`
+    );
 }
 
 const response = await fetch(API_URL, { headers: { Accept: 'application/json' } });
 if (!response.ok) throw new Error(`API de produtos respondeu ${response.status}.`);
 const payload = await response.json();
 const products = Array.isArray(payload.products) ? payload.products.filter((product) => product?.id) : [];
+const productTemplate = await readFile(path.join(ROOT, 'produto.html'), 'utf8');
 const mapping = await readJson(MAP_FILE, {});
 const previouslyGenerated = await readJson(GENERATED_FILE, []);
 const used = new Set(Object.values(mapping).filter((value) => /^\d{4}$/.test(String(value))));
@@ -112,7 +105,7 @@ for (const product of products) {
   const shortId = String(mapping[product.id]);
   const directory = path.join(ROOT, shortId);
   await mkdir(directory, { recursive: true });
-  await writeFile(path.join(directory, 'index.html'), pageHtml(product, shortId), 'utf8');
+  await writeFile(path.join(directory, 'index.html'), pageHtml(product, shortId, productTemplate), 'utf8');
 }
 
 await writeFile(MAP_FILE, `${JSON.stringify(mapping, null, 2)}\n`, 'utf8');
