@@ -1,4 +1,4 @@
-import { createInteractiveViewer } from './interactive-viewer3d.js?v=6';
+import { createInteractiveViewer } from './interactive-viewer3d.js?v=7';
 import { createProductStlViewer } from './product-stl-viewer.js?v=2';
 import * as THREE from 'three';
 import { STLLoader } from 'three/addons/loaders/STLLoader.js';
@@ -79,6 +79,34 @@ const CARD_MOCKUP_BACK_URL = 'assets/img/camisa-modelo-card-back.jpg?v=2';
 const AUTO_OPEN_3D_DELAY_MS = 6000;
 const PREVIEW_CANVAS_SIZE = 900;
 const PREVIEW_PRINT_CENTER_X = 0.478;
+
+function recoverDistinctShirtSides(product, products = []) {
+  const frontUrl = String(product?.model?.front?.url || '');
+  const backUrl = String(product?.model?.back?.url || '');
+  if (!frontUrl || !backUrl || frontUrl !== backUrl) return product;
+
+  const normalizedTitle = String(product?.title || '').trim().toLocaleLowerCase('pt-BR');
+  const candidates = products.filter((candidate) => {
+    if (!candidate || candidate.id === product.id) return false;
+    if (String(candidate.title || '').trim().toLocaleLowerCase('pt-BR') !== normalizedTitle) return false;
+    const candidateFront = String(candidate?.model?.front?.url || '');
+    const candidateBack = String(candidate?.model?.back?.url || '');
+    return candidateFront && candidateBack && candidateFront !== candidateBack;
+  });
+
+  // Só recupera automaticamente quando há uma única versão inequívoca.
+  // Isso corrige publicações antigas nas quais o backend copiou as costas
+  // sobre a frente, sem arriscar misturar produtos de nomes genéricos.
+  if (candidates.length !== 1) return product;
+  return {
+    ...product,
+    model: {
+      ...(product.model || {}),
+      front: candidates[0].model.front,
+      back: candidates[0].model.back,
+    },
+  };
+}
 const PREVIEW_PRINT_TOP_Y = 0.30;
 const PREVIEW_PRINT_SIZE = 0.34;
 const previewCache = new Map();
@@ -613,7 +641,11 @@ async function ensureViewer(product) {
     return;
   }
 
-  viewer = await createInteractiveViewer({ container: productViewerEl, cameraDistance: 2.15 });
+  viewer = await createInteractiveViewer({
+    container: productViewerEl,
+    cameraDistance: 2.15,
+    lockRotationCenter: true,
+  });
 
   const sides = [
     ['front', product.model?.front],
@@ -965,6 +997,14 @@ async function init() {
   syncShortUrl(currentProduct);
   await readProductMeta(currentProduct.id);
 
+  let allProducts = [];
+  try {
+    allProducts = await api.listProducts();
+    currentProduct = recoverDistinctShirtSides(currentProduct, allProducts);
+  } catch (error) {
+    console.warn('Catálogo complementar indisponível; abrindo o produto original.', error);
+  }
+
   try {
     const linhas = await window.UrsoninhosSheet?.load();
     const row = linhas?.[currentProduct.id];
@@ -983,7 +1023,6 @@ async function init() {
     productEditorForm?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  const allProducts = await api.listProducts();
   renderRelatedProducts(allProducts);
 }
 

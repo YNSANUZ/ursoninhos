@@ -96,7 +96,12 @@ function computeAnchors(mannequinMesh, model) {
   };
 }
 
-export async function createInteractiveViewer({ container, cameraDistance = EDITOR_CAMERA_DISTANCE, shirtColor = 'black' }) {
+export async function createInteractiveViewer({
+  container,
+  cameraDistance = EDITOR_CAMERA_DISTANCE,
+  shirtColor = 'black',
+  lockRotationCenter = false,
+}) {
   const state = {
     front: makeSideState(),
     back: makeSideState(),
@@ -122,9 +127,12 @@ export async function createInteractiveViewer({ container, cameraDistance = EDIT
   const camera = new THREE.PerspectiveCamera(28, (container.clientWidth || 1) / (container.clientHeight || 1), 0.01, 20);
   const controls = new OrbitControls(camera, renderer.domElement);
   controls.enableZoom = true;
-  controls.enablePan = true;
+  controls.enablePan = !lockRotationCenter;
   controls.screenSpacePanning = true;
-  controls.zoomToCursor = true;
+  // Na página do produto o zoom deve conservar o alvo no centro da camisa.
+  // zoomToCursor deslocava o pivô conforme a posição do mouse e fazia a peça
+  // orbitar pela manga em vez de simplesmente girar sobre o próprio eixo.
+  controls.zoomToCursor = !lockRotationCenter;
   controls.mouseButtons.LEFT = THREE.MOUSE.ROTATE;
   controls.mouseButtons.MIDDLE = THREE.MOUSE.PAN;
   controls.mouseButtons.RIGHT = THREE.MOUSE.PAN;
