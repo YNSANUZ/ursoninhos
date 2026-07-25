@@ -1658,6 +1658,13 @@ const heroQtyDecrease = document.getElementById('heroQtyDecrease');
 const heroQtyIncrease = document.getElementById('heroQtyIncrease');
 const HERO_EDITOR_RESUME_KEY = 'ursoninhos_resume_editor';
 let heroEditingProduct = null;
+const editorUndoBtn = document.getElementById('editorUndoBtn');
+const editorUndoStack = [];
+const EDITOR_UNDO_LIMIT = 16;
+let editorHistoryCurrent = null;
+let editorHistoryTimer = null;
+let editorHistoryAsyncTimer = null;
+let editorHistoryRestoring = false;
 
 function formatBRL(value) {
   return shopStore ? shopStore.formatBRL(value) : value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -1772,6 +1779,72 @@ function buildEditorState(size = '') {
     activeLayerIndexes: { ...activeLayerIndexes },
   };
 }
+
+function captureEditorHistoryState() {
+  return {
+    ...buildEditorState(heroSizeSelect?.value || ''),
+    editingProduct: heroEditingProduct ? { ...heroEditingProduct } : null,
+  };
+}
+
+function editorHistorySignature(snapshot) {
+  return JSON.stringify(snapshot);
+}
+
+function refreshEditorUndoButton() {
+  if (editorUndoBtn) editorUndoBtn.disabled = editorUndoStack.length === 0;
+}
+
+function commitEditorHistory() {
+  if (editorHistoryRestoring) return;
+  const next = captureEditorHistoryState();
+  if (!editorHistoryCurrent) {
+    editorHistoryCurrent = next;
+    refreshEditorUndoButton();
+    return;
+  }
+  if (editorHistorySignature(next) === editorHistorySignature(editorHistoryCurrent)) return;
+  editorUndoStack.push(editorHistoryCurrent);
+  if (editorUndoStack.length > EDITOR_UNDO_LIMIT) editorUndoStack.shift();
+  editorHistoryCurrent = next;
+  refreshEditorUndoButton();
+}
+
+function scheduleEditorHistoryCommit() {
+  if (editorHistoryRestoring) return;
+  clearTimeout(editorHistoryTimer);
+  clearTimeout(editorHistoryAsyncTimer);
+  editorHistoryTimer = setTimeout(commitEditorHistory, 220);
+  // Uploads e geração de texto terminam de forma assíncrona.
+  editorHistoryAsyncTimer = setTimeout(commitEditorHistory, 1400);
+}
+
+async function undoEditorChange() {
+  const previous = editorUndoStack.pop();
+  if (!previous) return;
+  editorHistoryRestoring = true;
+  try {
+    restoreHeroEditorState(previous);
+    await syncAllSidePrintsToViewer();
+    editorHistoryCurrent = captureEditorHistoryState();
+  } finally {
+    editorHistoryRestoring = false;
+    refreshEditorUndoButton();
+  }
+}
+
+editorUndoBtn?.addEventListener('click', undoEditorChange);
+
+// Registra somente estados que realmente mudaram. Assim girar a câmera ou
+// trocar de aba não cria passos vazios no histórico.
+document.getElementById('hero')?.addEventListener('click', (event) => {
+  if (event.target.closest('#editorUndoBtn, #editPanelCloseBtn, .edit-panel__tab')) return;
+  scheduleEditorHistoryCommit();
+});
+document.getElementById('hero')?.addEventListener('change', scheduleEditorHistoryCommit);
+document.getElementById('hero')?.addEventListener('input', scheduleEditorHistoryCommit);
+document.getElementById('hero')?.addEventListener('pointerup', scheduleEditorHistoryCommit);
+document.getElementById('hero')?.addEventListener('wheel', scheduleEditorHistoryCommit, { passive: true });
 
 function ensurePrintAvailable(printData) {
   if (!printData?.file) return null;
@@ -2219,6 +2292,8 @@ refreshHeroCard();
 // A restauração pode atualizar o tamanho selecionado; só deve rodar
 // depois que os botões de tamanho já foram inicializados.
 consumePendingHeroEditorResume();
+editorHistoryCurrent = captureEditorHistoryState();
+refreshEditorUndoButton();
 
 addToCartBtn?.addEventListener('click', async () => {
   // Adiciona a estampa que está VESTIDA na camisa (mockup), que não é

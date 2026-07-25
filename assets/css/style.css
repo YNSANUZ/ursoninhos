@@ -5426,6 +5426,34 @@ ul {
   text-align: center;
 }
 
+.edit-panel__head-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.edit-panel__undo {
+  min-height: 34px;
+  padding: 6px 11px;
+  border: 1px solid rgba(232, 173, 86, 0.45);
+  border-radius: 999px;
+  background: rgba(232, 173, 86, 0.08);
+  color: var(--color-gold, #e8ad56);
+  font: inherit;
+  font-size: 0.76rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.edit-panel__undo:hover:not(:disabled) {
+  background: rgba(232, 173, 86, 0.18);
+}
+
+.edit-panel__undo:disabled {
+  opacity: 0.38;
+  cursor: default;
+}
+
 .image-treatment {
   display: grid;
   gap: 8px;
