@@ -766,7 +766,10 @@ function init() {
   camera = new THREE.PerspectiveCamera(28, container.clientWidth / container.clientHeight, 0.01, 20);
   // Luz de observação acompanha a câmera: costas e laterais continuam
   // legíveis enquanto o usuário gira a camisa, sem aparência chapada.
-  camera.add(new THREE.PointLight(0xffead2, 1.15, 12, 1.6));
+  const cameraFill = new THREE.DirectionalLight(0xffead2, 1.45);
+  cameraFill.position.set(0, 0, 0);
+  cameraFill.target.position.set(0, 0, -1);
+  camera.add(cameraFill, cameraFill.target);
   scene.add(camera);
 
   controls = new OrbitControls(camera, interactionSurface);
