@@ -1878,8 +1878,9 @@ function restoreHeroEditorState(state) {
 
   refreshHeroPriceNote();
   heroEditingProduct = state.editingProduct?.id ? { ...state.editingProduct } : null;
-  if (publishModelBtn && heroEditingProduct) {
-    publishModelBtn.textContent = 'Salvar alterações da camisa';
+  const resumePublishButton = document.getElementById('publishModelBtn');
+  if (resumePublishButton && heroEditingProduct) {
+    resumePublishButton.textContent = 'Salvar alterações da camisa';
   }
   return true;
 }
