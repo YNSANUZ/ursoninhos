@@ -272,7 +272,7 @@
           <div class="stage-view-tools" aria-label="Controles de visualização">
             <label class="stage-zoom-control" for="stageZoomRange">
               <span class="stage-zoom-control__icon" aria-hidden="true">+</span>
-              <input type="range" id="stageZoomRange" min="0" max="100" step="1" value="50" aria-label="Zoom da visualização 3D">
+              <input type="range" id="stageZoomRange" min="0" max="100" step="5" value="50" aria-label="Zoom da visualização 3D">
               <span class="stage-zoom-control__icon" aria-hidden="true">−</span>
             </label>
             <button type="button" class="stage-play-toggle stage-view-tools__play" data-auto-rotate-toggle aria-label="Pausar troca automática de estampas">
@@ -1303,7 +1303,7 @@
       started = true;
       events.forEach(([target, name]) => target.removeEventListener(name, load3d));
       showLoading();
-      import('./assets/js/viewer3d.js?v=44')
+      import('./assets/js/viewer3d.js?v=45')
         .catch((error) => {
           console.warn('Manequim 3D indisponível, mantendo o palco 2D:', error);
           finishLoading(false);

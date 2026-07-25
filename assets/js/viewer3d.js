@@ -219,7 +219,12 @@ function setTransform({ scale, offsetX, offsetY }, side = 'front') {
 function setShirtColor(color) {
   if (!SHIRT_COLORS[color] || color === shirtColor) return;
   shirtColor = color;
-  if (shirtMaterial) shirtMaterial.color.setHex(SHIRT_COLORS[color]);
+  if (shirtMaterial) {
+    shirtMaterial.color.setHex(SHIRT_COLORS[color]);
+    // No preto, um normal map muito forte criava uma mancha isolada no
+    // peito. Mantemos as dobras, mas com relevo mais discreto.
+    shirtMaterial.normalScale.setScalar(color === 'black' ? 0.24 : 0.5);
+  }
   if (neckLabelMesh) neckLabelMesh.material.color.setHex(NECK_LABEL_TINT[color]);
   // As artes "screen" mudam de desenho conforme a cor do tecido
   // (ver makeDecal) — reprojeta todos os lados.
@@ -753,10 +758,10 @@ function init() {
   const fillLight = new THREE.DirectionalLight(0xffe6c7, 0.68);
   fillLight.position.set(-0.55, 1.2, 1.05);
   scene.add(fillLight);
-  const backLight = new THREE.DirectionalLight(0xffe1bf, 1.26);
+  const backLight = new THREE.DirectionalLight(0xffead1, 2.05);
   backLight.position.set(0.08, 1.4, -1.02);
   scene.add(backLight);
-  scene.add(new THREE.AmbientLight(0xcf9551, 0.42));
+  scene.add(new THREE.AmbientLight(0xf0c995, 0.56));
 
   camera = new THREE.PerspectiveCamera(28, container.clientWidth / container.clientHeight, 0.01, 20);
 
@@ -767,7 +772,7 @@ function init() {
   // Alguns mouses enviam vários eventos para um único movimento da roda.
   // Uma velocidade bem baixa evita que esses pulsos acumulados lancem a
   // câmera de muito perto para muito longe.
-  controls.zoomSpeed = 0.04;
+  controls.zoomSpeed = 0.12;
   controls.enablePan = true;
   controls.screenSpacePanning = true;
   controls.zoomToCursor = true;
@@ -817,6 +822,7 @@ function init() {
       shirtMaterial = new THREE.MeshStandardMaterial({
         color: SHIRT_COLORS[shirtColor],
         normalMap: originalMaterial?.normalMap || null,
+        normalScale: new THREE.Vector2(0.24, 0.24),
         roughness: 0.88,
         metalness: 0,
       });
