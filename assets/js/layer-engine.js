@@ -173,7 +173,11 @@
     const ctx = canvas.getContext('2d');
     const baseRatio = Number(options.baseRatio ?? (isBodySide ? 0.68 : 1));
     const offsetXReach = isBodySide ? 1.55 : 1;
-    const offsetYReach = isBodySide ? 1.45 : 1;
+    // A manga é curta e inclinada no modelo. Com alcance 1, o controle
+    // chegava ao limite antes de a arte alcançar a costura inferior.
+    // Ampliamos apenas o eixo vertical das mangas; o usuário pode levar
+    // a estampa até a barra (ou além dela, se esse for o efeito desejado).
+    const offsetYReach = isBodySide ? 1.45 : 2;
 
     for (const layer of normalized) {
       const image = await loadImage(layer.url);
