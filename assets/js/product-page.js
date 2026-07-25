@@ -221,7 +221,7 @@ function openShirtInFullEditor() {
       shortPath: api.getProductPath(currentProduct),
     },
   }));
-  window.location.href = '/#hero';
+  window.location.href = '/?editar-camisa=1#hero';
 }
 
 function setPhotoPreview(src, title) {
