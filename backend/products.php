@@ -18,33 +18,23 @@
    (se o seu atual usa outro nome, ajuste DATA_FILE abaixo).
    ========================================================= */
 
-const DATA_FILE = __DIR__ . '/products.json';
-const ADMIN_KEY = 'TROQUE-ESTA-CHAVE'; // usada só para DELETE
+declare(strict_types=1);
+
+require __DIR__ . '/bootstrap.php';
+
 const MAX_PRICE = 500;
 const PUBLIC_SHORT_ID_BASE = 8600;
 
-header('Content-Type: application/json; charset=utf-8');
-header('Access-Control-Allow-Origin: *');
 header('Access-Control-Allow-Methods: GET, POST, DELETE, OPTIONS');
-header('Access-Control-Allow-Headers: Content-Type, Authorization');
-
-if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-    exit;
-}
 
 function respond($payload, $status = 200)
 {
-    http_response_code($status);
-    echo json_encode($payload, JSON_UNESCAPED_UNICODE);
-    exit;
+    send_json($payload, $status);
 }
 
 function loadProducts()
 {
-    if (!file_exists(DATA_FILE)) return [];
-    $raw = file_get_contents(DATA_FILE);
-    $data = json_decode($raw, true);
-    $products = is_array($data) ? $data : [];
+    $products = load_products();
     $changed = false;
     $products = ensureShortLinks($products, $changed);
     if ($changed) {
@@ -55,10 +45,10 @@ function loadProducts()
 
 function saveProducts($products)
 {
-    file_put_contents(DATA_FILE, json_encode(array_values($products), JSON_UNESCAPED_UNICODE), LOCK_EX);
+    save_products(array_values($products));
 }
 
-function slugify($text)
+function productSlugify($text)
 {
     $slug = strtolower(trim(preg_replace('/[^a-zA-Z0-9]+/', '-', iconv('UTF-8', 'ASCII//TRANSLIT', $text)), '-'));
     return $slug !== '' ? $slug : 'modelo';
@@ -253,6 +243,7 @@ if ($method === 'POST') {
 
     // Edição pelo painel ADM. Mantém id, link curto, vendas e criação.
     if (($_GET['action'] ?? '') === 'update') {
+        require_user(true);
         $id = (string) ($_GET['id'] ?? '');
         if ($id === '') respond(['ok' => false, 'error' => 'Produto obrigatorio.'], 400);
         $products = loadProducts();
@@ -291,6 +282,9 @@ if ($method === 'POST') {
         respond(['ok' => false, 'error' => 'Produto nao encontrado.'], 404);
     }
 
+    $isPhysicalProduct = (($_GET['action'] ?? '') === 'create-physical');
+    require_user($isPhysicalProduct);
+
     // Publicação de produto
     $title = trim((string) ($body['title'] ?? ''));
     if ($title === '') respond(['ok' => false, 'error' => 'Titulo obrigatorio.'], 400);
@@ -299,7 +293,7 @@ if ($method === 'POST') {
     $model = is_array($body['model'] ?? null) ? $body['model'] : [];
 
     $product = [
-        'id' => slugify($title) . '-' . substr((string) round(microtime(true) * 1000), -6),
+        'id' => productSlugify($title) . '-' . substr((string) round(microtime(true) * 1000), -6),
         'title' => mb_substr($title, 0, 120),
         'description' => mb_substr(trim((string) ($body['description'] ?? '')), 0, 600),
         'price' => min(MAX_PRICE, max(0, (float) ($body['price'] ?? 0))),
@@ -313,6 +307,8 @@ if ($method === 'POST') {
         'model' => normalizeModel($model),
         'createdAt' => date('c'),
         'status' => 'published',
+        'productType' => $isPhysicalProduct ? 'produto-3d-fisico' : (string) ($body['productType'] ?? 'camisa-3d'),
+        'requiresSize' => $isPhysicalProduct ? false : (bool) ($body['requiresSize'] ?? true),
     ];
 
     $products = loadProducts();
@@ -325,9 +321,7 @@ if ($method === 'POST') {
 }
 
 if ($method === 'DELETE') {
-    if (($_GET['key'] ?? '') !== ADMIN_KEY) {
-        respond(['ok' => false, 'error' => 'Chave invalida.'], 403);
-    }
+    require_user(true);
     $id = $_GET['id'] ?? '';
     $products = loadProducts();
     $remaining = array_filter($products, fn($product) => !matchesProductKey($product, $id));
