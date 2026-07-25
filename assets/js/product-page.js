@@ -75,7 +75,7 @@ let currentProductMeta = { categories: [], tags: [], hasModel: false, modelUrl: 
 const IMGBB_API_KEY = 'b7150269142e0e38166f3e528598d051';
 const PRODUCT_META_URL = `${window.URSONINHOS_APP_CONFIG?.backendBaseUrl || 'https://primusdf.com.br/_ursoninhos_backend/api'}/product-meta.php`;
 const CARD_MOCKUP_URL = 'assets/img/camisa-modelo-card.jpg';
-const CARD_MOCKUP_BACK_URL = 'assets/img/camisa-modelo-card-back.jpg';
+const CARD_MOCKUP_BACK_URL = 'assets/img/camisa-modelo-card-back.jpg?v=2';
 const AUTO_OPEN_3D_DELAY_MS = 6000;
 const PREVIEW_CANVAS_SIZE = 900;
 const PREVIEW_PRINT_CENTER_X = 0.478;
