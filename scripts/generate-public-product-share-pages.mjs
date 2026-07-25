@@ -1,5 +1,5 @@
-import { randomInt } from 'node:crypto';
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { createHash, randomInt } from 'node:crypto';
+import { mkdir, readFile, readdir, rm, writeFile } from 'node:fs/promises';
 import { existsSync } from 'node:fs';
 import path from 'node:path';
 
@@ -7,6 +7,7 @@ const ROOT = path.resolve(import.meta.dirname, '..');
 const API_URL = 'https://primusdf.com.br/_ursoninhos_backend/api/products.php';
 const MAP_FILE = path.join(ROOT, 'assets', 'data', 'product-short-links.json');
 const GENERATED_FILE = path.join(ROOT, 'assets', 'data', 'generated-product-share-pages.json');
+const SOCIAL_IMAGE_DIR = path.join(ROOT, 'assets', 'img', 'share', 'products');
 const SITE_URL = 'https://ursoninhos.com';
 
 const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
@@ -35,16 +36,75 @@ function allocateShortId(used) {
   return candidate;
 }
 
-function pageHtml(product, shortId, productTemplate) {
+function coverSource(product) {
+  const gallery = Array.isArray(product.gallery) ? product.gallery : [];
+  const coverIndex = Math.min(Math.max(Number(product.coverIndex || 0), 0), Math.max(gallery.length - 1, 0));
+  return gallery[coverIndex] || product.catalogImage || product.views?.front || '';
+}
+
+function imageFormat(contentType, bytes) {
+  const type = String(contentType || '').toLowerCase();
+  if (type.includes('png') || bytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]))) {
+    return { extension: 'png', type: 'image/png' };
+  }
+  if (type.includes('webp') || bytes.subarray(8, 12).toString('ascii') === 'WEBP') {
+    return { extension: 'webp', type: 'image/webp' };
+  }
+  return { extension: 'jpg', type: 'image/jpeg' };
+}
+
+async function materializeSocialImage(product, shortId) {
+  const source = String(coverSource(product) || '');
+  let bytes;
+  let contentType = '';
+
+  if (source.startsWith('data:image/')) {
+    const match = source.match(/^data:([^;,]+)(?:;[^,]*)?;base64,(.+)$/s);
+    if (match) {
+      contentType = match[1];
+      bytes = Buffer.from(match[2], 'base64');
+    }
+  } else if (/^https:\/\//i.test(source)) {
+    const response = await fetch(source, { headers: { Accept: 'image/*' } });
+    if (response.ok) {
+      contentType = response.headers.get('content-type') || '';
+      bytes = Buffer.from(await response.arrayBuffer());
+    }
+  }
+
+  if (!bytes?.length) {
+    return {
+      url: `${SITE_URL}/assets/img/icon-512.png`,
+      type: 'image/png',
+    };
+  }
+
+  const format = imageFormat(contentType, bytes);
+  const hash = createHash('sha256').update(bytes).digest('hex').slice(0, 12);
+  const fileName = `${shortId}-${hash}.${format.extension}`;
+  await mkdir(SOCIAL_IMAGE_DIR, { recursive: true });
+  await writeFile(path.join(SOCIAL_IMAGE_DIR, fileName), bytes);
+
+  for (const existing of await readdir(SOCIAL_IMAGE_DIR)) {
+    if (existing.startsWith(`${shortId}-`) && existing !== fileName) {
+      await rm(path.join(SOCIAL_IMAGE_DIR, existing), { force: true });
+    }
+  }
+
+  return {
+    url: `${SITE_URL}/assets/img/share/products/${fileName}`,
+    type: format.type,
+  };
+}
+
+function pageHtml(product, shortId, productTemplate, socialImage) {
   const title = cleanText(product.title || 'Produto Ursoninhos', 120);
   const price = Number(product.price || 0).toLocaleString('pt-BR', {
     style: 'currency',
     currency: 'BRL',
   });
   const description = cleanText(`${product.description || 'Produto disponível na Ursoninhos.'} Por ${price}.`);
-  const gallery = Array.isArray(product.gallery) ? product.gallery : [];
-  const coverIndex = Math.min(Math.max(Number(product.coverIndex || 0), 0), Math.max(gallery.length - 1, 0));
-  const image = gallery[coverIndex] || product.catalogImage || product.views?.front || `${SITE_URL}/assets/img/icon-512.png`;
+  const image = socialImage.url;
   const canonical = `${SITE_URL}/${shortId}/`;
   const socialMeta = `
   <link rel="canonical" href="${canonical}">
@@ -55,6 +115,7 @@ function pageHtml(product, shortId, productTemplate) {
   <meta property="og:url" content="${canonical}">
   <meta property="og:image" content="${escapeHtml(image)}">
   <meta property="og:image:secure_url" content="${escapeHtml(image)}">
+  <meta property="og:image:type" content="${escapeHtml(socialImage.type)}">
   <meta property="og:image:alt" content="${escapeHtml(title)}">
   <meta property="og:locale" content="pt_BR">
   <meta property="product:price:amount" content="${Number(product.price || 0).toFixed(2)}">
@@ -104,8 +165,9 @@ await mkdir(path.dirname(MAP_FILE), { recursive: true });
 for (const product of products) {
   const shortId = String(mapping[product.id]);
   const directory = path.join(ROOT, shortId);
+  const socialImage = await materializeSocialImage(product, shortId);
   await mkdir(directory, { recursive: true });
-  await writeFile(path.join(directory, 'index.html'), pageHtml(product, shortId, productTemplate), 'utf8');
+  await writeFile(path.join(directory, 'index.html'), pageHtml(product, shortId, productTemplate, socialImage), 'utf8');
 }
 
 await writeFile(MAP_FILE, `${JSON.stringify(mapping, null, 2)}\n`, 'utf8');
