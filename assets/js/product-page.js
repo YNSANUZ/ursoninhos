@@ -201,7 +201,6 @@ function setPhotoPreview(src, title) {
   productImage.hidden = false;
   if (productImageLoading) productImageLoading.hidden = true;
   if (productThumbPhotoLoading) productThumbPhotoLoading.hidden = true;
-  productThumbPhoto.innerHTML = `<img src="${finalSrc}" alt="${title ? `Miniatura ${title}` : 'Miniatura do produto'}">`;
 }
 
 function splitTerms(value) {
@@ -414,9 +413,11 @@ function renderProductGallery(product, fallbackPhoto) {
   const photos = gallery.length ? gallery : [fallbackPhoto].filter(Boolean);
 
   if (photos.length) {
-    setPhotoPreview(photos[coverIndex] || photos[0], product.title);
+    const coverPhoto = photos[coverIndex] || photos[0];
+    setPhotoPreview(coverPhoto, product.title);
+    productThumbPhoto.innerHTML = `<img src="${coverPhoto}" alt="${product.title ? `Miniatura ${product.title}` : 'Miniatura do produto'}">`;
     productThumbPhoto.onclick = () => {
-      setPhotoPreview(photos[coverIndex] || photos[0], product.title);
+      setPhotoPreview(coverPhoto, product.title);
       showPhotoMedia();
       productThumbs.querySelectorAll('.pf-thumb').forEach((thumb) => thumb.classList.remove('is-active'));
       productThumbPhoto.classList.add('is-active');
