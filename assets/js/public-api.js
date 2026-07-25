@@ -38,6 +38,12 @@
       const metadata = metaPayload.products || {};
       products.forEach((product) => Object.assign(product, metadata[product.id] || {}));
     } catch (error) { /* backend antigo: produtos continuam disponíveis */ }
+    products.forEach((product) => {
+      const mappedPath = publicProductShortPaths[product.id];
+      if (!mappedPath) return;
+      product.shortPath = mappedPath;
+      product.shortId = mappedPath.replace(/\D/g, '');
+    });
     return products;
   }
 
