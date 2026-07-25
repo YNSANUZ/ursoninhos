@@ -50,6 +50,7 @@ const productEditorDescription = document.getElementById('productEditorDescripti
 const productEditorCategories = document.getElementById('productEditorCategories');
 const productEditorTags = document.getElementById('productEditorTags');
 const productEditorModel = document.getElementById('productEditorModel');
+const productEditorModelSection = document.getElementById('productEditorModelSection');
 const productEditorModelStatus = document.getElementById('productEditorModelStatus');
 const productEditorDeleteModel = document.getElementById('productEditorDeleteModel');
 const productTaxonomy = document.getElementById('productTaxonomy');
@@ -178,6 +179,8 @@ function fillEditor(product) {
   renderEditorGallery();
   if (productEditorCategories) productEditorCategories.value = (currentProductMeta.categories || []).join(', ');
   if (productEditorTags) productEditorTags.value = (currentProductMeta.tags || []).join(', ');
+  const isPhotoOnlyPhysicalProduct = product?.productType === 'produto-3d-fisico' || product?.requiresSize === false;
+  if (productEditorModelSection) productEditorModelSection.hidden = isPhotoOnlyPhysicalProduct;
   renderModelStatus();
 }
 
@@ -412,6 +415,12 @@ function renderProductGallery(product, fallbackPhoto) {
 
   if (photos.length) {
     setPhotoPreview(photos[coverIndex] || photos[0], product.title);
+    productThumbPhoto.onclick = () => {
+      setPhotoPreview(photos[coverIndex] || photos[0], product.title);
+      showPhotoMedia();
+      productThumbs.querySelectorAll('.pf-thumb').forEach((thumb) => thumb.classList.remove('is-active'));
+      productThumbPhoto.classList.add('is-active');
+    };
   }
 
   photos.forEach((url, index) => {
@@ -436,7 +445,7 @@ function renderProductGallery(product, fallbackPhoto) {
 
   const isPhysical = product?.productType === 'produto-3d-fisico' || product?.requiresSize === false;
   const hasShirtViewer = !isPhysical && Object.values(product?.model || {}).some(Boolean);
-  productThumb3d.hidden = !(currentProductMeta.hasModel || hasShirtViewer);
+  productThumb3d.hidden = !hasShirtViewer;
 }
 
 function loadImage(src) {
@@ -508,7 +517,8 @@ async function resolvePrimaryPhoto(product) {
 async function ensureViewer(product) {
   if (viewerReady || !productViewerEl) return;
 
-  if (currentProductMeta.hasModel && currentProductMeta.modelUrl) {
+  const isPhysical = product?.productType === 'produto-3d-fisico' || product?.requiresSize === false;
+  if (!isPhysical && currentProductMeta.hasModel && currentProductMeta.modelUrl) {
     viewer = await createProductStlViewer({
       container: productViewerEl,
       url: `${currentProductMeta.modelUrl}${currentProductMeta.modelUrl.includes('?') ? '&' : '?'}v=${encodeURIComponent(currentProductMeta.updatedAt || Date.now())}`,
@@ -597,7 +607,7 @@ async function renderProductInfo(product) {
   if (productChecklist && isPhysical) {
     productChecklist.innerHTML = `
       <li>Produto físico produzido sob demanda</li>
-      <li>${currentProductMeta.hasModel ? 'Visualização 3D interativa disponível' : 'Fotos reais do produto disponíveis'}</li>
+      <li>Fotos reais do produto disponíveis</li>
       <li>Quantidade ajustável antes da compra</li>
       <li>Envio para todo o Brasil</li>
     `;
@@ -605,7 +615,7 @@ async function renderProductInfo(product) {
   if (productBenefits && isPhysical) {
     productBenefits.innerHTML = `
       <div class="pf-benefit"><div><strong>Envio para todo o Brasil</strong><span>Receba com segurança</span></div></div>
-      <div class="pf-benefit"><div><strong>${currentProductMeta.hasModel ? 'Prévia 3D disponível' : 'Fotos reais do produto'}</strong><span>Confira antes de comprar</span></div></div>
+      <div class="pf-benefit"><div><strong>Fotos reais do produto</strong><span>Confira antes de comprar</span></div></div>
       <div class="pf-benefit"><div><strong>Produção Ursoninhos</strong><span>Acabamento pronto para vender</span></div></div>
     `;
   }
