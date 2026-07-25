@@ -69,6 +69,7 @@ let editorOpen = false;
 let editorGalleryUrls = [];
 let editorCoverIndex = 0;
 const HERO_EDITOR_RESUME_KEY = 'ursoninhos_resume_editor';
+const PRINT_COMPOSITE_WORKSPACE_SCALE = 6;
 let currentProductMeta = { categories: [], tags: [], hasModel: false, modelUrl: '', modelTriangles: 0 };
 const IMGBB_API_KEY = 'b7150269142e0e38166f3e528598d051';
 const PRODUCT_META_URL = `${window.URSONINHOS_APP_CONFIG?.backendBaseUrl || 'https://primusdf.com.br/_ursoninhos_backend/api'}/product-meta.php`;
@@ -528,11 +529,24 @@ async function buildFlatMockup(printUrl, transform = {}, blend = 'screen') {
 }
 
 async function resolvePrimaryPhoto(product) {
+  // A capa já foi capturada pelo mesmo viewer usado no editor. Reutilizá-la
+  // mantém exatamente o tamanho escolhido pelo criador e evita recompor uma
+  // arte grande dentro de um canvas menor, o que a fazia parecer reduzida.
+  const savedFrontView = product?.views?.front || product?.catalogImage;
+  if (savedFrontView) return savedFrontView;
+
   const frontModel = product?.model?.front;
   const frontLayers = layerEngine?.normalizeSide(frontModel) || [];
   if (frontLayers.length) {
-    const composite = await layerEngine.composeLayers(frontLayers, { side: 'front' });
-    const mockup = await buildFlatMockup(composite, {}, 'normal');
+    const composite = await layerEngine.composeLayers(frontLayers, {
+      side: 'front',
+      workspaceScale: PRINT_COMPOSITE_WORKSPACE_SCALE,
+    });
+    const mockup = await buildFlatMockup(
+      composite,
+      { scale: PRINT_COMPOSITE_WORKSPACE_SCALE },
+      'normal',
+    );
     if (mockup) return mockup;
   }
   if (frontModel?.url) {
@@ -579,9 +593,16 @@ async function ensureViewer(product) {
   for (const [sideKey, sideState] of sides) {
     const layers = layerEngine?.normalizeSide(sideState) || [];
     if (layers.length) {
-      const composite = await layerEngine.composeLayers(layers, { side: sideKey });
+      const composite = await layerEngine.composeLayers(layers, {
+        side: sideKey,
+        workspaceScale: PRINT_COMPOSITE_WORKSPACE_SCALE,
+      });
       await viewer.setPrint(sideKey, composite, 'normal');
-      viewer.setTransform(sideKey, { scale: 1, offsetX: 0, offsetY: 0 });
+      viewer.setTransform(sideKey, {
+        scale: PRINT_COMPOSITE_WORKSPACE_SCALE,
+        offsetX: 0,
+        offsetY: 0,
+      });
       continue;
     }
     if (sideState?.url) {

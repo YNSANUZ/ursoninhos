@@ -1809,6 +1809,13 @@ function syncFrontOverlayFromState() {
 function restoreHeroEditorState(state) {
   if (!state || typeof state !== 'object') return false;
 
+  const resumedProduct = state.editingProduct?.id ? { ...state.editingProduct } : null;
+  if (resumedProduct) {
+    // Uma camisa aberta pelo lápis deve ficar estável enquanto o ADM ajusta
+    // suas camadas. O play continua disponível caso ele queira retomar.
+    setAutoRotatePaused(true);
+  }
+
   selectedShirtColor = state.shirtColor === 'white' ? 'white' : 'black';
   shirtColorButtons.forEach((button) => {
     button.classList.toggle('is-active', button.dataset.color === selectedShirtColor);
@@ -1877,7 +1884,7 @@ function restoreHeroEditorState(state) {
   }
 
   refreshHeroPriceNote();
-  heroEditingProduct = state.editingProduct?.id ? { ...state.editingProduct } : null;
+  heroEditingProduct = resumedProduct;
   const resumePublishButton = document.getElementById('publishModelBtn');
   if (resumePublishButton && heroEditingProduct) {
     resumePublishButton.textContent = 'Salvar alterações da camisa';
@@ -2367,9 +2374,13 @@ publishModelBtn?.addEventListener('click', async () => {
       creator: heroEditingProduct?.creator || user.name,
       creatorPhoto: heroEditingProduct?.creatorPhoto || user.photoUrl || '',
     };
+    const editingProductId = heroEditingProduct?.id || '';
     const product = heroEditingProduct
       ? await api.updateProduct(heroEditingProduct.id, productPayload)
       : await api.createProduct(productPayload);
+    if (!product?.id || (editingProductId && product.id !== editingProductId)) {
+      throw new Error('O backend não confirmou a atualização do mesmo produto.');
+    }
 
     setPublishFeedback(
       `${heroEditingProduct

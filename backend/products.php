@@ -118,8 +118,9 @@ function normalizeTransform($transform)
 {
     return [
         'scale' => max(0.22, min(2.35, (float) ($transform['scale'] ?? 1))),
-        'offsetX' => max(-24, min(24, (float) ($transform['offsetX'] ?? 0))),
-        'offsetY' => max(-24, min(24, (float) ($transform['offsetY'] ?? 0))),
+        'offsetX' => max(-140, min(140, (float) ($transform['offsetX'] ?? 0))),
+        'offsetY' => max(-140, min(140, (float) ($transform['offsetY'] ?? 0))),
+        'rotation' => max(-180, min(180, (float) ($transform['rotation'] ?? 0))),
     ];
 }
 
@@ -151,6 +152,11 @@ function normalizeLayer($layer, $index = 0)
         'name' => mb_substr((string) ($layer['name'] ?? ($textData ? 'Texto' : 'Imagem')), 0, 120),
         'type' => ($textData || ($layer['type'] ?? '') === 'text') ? 'text' : 'image',
         'url' => $url,
+        'originalUrl' => (string) ($layer['originalUrl'] ?? $layer['originalFile'] ?? $url),
+        'imageTreatment' => in_array($layer['imageTreatment'] ?? '', ['original', 'remove-dark', 'invert-mono'], true)
+            ? $layer['imageTreatment']
+            : 'original',
+        'darkBackgroundDetected' => (bool) ($layer['darkBackgroundDetected'] ?? false),
         'blend' => in_array($layer['blend'] ?? '', ['screen', 'normal'], true) ? $layer['blend'] : 'normal',
         'transform' => normalizeTransform($transform),
         'textData' => $textData,
