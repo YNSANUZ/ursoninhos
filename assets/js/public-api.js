@@ -40,9 +40,13 @@
     } catch (error) { /* backend antigo: produtos continuam disponíveis */ }
     products.forEach((product) => {
       const mappedPath = publicProductShortPaths[product.id];
-      if (!mappedPath) return;
-      product.shortPath = mappedPath;
-      product.shortId = mappedPath.replace(/\D/g, '');
+      if (mappedPath) {
+        product.shortPath = mappedPath;
+        product.shortId = mappedPath.replace(/\D/g, '');
+      } else {
+        delete product.shortPath;
+        delete product.shortId;
+      }
     });
     return products;
   }
@@ -57,9 +61,13 @@
     const payload = await readJson(response);
     const product = payload.product || null;
     if (!product) return null;
-    if (publicProductShortPaths[product.id]) {
-      product.shortPath = publicProductShortPaths[product.id];
+    const mappedPath = publicProductShortPaths[product.id];
+    if (mappedPath) {
+      product.shortPath = mappedPath;
       product.shortId = product.shortPath.replace(/\D/g, '');
+    } else {
+      delete product.shortPath;
+      delete product.shortId;
     }
     try {
       const metaResponse = await fetch(`${baseUrl}/product-meta.php?id=${encodeURIComponent(product.id)}`, { cache: 'no-store' });

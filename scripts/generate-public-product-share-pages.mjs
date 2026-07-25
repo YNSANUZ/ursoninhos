@@ -57,14 +57,26 @@ async function materializeSocialImage(product, shortId) {
   const source = String(coverSource(product) || '');
   let bytes;
   let contentType = '';
+  let hash = '';
 
   if (source.startsWith('data:image/')) {
     const match = source.match(/^data:([^;,]+)(?:;[^,]*)?;base64,(.+)$/s);
     if (match) {
       contentType = match[1];
       bytes = Buffer.from(match[2], 'base64');
+      hash = createHash('sha256').update(bytes).digest('hex').slice(0, 12);
     }
   } else if (/^https:\/\//i.test(source)) {
+    hash = createHash('sha256').update(source).digest('hex').slice(0, 12);
+    await mkdir(SOCIAL_IMAGE_DIR, { recursive: true });
+    const cachedFile = (await readdir(SOCIAL_IMAGE_DIR)).find((file) => file.startsWith(`${shortId}-${hash}.`));
+    if (cachedFile) {
+      const extension = path.extname(cachedFile).slice(1).toLowerCase();
+      return {
+        url: `${SITE_URL}/assets/img/share/products/${cachedFile}`,
+        type: extension === 'png' ? 'image/png' : extension === 'webp' ? 'image/webp' : 'image/jpeg',
+      };
+    }
     const response = await fetch(source, { headers: { Accept: 'image/*' } });
     if (response.ok) {
       contentType = response.headers.get('content-type') || '';
@@ -80,7 +92,7 @@ async function materializeSocialImage(product, shortId) {
   }
 
   const format = imageFormat(contentType, bytes);
-  const hash = createHash('sha256').update(bytes).digest('hex').slice(0, 12);
+  if (!hash) hash = createHash('sha256').update(bytes).digest('hex').slice(0, 12);
   const fileName = `${shortId}-${hash}.${format.extension}`;
   await mkdir(SOCIAL_IMAGE_DIR, { recursive: true });
   await writeFile(path.join(SOCIAL_IMAGE_DIR, fileName), bytes);
