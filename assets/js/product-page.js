@@ -805,10 +805,16 @@ async function saveAdminEdits(event) {
     creator: creatorName,
     creatorPhoto: String(productEditorCreatorPhoto?.value || '').trim(),
     catalogImage: coverImage,
-    gallery: editorGalleryUrls,
-    coverIndex,
     description: store.embedCreator(plainDescription, creatorName),
   };
+  // Camisas usam prévias internas (data:image) em catalogImage/views, não uma
+  // galeria externa do ImgBB. Enviar gallery: [] fazia o backend interpretar
+  // uma simples edição de texto como remoção de todas as fotos e recusá-la.
+  // Só alteramos a galeria quando o ADM realmente adicionou fotos externas.
+  if (editorGalleryUrls.length) {
+    payload.gallery = editorGalleryUrls;
+    payload.coverIndex = coverIndex;
+  }
 
   if (!payload.title) {
     setEditorNote('Informe um nome para o produto.', true);
