@@ -2009,6 +2009,19 @@ async function generateHeroPreviewViews(frontFallback = null) {
   return previewViews;
 }
 
+function modelPersistenceSignature(model) {
+  const normalized = layerEngine?.normalizeModel?.(model) || {};
+  return JSON.stringify(['front', 'back', 'sleeveRight', 'sleeveLeft'].map((side) =>
+    (normalized[side] || []).map((layer) => ({
+      url: layer.url,
+      blend: layer.blend,
+      transform: layer.transform,
+      type: layer.type,
+      textData: layer.textData,
+    }))
+  ));
+}
+
 function waitForShirtViewerReady(timeoutMs = 8000) {
   if (window.shirtViewer3D?.ready) return Promise.resolve(true);
   return new Promise((resolve) => {
@@ -2456,6 +2469,11 @@ publishModelBtn?.addEventListener('click', async () => {
     if (!product?.id || (editingProductId && product.id !== editingProductId)) {
       throw new Error('O backend não confirmou a atualização do mesmo produto.');
     }
+    if (heroEditingProduct && modelPersistenceSignature(product.model) !== modelPersistenceSignature(publicModel)) {
+      throw new Error(
+        'O servidor não gravou as camadas novas da camisa. O desenho continua aberto no editor; atualize o backend antes de tentar salvar novamente.'
+      );
+    }
 
     setPublishFeedback(
       `${heroEditingProduct
@@ -2472,7 +2490,10 @@ publishModelBtn?.addEventListener('click', async () => {
     // (só funciona com o Web App configurado; sem ele, não faz nada).
   } catch (error) {
     console.error('Não foi possível publicar o modelo:', error);
-    setPublishFeedback('Não foi possível publicar agora. Tente novamente em instantes.', true);
+    setPublishFeedback(
+      error.message || 'Não foi possível publicar agora. Tente novamente em instantes.',
+      true
+    );
   } finally {
     publishModelBtn.disabled = false;
   }
