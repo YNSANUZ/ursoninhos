@@ -1,9 +1,23 @@
 (function () {
   const config = window.URSONINHOS_APP_CONFIG || {};
   const baseUrl = config.backendBaseUrl || '';
-  const publicProductShortPaths = {
-    'bebedouro-para-aves-pequenas-em-garrafa-pet-6-bocas-galinhas-pintinhos-codornas-e-p-ssaros-55e66092': '/55e66092/',
-  };
+  let publicProductShortPaths = {};
+  let shortPathsPromise = null;
+
+  async function loadShortPaths() {
+    if (!shortPathsPromise) {
+      shortPathsPromise = fetch('/assets/data/product-short-links.json', { cache: 'no-store' })
+        .then((response) => response.ok ? response.json() : {})
+        .then((mapping) => {
+          publicProductShortPaths = Object.fromEntries(
+            Object.entries(mapping || {}).map(([id, shortId]) => [id, `/${shortId}/`])
+          );
+          return publicProductShortPaths;
+        })
+        .catch(() => publicProductShortPaths);
+    }
+    return shortPathsPromise;
+  }
 
   async function readJson(response) {
     const payload = await response.json();
@@ -14,6 +28,7 @@
   }
 
   async function listProducts() {
+    await loadShortPaths();
     const response = await fetch(`${baseUrl}/products.php`, { cache: 'no-store' });
     const payload = await readJson(response);
     const products = payload.products || [];
@@ -27,6 +42,7 @@
   }
 
   async function getProduct(id) {
+    await loadShortPaths();
     const response = await fetch(`${baseUrl}/products.php?id=${encodeURIComponent(id)}`, { cache: 'no-store' });
     const payload = await readJson(response);
     const product = payload.product || null;

@@ -1,0 +1,35 @@
+name: Atualizar links curtos dos produtos
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: '*/5 * * * *'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: product-share-pages
+  cancel-in-progress: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: main
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: node scripts/generate-public-product-share-pages.mjs
+      - name: Publicar páginas atualizadas
+        run: |
+          if git diff --quiet && [ -z "$(git status --porcelain)" ]; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A assets/data '[0-9][0-9][0-9][0-9]'
+          git commit -m "Atualiza links curtos dos produtos"
+          git push
