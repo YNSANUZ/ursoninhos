@@ -196,7 +196,10 @@ function toggleEditor(force) {
 
 function isEditableShirt(product) {
   const isPhysical = product?.productType === 'produto-3d-fisico' || product?.requiresSize === false;
-  return !isPhysical && Object.values(product?.model || {}).some(Boolean);
+  // Camisas antigas podem ter apenas o modelo legado da frente, sem a
+  // estrutura moderna de camadas. Se não é produto físico, continua sendo
+  // uma camisa e deve abrir no editor completo para poder ser modernizada.
+  return Boolean(product) && !isPhysical;
 }
 
 function openShirtInFullEditor() {
