@@ -1657,6 +1657,7 @@ const heroQtyInput = document.getElementById('heroQtyInput');
 const heroQtyDecrease = document.getElementById('heroQtyDecrease');
 const heroQtyIncrease = document.getElementById('heroQtyIncrease');
 const HERO_EDITOR_RESUME_KEY = 'ursoninhos_resume_editor';
+let heroEditingProduct = null;
 
 function formatBRL(value) {
   return shopStore ? shopStore.formatBRL(value) : value.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
@@ -1876,6 +1877,10 @@ function restoreHeroEditorState(state) {
   }
 
   refreshHeroPriceNote();
+  heroEditingProduct = state.editingProduct?.id ? { ...state.editingProduct } : null;
+  if (publishModelBtn && heroEditingProduct) {
+    publishModelBtn.textContent = 'Salvar alterações da camisa';
+  }
   return true;
 }
 
@@ -2342,11 +2347,11 @@ publishModelBtn?.addEventListener('click', async () => {
     const baseDescription = `Modelo criado pela comunidade Ursoninhos com a estampa ${frontPrint.name}.`;
     const searchableDescription = layerEngine?.addTextToDescription?.(baseDescription, publicModel)
       || baseDescription;
-    const product = await api.createProduct({
+    const productPayload = {
       title: automaticTitle,
       description: store.embedCreator(
         searchableDescription,
-        user.name
+        heroEditingProduct?.creator || user.name
       ),
       tags: shirtTexts,
       price: publishCoverage.price,
@@ -2358,14 +2363,22 @@ publishModelBtn?.addEventListener('click', async () => {
       // O backend atual ignora este campo; a versão nova (backend/
       // products.php) passa a persisti-lo. O marcador na descrição
       // garante o crédito nos dois casos.
-      creator: user.name,
-      creatorPhoto: user.photoUrl || '',
-    });
+      creator: heroEditingProduct?.creator || user.name,
+      creatorPhoto: heroEditingProduct?.creatorPhoto || user.photoUrl || '',
+    };
+    const product = heroEditingProduct
+      ? await api.updateProduct(heroEditingProduct.id, productPayload)
+      : await api.createProduct(productPayload);
 
     setPublishFeedback(
-      `Modelo publicado por ${formatBRL(publishCoverage.price)}, ${firstName}! Ele já está na vitrine com seu crédito. ` +
+      `${heroEditingProduct
+        ? 'Camisa atualizada com sucesso!'
+        : `Modelo publicado por ${formatBRL(publishCoverage.price)}, ${firstName}! Ele já está na vitrine com seu crédito.`} ` +
       `<a href="${window.UrsoninhosApi?.getProductPath(product) || `produto.html?id=${encodeURIComponent(product.id)}`}">Ver página do produto</a>`
     );
+    if (heroEditingProduct) {
+      heroEditingProduct = { ...heroEditingProduct, ...product };
+    }
     window.UrsoninhosCatalog?.refresh();
 
     // Registra o produto novo também na planilha Google de controle

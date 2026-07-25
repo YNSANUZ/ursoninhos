@@ -68,6 +68,7 @@ let viewerReady = false;
 let editorOpen = false;
 let editorGalleryUrls = [];
 let editorCoverIndex = 0;
+const HERO_EDITOR_RESUME_KEY = 'ursoninhos_resume_editor';
 let currentProductMeta = { categories: [], tags: [], hasModel: false, modelUrl: '', modelTriangles: 0 };
 const IMGBB_API_KEY = 'b7150269142e0e38166f3e528598d051';
 const PRODUCT_META_URL = `${window.URSONINHOS_APP_CONFIG?.backendBaseUrl || 'https://primusdf.com.br/_ursoninhos_backend/api'}/product-meta.php`;
@@ -190,6 +191,37 @@ function toggleEditor(force) {
   productEditorForm.hidden = !editorOpen;
   if (editorOpen && currentProduct) fillEditor(currentProduct);
   if (!editorOpen) setEditorNote('');
+}
+
+function isEditableShirt(product) {
+  const isPhysical = product?.productType === 'produto-3d-fisico' || product?.requiresSize === false;
+  return !isPhysical && Object.values(product?.model || {}).some(Boolean);
+}
+
+function openShirtInFullEditor() {
+  if (!currentProduct || !isAdminUser() || !isEditableShirt(currentProduct)) return;
+  const normalizedModel = layerEngine?.normalizeModel?.(currentProduct.model) || {};
+  const layersBySide = {};
+  ['front', 'back', 'sleeveRight', 'sleeveLeft'].forEach((side) => {
+    layersBySide[side] = Array.isArray(normalizedModel[side]) ? normalizedModel[side] : [];
+  });
+  localStorage.setItem(HERO_EDITOR_RESUME_KEY, JSON.stringify({
+    activeSide: 'front',
+    shirtColor: currentProduct.shirtColor === 'white' ? 'white' : 'black',
+    size: productSizeSelect?.value || 'M',
+    layersBySide,
+    activeLayerIndexes: { front: 0, back: 0, sleeveRight: 0, sleeveLeft: 0 },
+    editingProduct: {
+      id: currentProduct.id,
+      title: currentProduct.title,
+      description: currentProduct.description,
+      price: currentProduct.price,
+      creator: currentProduct.creator || '',
+      creatorPhoto: currentProduct.creatorPhoto || '',
+      shortPath: api.getProductPath(currentProduct),
+    },
+  }));
+  window.location.href = '/#hero';
 }
 
 function setPhotoPreview(src, title) {
@@ -780,7 +812,13 @@ function bindControls() {
     });
   });
 
-  productEditToggleBtn?.addEventListener('click', () => toggleEditor());
+  productEditToggleBtn?.addEventListener('click', () => {
+    if (isEditableShirt(currentProduct)) {
+      openShirtInFullEditor();
+      return;
+    }
+    toggleEditor();
+  });
   productEditorCancelBtn?.addEventListener('click', () => toggleEditor(false));
   productEditorImages?.addEventListener('change', handleEditorImages);
   productEditorModel?.addEventListener('change', uploadProtectedModel);
