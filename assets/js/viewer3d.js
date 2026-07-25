@@ -223,7 +223,7 @@ function setShirtColor(color) {
     shirtMaterial.color.setHex(SHIRT_COLORS[color]);
     // No preto, um normal map muito forte criava uma mancha isolada no
     // peito. Mantemos as dobras, mas com relevo mais discreto.
-    shirtMaterial.normalScale.setScalar(color === 'black' ? 0.24 : 0.5);
+    shirtMaterial.normalScale.setScalar(color === 'black' ? 0 : 0.42);
   }
   if (neckLabelMesh) neckLabelMesh.material.color.setHex(NECK_LABEL_TINT[color]);
   // As artes "screen" mudam de desenho conforme a cor do tecido
@@ -764,6 +764,10 @@ function init() {
   scene.add(new THREE.AmbientLight(0xf0c995, 0.56));
 
   camera = new THREE.PerspectiveCamera(28, container.clientWidth / container.clientHeight, 0.01, 20);
+  // Luz de observação acompanha a câmera: costas e laterais continuam
+  // legíveis enquanto o usuário gira a camisa, sem aparência chapada.
+  camera.add(new THREE.PointLight(0xffead2, 1.15, 12, 1.6));
+  scene.add(camera);
 
   controls = new OrbitControls(camera, interactionSurface);
   controls.enableZoom = true; // roda do mouse / pinça aproxima e afasta
@@ -822,7 +826,7 @@ function init() {
       shirtMaterial = new THREE.MeshStandardMaterial({
         color: SHIRT_COLORS[shirtColor],
         normalMap: originalMaterial?.normalMap || null,
-        normalScale: new THREE.Vector2(0.24, 0.24),
+        normalScale: new THREE.Vector2(0, 0),
         roughness: 0.88,
         metalness: 0,
       });
